@@ -1,0 +1,119 @@
+import React, { useEffect } from 'react';
+import { Route } from 'react-router-dom';
+import { Actions } from './Actions';
+import { HistoryPanel } from './History/HistoryPanel';
+import { IndexPanel } from './Index/IndexPanel';
+import { CreateBranchDialog } from './Dialogs/CreateBranchDialog';
+import { DeleteBranchDialog } from './Dialogs/DeleteBranchDialog';
+import { RequestMergeDialog } from './Merging/RequestMergeDialog';
+import { RequestUpstreamDialog } from './Dialogs/RequestUpstreamDialog';
+import { RequestFetchDialog } from './Dialogs/RequestFetchDialog';
+import { RequestStashDialog } from './Dialogs/RequestStash';
+import { RequestStashApplyDialog } from './Dialogs/RequestStashApplyDialog';
+import { RequestStashDropDialog } from './Dialogs/RequestStashDropDialog';
+import styled from 'styled-components';
+import { MergeStatusBar } from './Merging/MergeStatusBar';
+import { CheckoutRemoteDialog } from './Dialogs/CheckoutRemote';
+import { PullDialog } from './Dialogs/PullDialog';
+import { useDirWatcher } from '../../model/dirwatcher';
+import { ConfigurationPanel } from './Configuration/ConfigurationPanel';
+import { ManualMergePanel } from './Merging/ManualMergePanel';
+import { StatusBar } from './StatusBar';
+import { RequestCreateTagDialog } from './Dialogs/RequestCreateTag';
+import { ExplorerPanel } from './Explore/ExplorerPanel';
+import { BlameInfoDialog } from './Dialogs/BlameInfoDialog';
+import { ConfigureGitFlow } from './Dialogs/ConfigureGitFlow';
+import { Logger } from '../../util/logger';
+import { BranchResetDialog } from './Dialogs/BranchResetDialog';
+import { useDialog } from '../../model/state/dialogs';
+import { useRepo } from '../../model/state/repo';
+import { useWorkflows } from '../../model/state/workflows';
+import { Gitflow } from '../../util/workflows/gitflow';
+import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
+import { useLocation } from 'react-router';
+import { AddIgnoreListItem } from './Dialogs/AddIgnoreListItem';
+import { InteractiveRebase } from './Dialogs/InteractiveRebase';
+import { Rebase } from './Dialogs/Rebase';
+import { RebaseStatusBar } from './Rebase/RebaseStatusBar';
+
+export const MainView = styled.div`
+    display: grid;
+    height: 100%;
+    grid-template-rows: fit-content(10rem) 1fr 1.5rem;
+`;
+
+const DialogsContainer: React.FC = () => (
+    <>
+        <CreateBranchDialog />
+        <DeleteBranchDialog />
+        <RequestMergeDialog />
+        <RequestUpstreamDialog />
+        <RequestFetchDialog />
+        <PullDialog />
+        <RequestStashDialog />
+        <RequestStashApplyDialog />
+        <RequestStashDropDialog />
+        <CheckoutRemoteDialog />
+        <ManualMergePanel />
+        <BranchResetDialog />
+        <RequestCreateTagDialog />
+        <BlameInfoDialog />
+        <RemoteConfigurationDialog />
+        <ConfigureGitFlow />
+        <AddIgnoreListItem />
+        <InteractiveRebase />
+        <Rebase />
+    </>
+);
+
+export const Repository: React.FC = () => {
+    const repo = useRepo();
+    const path = repo.path;
+    const dialog = useDialog();
+    const __ = useDirWatcher(path);
+    const workflows = useWorkflows();
+    const location = useLocation();
+    React.useEffect(() => {
+        if (repo.active) {
+            Logger().debug('Repository', 'Path changed', { path: path });
+            repo.loadRepo().then(() => {
+                workflows.registerGitWorkflows([new Gitflow(dialog)]);
+            });
+        }
+    }, [path]);
+    React.useEffect(() => {
+        if (repo.active && location.pathname === '/index') {
+            repo.getStatus();
+        }
+    }, [location]);
+    return (
+        <MainView>
+            <div>
+                <MergeStatusBar />
+                <RebaseStatusBar />
+            </div>
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: '4rem minmax(0,1fr)',
+                    height: '100%',
+                }}>
+                <Actions />
+                <Route exact path="/">
+                    <HistoryPanel />
+                </Route>
+                <Route exact path="/index">
+                    <IndexPanel />
+                </Route>
+                <Route exact path="/config">
+                    <ConfigurationPanel />
+                </Route>
+                <Route exact path="/files">
+                    <ExplorerPanel />
+                </Route>
+            </div>
+            <StatusBar />
+            <DialogsContainer />
+        </MainView>
+    );
+};

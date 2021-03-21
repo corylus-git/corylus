@@ -1,0 +1,180 @@
+{
+    "name": "corylus",
+    "version": "0.0.45",
+    "description": "",
+    "main": "./dist/main.js",
+    "scripts": {
+        "build-main": "cross-env NODE_ENV=production webpack --config webpack.main.prod.config.js",
+        "build-renderer": "cross-env NODE_ENV=production webpack --config webpack.renderer.prod.config.js",
+        "build": "npm run build-main && npm run build-renderer",
+        "start-renderer-dev": "webpack-dev-server --config webpack.renderer.dev.config.js",
+        "start-main-dev": "webpack --config webpack.main.config.js && electron ./dist/main.js",
+        "start-dev": "cross-env START_HOT=1 npm run start-renderer-dev",
+        "prestart": "npm run build",
+        "start": "electron .",
+        "lint": "eslint --ext=jsx,js,tsx,ts src",
+        "test": "jest '(\\/test\\/(?!e2e/)).*'",
+        "pretest:e2e": "npm run build",
+        "test:e2e": "jest '(\\/test\\/e2e/).*'",
+        "pack": "npm run build && electron-builder --dir",
+        "dist": "npm run build && electron-builder",
+        "postinstall": "electron-builder install-app-deps"
+    },
+    "files": [
+        "build/icon.png"
+    ],
+    "lint-staged": {
+        "{src,test,mocks}/**/*.{json,css,scss,md}": [
+            "prettier --config ./.prettierrc --write"
+        ],
+        "{src,test,mocks}/**/*.{js,ts,tsx}": [
+            "prettier --config ./.prettierrc --write",
+            "eslint --ext=jsx,js,ts,tsx --fix src"
+        ]
+    },
+    "jest": {
+        "transform": {
+            "^.+\\.tsx?$": "ts-jest"
+        },
+        "testRegex": "(/test/.+\\.spec)\\.tsx?$",
+        "moduleFileExtensions": [
+            "ts",
+            "tsx",
+            "js",
+            "json",
+            "node"
+        ],
+        "moduleNameMapper": {
+            "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/mocks/fileMock.js",
+            "\\.(s?css|sass)$": "<rootDir>/mocks/styleMock.js"
+        }
+    },
+    "build": {
+        "productName": "Corylus",
+        "appId": "dev.corylus",
+        "mac": {
+            "category": "development"
+        },
+        "directories": {
+            "output": "release"
+        },
+        "files": [
+            "dist/",
+            "node_modules/",
+            "package.json",
+            "build"
+        ],
+        "linux": {
+            "target": "deb"
+        },
+        "win": {
+            "target": "nsis"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "author": {
+        "name": "Markus Brueckner",
+        "email": "namenlos@geekbetrieb.de"
+    },
+    "license": "Proprietary",
+    "bugs": {
+        "url": ""
+    },
+    "homepage": "https://corylus.dev",
+    "devDependencies": {
+        "@babel/core": "^7.10.2",
+        "@babel/plugin-proposal-class-properties": "^7.10.1",
+        "@babel/polyfill": "^7.10.1",
+        "@babel/preset-env": "^7.10.2",
+        "@babel/preset-react": "^7.10.1",
+        "@babel/preset-typescript": "^7.10.1",
+        "@hot-loader/react-dom": "^17.0.1",
+        "@svgr/webpack": "^5.4.0",
+        "@types/async-lock": "^1.1.2",
+        "@types/electron-devtools-installer": "^2.2.0",
+        "@types/jest": "^25.2.3",
+        "@types/prismjs": "^1.16.1",
+        "@types/react": "^17.0.3",
+        "@types/react-dom": "^17.0.2",
+        "@types/react-resize-detector": "^4.2.0",
+        "@types/react-router": "^5.1.7",
+        "@types/react-test-renderer": "^17.0.1",
+        "@types/react-window": "^1.8.2",
+        "@types/styled-components": "^5.1.0",
+        "@types/temp": "^0.8.34",
+        "@types/webdriverio": "^5.0.0",
+        "@types/webpack-env": "^1.15.2",
+        "@typescript-eslint/eslint-plugin": "^3.0.2",
+        "@typescript-eslint/parser": "^3.0.2",
+        "babel-loader": "^8.1.0",
+        "cross-env": "^7.0.2",
+        "css-loader": "^3.5.3",
+        "electron": "^12.0.1",
+        "electron-builder": "^22.7.0",
+        "electron-devtools-installer": "^3.1.1",
+        "eslint": "^7.1.0",
+        "eslint-config-airbnb": "^18.1.0",
+        "eslint-config-prettier": "^6.11.0",
+        "eslint-plugin-import": "^2.20.2",
+        "eslint-plugin-jsx-a11y": "^6.2.3",
+        "eslint-plugin-prettier": "^3.1.3",
+        "eslint-plugin-react": "^7.20.0",
+        "eslint-plugin-react-hooks": "^4.0.4",
+        "file-loader": "^6.0.0",
+        "fork-ts-checker-webpack-plugin": "^4.1.6",
+        "html-webpack-plugin": "^4.3.0",
+        "husky": "^4.2.5",
+        "image-webpack-loader": "^6.0.0",
+        "jest": "^26.0.1",
+        "lint-staged": "^10.2.7",
+        "monaco-editor-webpack-plugin": "^1.9.0",
+        "node-sass": "^4.14.1",
+        "prettier": "^2.0.5",
+        "react-hot-loader": "^4.12.21",
+        "react-test-renderer": "^17.0.1",
+        "sass-loader": "^8.0.2",
+        "source-map-loader": "^1.0.0",
+        "spectron": "^11.0.0",
+        "style-loader": "^1.2.1",
+        "ts-jest": "^26.1.0",
+        "ts-loader": "^7.0.5",
+        "typescript": "^3.9.3",
+        "webpack": "^4.43.0",
+        "webpack-cli": "^3.3.11",
+        "webpack-dev-server": "^3.11.0",
+        "webpack-merge": "^4.2.2"
+    },
+    "dependencies": {
+        "@types/react-router-dom": "^5.1.5",
+        "add": "^2.0.6",
+        "async-lock": "^1.2.4",
+        "date-fns": "^2.19.0",
+        "electron-settings": "^4.0.0",
+        "formik": "^2.2.6",
+        "framer-motion": "4.0.0",
+        "immer": "^8.0.1",
+        "nanoid": "^3.1.21",
+        "observable-hooks": "^2.3.5",
+        "react": "^17.0.1",
+        "react-dom": "^17.0.1",
+        "react-monaco-editor": "^0.36.0",
+        "react-query": "3.12.1",
+        "react-resize-detector": "^4.2.3",
+        "react-router": "^5.2.0",
+        "react-router-dom": "^5.2.0",
+        "react-simple-code-editor": "^0.11.0",
+        "react-toastify": "^7.0.3",
+        "react-window": "^1.8.6",
+        "ring-buffer-ts": "^1.0.3",
+        "simple-git": "^2.36.2",
+        "styled-components": "^5.2.1",
+        "temp": "0.9.4",
+        "winston": "^3.3.3",
+        "winston-transport": "^4.4.0",
+        "yarn": "^1.22.4",
+        "zustand": "^3.3.3"
+    }
+}
