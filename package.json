@@ -73,15 +73,15 @@
     },
     "repository": {
         "type": "git",
-        "url": ""
+        "url": "https://github.com/corylus-git/corylus"
     },
     "author": {
         "name": "Markus Brueckner",
         "email": "namenlos@geekbetrieb.de"
     },
-    "license": "Proprietary",
+    "license": "GPL-3.0-only",
     "bugs": {
-        "url": ""
+        "url": "https://github.com/corylus-git/corylus/issues"
     },
     "homepage": "https://corylus.dev",
     "devDependencies": {
