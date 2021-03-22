@@ -656,13 +656,13 @@ export class SimpleGitBackend implements GitBackend {
     };
 
     getCommit = async (ref: string): Promise<Commit> => {
-        Logger().debug('SimpleGitBackend', 'Trying to get commit', ref);
-        const options: LogOptions<SimpleGitBackend['commitFormat']> = {
+        Logger().debug('SimpleGitBackend', 'Trying to get commit', { ref });
+        const options: Record<string, any> = {
             format: { ...this.commitFormat, message: '%B' },
             splitter: '|--/',
             maxCount: 1,
-            from: ref,
         };
+        options[ref] = true;
         const entries = await this._git.log<SimpleGitBackend['commitFormat']>(options);
         Logger().debug('SimpleGitBackend', 'Result', { entries: entries });
         return this.mapSummary(entries!.all[0]);
