@@ -643,7 +643,8 @@ export class SimpleGitBackend implements GitBackend {
             opts.maxCount = limit;
         }
         if (path) {
-            opts.file = path;
+            opts['--'] = true;
+            opts[path] = true;
         }
         if (range) {
             opts[range] = true;
