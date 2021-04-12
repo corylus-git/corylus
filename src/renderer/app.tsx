@@ -21,9 +21,9 @@ if (process.env.DEBUG !== undefined) {
 
 // configure logging
 if (level === 'debug' || level === 'silly' || process.env.NODE_ENV !== 'production') {
-    initLogging(level, process.env.NODE_ENV === 'production');
+    initLogging('ui', level, process.env.NODE_ENV === 'production');
 } else {
-    initLogging(level, process.env.GITCLIENT_STDOUT !== undefined);
+    initLogging('ui', level, process.env.GITCLIENT_STDOUT !== undefined);
 }
 
 // Create main element
