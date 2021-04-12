@@ -2,18 +2,11 @@ import { Person } from './stateObjects';
 import { Logger } from '../util/logger';
 
 /**
- * A simple git config values
- */
-export interface IConfigValues {
-    user?: Partial<Person>;
-}
-
-/**
  * Retrieve the effective git configuration, i.e. local values overriding global ones
  *
  * @param IGitConfig The git config as retrieved from the system
  */
-export function effective(config?: IGitConfig): IConfigValues | undefined {
+export function effective(config?: IGitConfig): IEffectiveConfig | undefined {
     const conf = config && {
         ...config.global,
         ...config.local,
@@ -37,7 +30,7 @@ export interface IGitFlowConfigValues {
     };
 }
 export interface IGitConfigValues {
-    /* currently empty by design */
+    user?: Partial<Person>;
 }
 export interface IGitFlowConfig {
     gitFlow?: IGitFlowConfigValues;
@@ -54,3 +47,8 @@ export interface IGitConfig {
     local?: IGitConfigValues & IGitFlowConfig;
     global?: IGitConfigValues;
 }
+
+/**
+ * The effective values of a config, i.e. the merged values from global and local
+ */
+export type IEffectiveConfig = IGitConfigValues & IGitFlowConfig;
