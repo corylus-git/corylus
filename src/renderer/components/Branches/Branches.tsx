@@ -190,7 +190,12 @@ const BranchNodeDisplay: React.FC<{
             }
             current={!!toOptional(props.branch)?.current}
             onContextMenu={() => openContextMenu(dialog, props.branch, props.currentBranch)}>
-            {props.label}
+            <span
+                style={{
+                    userSelect: 'text',
+                }}>
+                {props.label}
+            </span>
             {statsParts.length > 0 && (
                 <span style={{ fontSize: '80%', marginLeft: '1rem' }}>
                     ({statsParts.join(', ')})

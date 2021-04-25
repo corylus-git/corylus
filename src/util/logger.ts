@@ -31,46 +31,76 @@ export class RingBufferTransport extends Transport {
  * context where the log message occured
  */
 class LogWrapper {
-    private _logger: winston.Logger;
+    logger: winston.Logger;
+    globalContext: string;
 
-    constructor(logger: winston.Logger) {
-        this._logger = logger;
+    constructor(globalContext: string, logger: winston.Logger) {
+        this.logger = logger;
+        this.globalContext = globalContext;
     }
 
     silly(context: string, message: string, meta?: any) {
-        this._logger.silly(message, { context: context, ...meta });
+        this.logger.silly(message, {
+            globalContext: this.globalContext,
+            context: context,
+            ...meta,
+        });
     }
 
     debug(context: string, message: string, meta?: any) {
-        this._logger.debug(message, { context: context, ...meta });
+        this.logger.debug(message, {
+            globalContext: this.globalContext,
+            context: context,
+            ...meta,
+        });
     }
 
     info(context: string, message: string, meta?: any) {
-        this._logger.info(message, { context: context, ...meta });
+        this.logger.info(message, {
+            globalContext: this.globalContext,
+            context: context,
+            ...meta,
+        });
     }
 
     warn(context: string, message: string, meta?: any) {
-        this._logger.warn(message, { context: context, ...meta });
+        this.logger.warn(message, {
+            globalContext: this.globalContext,
+            context: context,
+            ...meta,
+        });
     }
 
     error(context: string, message: string, meta?: any) {
-        this._logger.error(message, { context: context, ...meta });
+        this.logger.error(message, {
+            globalContext: this.globalContext,
+            context: context,
+            ...meta,
+        });
     }
 
     emerg(context: string, message: string, meta?: any) {
-        this._logger.emerg(message, { context: context, ...meta });
+        this.logger.emerg(message, {
+            globalContext: this.globalContext,
+            context: context,
+            ...meta,
+        });
     }
 }
 
 let _logger: LogWrapper;
 
-export const Logger = (): LogWrapper => _logger ?? (initLogging('info'), _logger);
+export const Logger = (): LogWrapper => _logger ?? (initLogging('unknown', 'info'), _logger);
 
 let _ringBuffer: RingBufferTransport;
 
 export const LogBuffer = () => _ringBuffer;
 
-export function initLogging(level: 'info' | 'debug' | 'silly', stdout?: boolean): void {
+export function initLogging(
+    globalContext: string,
+    level: 'info' | 'debug' | 'silly',
+    stdout?: boolean
+): void {
     _ringBuffer = new RingBufferTransport({
         level: level,
         size: level === 'info' ? 200 : level === 'debug' ? 1000 : 2000,
@@ -92,6 +122,7 @@ export function initLogging(level: 'info' | 'debug' | 'silly', stdout?: boolean)
             })
         );
     _logger = new LogWrapper(
+        globalContext,
         winston.createLogger({
             format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
             transports: transports,

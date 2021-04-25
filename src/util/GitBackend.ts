@@ -33,7 +33,12 @@ import { chunks } from './ImmutableArrayUtils';
 import { toast } from 'react-toastify';
 import { structuredToast } from './structuredToast';
 import { nanoid } from 'nanoid';
-import { IGitConfig, IGitConfigValues, IConfigValues, IGitFlowConfig } from '../model/IGitConfig';
+import {
+    IEffectiveConfig,
+    IGitConfig,
+    IGitConfigValues,
+    IGitFlowConfig,
+} from '../model/IGitConfig';
 import { Maybe, fromNullable, nothing, just } from './maybe';
 
 export type ProgressEventType = string;
@@ -1316,8 +1321,8 @@ export class SimpleGitBackend implements GitBackend {
         };
     };
 
-    private transformConfig = (input: ConfigValues) => {
-        const ret: IConfigValues = {};
+    private transformConfig = (input: ConfigValues): IEffectiveConfig => {
+        const ret: IEffectiveConfig = {};
         console.log(input);
         if (input['user.name'] || input['user.email']) {
             ret.user = {
