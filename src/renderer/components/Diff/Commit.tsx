@@ -45,6 +45,7 @@ const CommitHeaderFrame = styled.div`
     padding: 0.5rem;
     padding-bottom: 0;
     margin-bottom: 0.5rem;
+    user-select: text;
 `;
 
 export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
@@ -118,7 +119,10 @@ function FileDiff(props: {
                 <div></div>
             )}
             <FileStatus status={props.diff.status} />
-            <div>
+            <div
+                style={{
+                    userSelect: 'text',
+                }}>
                 {props.diff.oldPath && `${props.diff.oldPath} → `}
                 {props.diff.path}
                 {/* {props.diff.source && <SourceDisplay>({props.diff.source})</SourceDisplay>} */}
