@@ -78,6 +78,9 @@ export const IndexTree: React.FC<IndexTreeProps> = (props) => {
                         return (
                             <span
                                 title={`${path?.join('/') ?? ''}/${file}`}
+                                style={{
+                                    whiteSpace: 'nowrap',
+                                }}
                                 onContextMenu={() => meta && openContextMenu(meta, dialog)}>
                                 {meta && meta.type !== 'dir' && (
                                     <FileStatus
