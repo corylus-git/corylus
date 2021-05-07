@@ -15,7 +15,6 @@ import SettingsIcon from './icons/SettingsIcon.svg';
 import ExploreIcon from './icons/ExploreIcon.svg';
 import { Hoverable } from './StyleBase';
 import { remote } from 'electron';
-import { Subject } from 'rxjs';
 import { Logger } from '../../util/logger';
 import { push } from '../../model/actions/repo';
 import { nothing, just } from '../../util/maybe';
