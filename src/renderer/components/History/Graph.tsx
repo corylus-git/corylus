@@ -2,7 +2,7 @@ import * as React from 'react';
 import styled from 'styled-components';
 import { CommitInfo } from './CommitInfo';
 import { HoverableDiv } from '../StyleBase';
-import { Commit } from '../../../model/stateObjects';
+import { BranchInfo, Commit } from '../../../model/stateObjects';
 import { GraphNode } from './GraphNode';
 import { RailLine } from './RailLine';
 import { FixedSizeList as List } from 'react-window';
@@ -21,6 +21,7 @@ import {
 } from '../../../model/state/repo';
 import { useGraph } from '../../../model/state/graph';
 import { GraphLayoutData } from '../../../util/graphLayout';
+import { changeBranch } from '../../../model/actions/repo';
 
 const { Menu, MenuItem } = remote;
 
@@ -38,7 +39,7 @@ function openContextMenu(
     dialog: DialogActions,
     ref: string,
     shortRef: string,
-    currentBranch: Maybe<string>
+    currentBranch: Maybe<BranchInfo>
 ) {
     const menu = Menu.buildFromTemplate([
         {
@@ -68,14 +69,24 @@ function openContextMenu(
             click: () => dialog.open({ type: 'interactive-rebase', target: ref }),
         },
     ]);
+
+    console.log('Checkout', currentBranch, ref);
+    if (currentBranch.found && currentBranch.value.head !== ref) {
+        menu.append(
+            new MenuItem({
+                label: `Checkout ${shortRef} as detached HEAD`,
+                click: () => changeBranch(ref),
+            })
+        );
+    }
     if (currentBranch.found) {
         menu.append(
             new MenuItem({
-                label: `Reset ${currentBranch.found && currentBranch.value} to ${shortRef}`,
+                label: `Reset ${currentBranch.found && currentBranch.value.ref} to ${shortRef}`,
                 click: () =>
                     dialog.open({
                         type: 'request-branch-reset',
-                        branch: currentBranch.value,
+                        branch: currentBranch.value.ref,
                         toRef: ref,
                     }),
             })
@@ -147,12 +158,7 @@ export const GraphRenderer: React.FC<
                 key={e.commit.oid}
                 style={props.style}
                 onContextMenu={() =>
-                    openContextMenu(
-                        dialog,
-                        e.commit.oid,
-                        e.commit.short_oid,
-                        map(currentBranch, (branch) => branch.ref)
-                    )
+                    openContextMenu(dialog, e.commit.oid, e.commit.short_oid, currentBranch)
                 }
                 isCurrent={
                     selectedCommit.found && e.commit.oid === selectedCommit.value.commit.oid
