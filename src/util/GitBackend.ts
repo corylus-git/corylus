@@ -490,12 +490,13 @@ export class SimpleGitBackend implements GitBackend {
         return result ?? { ahead: 0, behind: 0 };
     };
 
-    getBranches = async () => {
+    getBranches = async (): Promise<BranchInfo[]> => {
         performance.mark('startBranches');
         const branches = await this._git.branch(['--no-abbrev', '--all']);
         performance.mark('endBranches');
         performance.measure('branches', 'startBranches', 'endBranches');
         const trackedBranches = (await this.getRefsAndUpstreams())?.filter((r) => r.upstream);
+        const isDetached = (await this._git.revparse(['--symbolic-full-name', 'HEAD'])) === 'HEAD';
         const stats: { ref: string; stats: UpstreamInfo }[] = await Promise.all(
             trackedBranches?.map(async (branchInfo) => {
                 const upstream = branches.all.find(
@@ -533,6 +534,7 @@ export class SimpleGitBackend implements GitBackend {
                     trackedBy: trackedBranches?.find(
                         (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch
                     )?.ref,
+                    isDetached: branches?.current === branch && isDetached,
                 } as BranchInfo;
             }) || [];
         return ret;

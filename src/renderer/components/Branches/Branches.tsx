@@ -201,6 +201,9 @@ const BranchNodeDisplay: React.FC<{
                     ({statsParts.join(', ')})
                 </span>
             )}
+            {props.branch.found && props.branch.value.isDetached && (
+                <span style={{ fontSize: '80%', marginLeft: '1rem' }}>[detached HEAD]</span>
+            )}
             {toOptional(props.branch)?.upstream?.upstreamMissing && (
                 <UpstreamMissing>x</UpstreamMissing>
             )}
