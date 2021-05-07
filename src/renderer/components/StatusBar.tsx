@@ -21,6 +21,12 @@ const CurrentBranch = styled.pre`
     font-size: 80%;
 `;
 
+const Detached = styled.span`
+    color: ${(props) => props.theme.colors.notify};
+    font-style: italic;
+    font-weight: bold;
+`;
+
 export const StatusBar: React.FC = () => {
     const progress = useProgress();
     const currentBranch = useCurrentBranch();
@@ -29,6 +35,9 @@ export const StatusBar: React.FC = () => {
     return (
         <StatusBarView>
             <CurrentBranch>
+                {currentBranch.found && currentBranch.value.isDetached && (
+                    <Detached>DETACHED HEAD: </Detached>
+                )}
                 {status.length > 0 && '*'}
                 {currentBranch.found && currentBranch.value.ref}
             </CurrentBranch>

@@ -62,6 +62,10 @@ export interface BranchInfo {
      * For remote branches: which local branch tracks this remote branch?
      */
     trackedBy?: string;
+    /**
+     * true if the branch is a detached HEAD
+     */
+    isDetached?: boolean;
 }
 
 /**
