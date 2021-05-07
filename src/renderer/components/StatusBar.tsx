@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { RunningIndicator } from './util/RunningIndicator';
 import { useProgress } from '../../model/state/progress';
-import { useCurrentBranch } from '../../model/state/repo';
+import { useCurrentBranch, useStatus } from '../../model/state/repo';
 
 const StatusBarView = styled.div`
     border-top: 1px solid ${(props) => props.theme.colors.border};
@@ -24,10 +24,14 @@ const CurrentBranch = styled.pre`
 export const StatusBar: React.FC = () => {
     const progress = useProgress();
     const currentBranch = useCurrentBranch();
+    const status = useStatus();
 
     return (
         <StatusBarView>
-            <CurrentBranch>{currentBranch.found && currentBranch.value.ref}</CurrentBranch>
+            <CurrentBranch>
+                {status.length > 0 && '*'}
+                {currentBranch.found && currentBranch.value.ref}
+            </CurrentBranch>
             <div style={{ marginRight: '0.5rem' }}>{progress.message}</div>
             <RunningIndicator active={progress.animate} />
         </StatusBarView>
