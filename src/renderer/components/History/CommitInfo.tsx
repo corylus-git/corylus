@@ -78,7 +78,7 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                     fontSize: '80%',
                 }}>
                 {props.branches
-                    .filter((b) => b.head === props.commit.oid)
+                    .filter((b) => b.head === props.commit.oid && !b.isDetached)
                     .map((b) => (
                         <BranchDisplay
                             key={`b-${b.remote}-${b.ref}`}

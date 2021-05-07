@@ -70,7 +70,6 @@ function openContextMenu(
         },
     ]);
 
-    console.log('Checkout', currentBranch, ref);
     if (currentBranch.found && currentBranch.value.head !== ref) {
         menu.append(
             new MenuItem({
