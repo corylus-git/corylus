@@ -46,10 +46,11 @@ const StyledCloseIcon = styled(CloseIcon)`
 const Tab: React.FC<{
     active: boolean;
     label: string;
+    title?: string;
     onClick?: (ev: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
     onClose: () => void;
 }> = (props) => (
-    <TabDiv active={!!props.active} onClick={props.onClick}>
+    <TabDiv active={!!props.active} onClick={props.onClick} title={props.title}>
         <span>{props.label}</span>
         <StyledCloseIcon
             viewBox="0 0 24 24"
@@ -94,6 +95,7 @@ export const Tabs: React.FC = () => {
                         label={tab.title}
                         active={false}
                         key={tab.id}
+                        title={(tab.path.found && tab.path.value) || undefined}
                         onClose={() => tabs.closeTab(tab.id)}
                         onClick={() => tabs.switchTab(tab)}
                     />
@@ -103,6 +105,10 @@ export const Tabs: React.FC = () => {
                         label={tabs.active.value.title}
                         active={true}
                         key={tabs.active.value.id}
+                        title={
+                            (tabs.active.value.path.found && tabs.active.value.path.value) ||
+                            undefined
+                        }
                         onClose={() => tabs.closeTab(unsafeDefinitely(tabs.active).id)}
                     />
                 )}
@@ -111,6 +117,7 @@ export const Tabs: React.FC = () => {
                         label={tab.title}
                         active={false}
                         key={tab.id}
+                        title={(tab.path.found && tab.path.value) || undefined}
                         onClose={() => tabs.closeTab(tab.id)}
                         onClick={() => tabs.switchTab(tab)}
                     />
