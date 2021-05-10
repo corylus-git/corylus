@@ -94,6 +94,10 @@ export type RepoState = {
      * The configuration of the repository
      */
     config: IGitConfig;
+    /**
+     * The refs affected by a specific commit.
+     */
+    affected: { branches: string[]; tags: string[]; refs: string[] };
 };
 
 export type RepoActions = {
@@ -141,6 +145,7 @@ export const repoStore = create(
             files: nothing,
             historyLoader: undefined,
             lock: new AsyncLock(),
+            affected: { branches: [], tags: [], refs: [] },
             openRepo: (path: string): Promise<void> => {
                 Logger().debug('openRepo', 'Opening repo', { path });
                 set(
@@ -163,6 +168,7 @@ export const repoStore = create(
                         files: nothing,
                         historyLoader: undefined,
                         lock: new AsyncLock(),
+                        affected: { branches: [], tags: [], refs: [] },
                     }),
                     true
                 );
@@ -316,12 +322,44 @@ export const repoStore = create(
                         commit: commit,
                         stats: commitStats,
                     });
+                    Logger().debug('selectCommit', 'Requesting affected commits', {
+                        commit: commit,
+                    });
+                    const affected = await get().backend.getAffectedRefs(
+                        commit.oid,
+                        true,
+                        true,
+                        false
+                    );
+                    Logger().debug('selectCommit', 'Retrieved affected refs', {
+                        affected: affected,
+                    });
                     set((state) => {
                         state.selectedCommit = just(commitStats);
+                        Logger().debug('selectCommit', 'Setting affected commits', {
+                            affected: affected,
+                        });
+                        state.affected = affected;
                     });
                 } else {
+                    Logger().debug('selectCommit', 'Requesting affected commits', {
+                        commit: (ref as CommitStats).commit.oid,
+                    });
+                    const affected = await get().backend.getAffectedRefs(
+                        (ref as CommitStats).commit.oid,
+                        true,
+                        true,
+                        false
+                    );
+                    Logger().debug('selectCommit', 'Retrieved affected refs', {
+                        affected: affected,
+                    });
                     set((state) => {
                         state.selectedCommit = just(ref as CommitStats);
+                        Logger().debug('selectCommit', 'Setting affected commits', {
+                            affected: affected,
+                        });
+                        state.affected = affected;
                     });
                 }
             },
@@ -421,3 +459,9 @@ export const useSelectedCommit = (): Maybe<CommitStats> =>
  */
 export const useRebaseStatus = (): Maybe<RebaseStatusInfo> =>
     useRepo((state: RepoState & RepoActions) => state.rebaseStatus);
+
+/**
+ * Get the refs affected by the currently selected commit, if any.
+ */
+export const useAffected = (): { branches: string[]; tags: string[]; refs: string[] } =>
+    useRepo((state: RepoState) => state.affected);

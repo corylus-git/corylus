@@ -427,6 +427,22 @@ export interface GitBackend {
      * abort the currently running rebase
      */
     abortRebase(): Promise<void>;
+
+    /**
+     * Get the refs a commit is contained in, i.e. who contain the given ref
+     * in their histories.
+     *
+     * @param ref The ref to look up in the histories of other items
+     * @param branches Get the name of all affected branches
+     * @param tags Get the names of all affected tags
+     * @param commits Get the OIDs of all affected commits
+     */
+    getAffectedRefs(
+        ref: string,
+        branches: boolean,
+        tags: boolean,
+        commits: boolean
+    ): Promise<{ branches: string[]; tags: string[]; refs: string[] }>;
 }
 
 export class SimpleGitBackend implements GitBackend {
@@ -1456,6 +1472,34 @@ export class SimpleGitBackend implements GitBackend {
 
     abortRebase = async (): Promise<void> => {
         await this._git.rebase(['--abort']);
+    };
+
+    getAffectedRefs = async (
+        ref: string,
+        branches: boolean,
+        tags: boolean,
+        commits: boolean
+    ): Promise<{ branches: string[]; tags: string[]; refs: string[] }> => {
+        const refs: { branches: string[]; tags: string[]; refs: string[] } = {
+            branches: [],
+            tags: [],
+            refs: [],
+        };
+        if (branches) {
+            const br = await this._git.raw(['branch', '--contains', ref, '--format=%(refname)']);
+            Logger().silly('getAffectedRefs', 'Raw branches string', { output: br });
+            refs.branches = br.split('\n').map((b) => b.replace('refs/heads/', '')); // we only care about the actual branch name
+        }
+        if (tags) {
+            const tgs = await this._git.raw(['tag', '--contains', ref]);
+            Logger().silly('getAffectedRefs', 'Raw tags string', { output: tgs });
+            refs.tags = tgs.split('\n');
+        }
+        if (commits) {
+            throw new Error('Not implemented yet');
+        }
+        Logger().debug('getAffectedRefs', 'Returning affected refs', { affected: refs });
+        return refs;
     };
 }
 
