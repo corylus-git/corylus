@@ -26,6 +26,7 @@ import { StyledButton } from '../util/StyledButton';
 
 import RemoteIcon from '../icons/Remote.svg';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
+import { Affected } from './Affected';
 
 const { Menu, MenuItem } = remote;
 
@@ -122,23 +123,6 @@ const UpstreamMissing = styled.span`
     width: 0.5rem;
     height: 0.5rem;
     font-size: 0.5rem;
-    z-index: 3;
-`;
-
-const Affected = styled.span`
-    display: inline-block;
-    position: relative;
-    background-color: ${(props) => props.theme.colors.notify};
-    color: ${(props) => props.theme.colors.background};
-    border-radius: 50%;
-    text-align: center;
-    width: 0.75rem;
-    height: 0.75rem;
-    margin-left: 0.5rem;
-    font-size: 0.75rem;
-    font-style: normal;
-    font-weight: bolder;
-    padding-top: 0;
     z-index: 3;
 `;
 
