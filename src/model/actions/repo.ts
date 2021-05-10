@@ -4,7 +4,7 @@ import { Tag, BranchInfo, Stash, IndexStatus, Commit } from '../stateObjects';
 import { Maybe } from '../../util/maybe';
 import { toast } from 'react-toastify';
 import { structuredToast } from '../../util/structuredToast';
-import { MergeSummary } from 'simple-git/promise';
+import { MergeResult } from 'simple-git/promise';
 import { IndexTreeNode } from '../../renderer/components/Index/IndexTree';
 import fs from 'fs';
 import path from 'path';
@@ -112,7 +112,7 @@ export const merge = async (from: string, noFF: boolean): Promise<void> => {
         repoStore.getState().loadHistory();
         repoStore.getState().getStatus();
     } catch (e) {
-        if (e.git && ((e.git as MergeSummary)?.conflicts?.length ?? 0 !== 0)) {
+        if (e.git && ((e.git as MergeResult)?.conflicts?.length ?? 0 !== 0)) {
             toast.error(
                 'Merge failed due to conflicted files. Please review the conflicts and continue or abort the merge',
                 { autoClose: false }
