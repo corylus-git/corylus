@@ -6,7 +6,9 @@ import styled from 'styled-components';
 import { remote } from 'electron';
 import { Tag } from '../../../model/stateObjects';
 import { deleteTag } from '../../../model/actions/repo';
-import { useTags, repoStore } from '../../../model/state/repo';
+import { useTags, repoStore, useAffected } from '../../../model/state/repo';
+import { Affected } from './Affected';
+import MergeIconSmall from '../icons/MergeIconSmall.svg';
 
 const { Menu } = remote;
 
@@ -31,6 +33,7 @@ function openContextMenu(tag: Tag) {
 
 export const TagsList: React.FC = () => {
     const tags = useTags();
+    const affected = useAffected();
     return (
         <Tree
             key="Tags"
@@ -46,7 +49,18 @@ export const TagsList: React.FC = () => {
                 path.length === 0 ? (
                     <TypeHeader>{`${label}${open ? '' : ` (${tags.length})`}`}</TypeHeader>
                 ) : (
-                    <TagDisplay onContextMenu={() => openContextMenu(meta!)}>{label}</TagDisplay>
+                    <TagDisplay onContextMenu={() => openContextMenu(meta!)}>
+                        {label}
+                        {affected.tags.find((a) => a === meta?.name) && (
+                            <Affected title="The tag contains the currently selected commit in its history">
+                                <MergeIconSmall
+                                    viewBox="0 0 24 24"
+                                    width="0.75em"
+                                    height="0.75em"
+                                />
+                            </Affected>
+                        )}
+                    </TagDisplay>
                 )
             }
             onEntryClick={(meta) => {
