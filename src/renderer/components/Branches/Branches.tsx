@@ -14,17 +14,18 @@ import { TypeHeader } from './TypeHeader';
 import { Maybe, map, nothing, toOptional, fromNullable, just } from '../../../util/maybe';
 import { changeBranch, fetchRemote, deleteRemote, pull } from '../../../model/actions/repo';
 import { Logger } from '../../../util/logger';
-import { DialogActions, useDialog, DialogState } from '../../../model/state/dialogs';
+import { DialogActions, useDialog } from '../../../model/state/dialogs';
 import {
     useBranches,
     useCurrentBranch,
-    useRepo,
     repoStore,
     useRemotes,
+    useAffected,
 } from '../../../model/state/repo';
 import { StyledButton } from '../util/StyledButton';
 
 import RemoteIcon from '../icons/Remote.svg';
+import MergeIconSmall from '../icons/MergeIconSmall.svg';
 
 const { Menu, MenuItem } = remote;
 
@@ -124,6 +125,23 @@ const UpstreamMissing = styled.span`
     z-index: 3;
 `;
 
+const Affected = styled.span`
+    display: inline-block;
+    position: relative;
+    background-color: ${(props) => props.theme.colors.notify};
+    color: ${(props) => props.theme.colors.background};
+    border-radius: 50%;
+    text-align: center;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    font-style: normal;
+    font-weight: bolder;
+    padding-top: 0;
+    z-index: 3;
+`;
+
 function doChangeBranch(dialog: DialogActions, branch: BranchInfo | undefined) {
     Logger().debug('doChangeBranch', 'Requested new target branch', { branch });
     if (branch && !branch.remote) {
@@ -146,6 +164,7 @@ const BranchNodeDisplay: React.FC<{
     label: string;
     path: readonly string[];
     branch: Maybe<BranchInfo>;
+    affected: boolean;
 }> = (props) => {
     const dialog = useDialog();
     if (props.path.length === 0) {
@@ -193,6 +212,7 @@ const BranchNodeDisplay: React.FC<{
             <span
                 style={{
                     userSelect: 'text',
+                    cursor: 'pointer',
                 }}>
                 {props.label}
             </span>
@@ -204,8 +224,15 @@ const BranchNodeDisplay: React.FC<{
             {props.branch.found && props.branch.value.isDetached && (
                 <span style={{ fontSize: '80%', marginLeft: '1rem' }}>[detached HEAD]</span>
             )}
+            {props.affected && (
+                <Affected title="The branch contains the currently selected commit in its history">
+                    <MergeIconSmall viewBox="0 0 24 24" width="0.75em" height="0.75em" />
+                </Affected>
+            )}
             {toOptional(props.branch)?.upstream?.upstreamMissing && (
-                <UpstreamMissing>x</UpstreamMissing>
+                <UpstreamMissing title="Configured upstream branch no longer available">
+                    x
+                </UpstreamMissing>
             )}
         </Branch>
     );
@@ -248,6 +275,7 @@ const RemoteNameDisplay: React.FC<{ remote: RemoteMeta }> = (props) => {
 function BranchTree(props: {
     root: TreeNode<BranchInfo | RemoteMeta>;
     currentBranch: Maybe<BranchInfo>;
+    affected: string[];
 }) {
     const dialog = useDialog();
 
@@ -266,6 +294,13 @@ function BranchTree(props: {
                             branch={fromNullable(
                                 (branch as BranchInfo)?.ref ? (branch as BranchInfo) : undefined
                             )}
+                            affected={
+                                props.affected.find(
+                                    (a) =>
+                                        !(branch as BranchInfo)?.remote &&
+                                        a === (branch as BranchInfo)?.ref
+                                ) !== undefined
+                            }
                         />
                     );
                 }
@@ -367,6 +402,8 @@ export const Branches: React.FC = () => {
     const branches = useBranches();
     const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
+    const affected = useAffected();
+    console.log('Affected', affected);
     const branchTree = React.useMemo(
         () =>
             currentBranch !== undefined &&
@@ -381,7 +418,13 @@ export const Branches: React.FC = () => {
 
     return (
         <>
-            {branchTree && <BranchTree root={branchTree} currentBranch={currentBranch} />}
+            {branchTree && (
+                <BranchTree
+                    root={branchTree}
+                    currentBranch={currentBranch}
+                    affected={affected.branches}
+                />
+            )}
             <TagsList />
             <Stashes />
         </>
