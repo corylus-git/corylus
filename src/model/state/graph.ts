@@ -9,7 +9,7 @@ export type GraphActions = {
     reset: () => void;
 };
 
-export const graph = create<GraphLayoutData & GraphActions>((set, get) => ({
+export const graph = create<GraphLayoutData & GraphActions>((set, _) => ({
     lines: [],
     rails: [],
     calculateGraph: (orderedHistory: readonly Commit[]): void => {
