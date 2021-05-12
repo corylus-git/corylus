@@ -928,9 +928,8 @@ export class SimpleGitBackend implements GitBackend {
             opts.push('--set-upstream');
             branch = `${branch}:${options.upstream}`;
         }
-        const id = nanoid();
         try {
-            Logger().silly('SimpleGitBackend', 'Push with options', {
+            Logger().debug('SimpleGitBackend', 'Push with options', {
                 options: opts,
                 remote: options?.remote,
                 branch: branch,

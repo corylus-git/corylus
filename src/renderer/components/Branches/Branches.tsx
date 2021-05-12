@@ -12,7 +12,7 @@ import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
 import { TypeHeader } from './TypeHeader';
 import { Maybe, map, nothing, toOptional, fromNullable, just } from '../../../util/maybe';
-import { changeBranch, fetchRemote, deleteRemote, pull } from '../../../model/actions/repo';
+import { changeBranch, fetchRemote, deleteRemote, pull, push } from '../../../model/actions/repo';
 import { Logger } from '../../../util/logger';
 import { DialogActions, useDialog } from '../../../model/state/dialogs';
 import {
@@ -85,6 +85,20 @@ function openContextMenu(
                                 false
                             );
                         }
+                    },
+                })
+            );
+        }
+        if ((branch.value.upstream?.ahead ?? 0) > 0) {
+            menu.append(
+                new MenuItem({
+                    label: `Push ${branch.value.ref} to remote tracking branch`,
+                    click: () => {
+                        push(
+                            branch.value.ref,
+                            branch.value.upstream!.remoteName,
+                            branch.value.upstream!.ref
+                        );
                     },
                 })
             );
