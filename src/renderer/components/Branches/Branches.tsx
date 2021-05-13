@@ -27,6 +27,7 @@ import { StyledButton } from '../util/StyledButton';
 import RemoteIcon from '../icons/Remote.svg';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
 import { Affected } from './Affected';
+import { useTheme } from '../../../model/state/theme';
 
 const { Menu, MenuItem } = remote;
 
@@ -165,6 +166,7 @@ const BranchNodeDisplay: React.FC<{
     affected: boolean;
 }> = (props) => {
     const dialog = useDialog();
+    const theme = useTheme();
     if (props.path.length === 0) {
         return <TypeHeader>Branches</TypeHeader>;
     }
@@ -224,7 +226,12 @@ const BranchNodeDisplay: React.FC<{
             )}
             {props.affected && (
                 <Affected title="The branch contains the currently selected commit in its history">
-                    <MergeIconSmall viewBox="0 0 24 24" width="0.75em" height="0.75em" />
+                    <MergeIconSmall
+                        viewBox="0 0 24 24"
+                        width="0.75em"
+                        height="0.75em"
+                        fill={theme.current.colors.background}
+                    />
                 </Affected>
             )}
             {toOptional(props.branch)?.upstream?.upstreamMissing && (
