@@ -761,7 +761,6 @@ export class SimpleGitBackend implements GitBackend {
                 '--name-status',
                 `${commit.oid}^..${commit.oid}`,
             ]);
-            console.log(incomingResult);
             incoming = just(parseFileStatus(incomingResult, `${commit.oid}^`));
             const incomingNumStat = await this._git.raw([
                 'diff',
@@ -772,7 +771,6 @@ export class SimpleGitBackend implements GitBackend {
             ]);
             Logger().debug('SimpleGitBackend', 'Received raw log', { log: incomingNumStat });
             mergeNumStats(incomingNumStat, incoming.value);
-            console.log(incoming);
         }
         return {
             commit: commit,
@@ -799,7 +797,6 @@ export class SimpleGitBackend implements GitBackend {
             if (options.path) {
                 command = command.concat(['--', options.path]);
             }
-            console.log(command);
             return this._git.raw(command) ?? Promise.resolve('');
         }
         let diffoptions = [] as string[];
@@ -1151,7 +1148,6 @@ export class SimpleGitBackend implements GitBackend {
         });
         return (
             stashList?.map((entry) => {
-                console.log('Stash-Entry', entry);
                 const longParents = entry[6].split(/\s+/);
                 const shortParents = entry[7].split(/\s+/);
                 return {
@@ -1340,7 +1336,6 @@ export class SimpleGitBackend implements GitBackend {
 
     private transformConfig = (input: ConfigValues): IEffectiveConfig => {
         const ret: IEffectiveConfig = {};
-        console.log(input);
         if (input['user.name'] || input['user.email']) {
             ret.user = {
                 name: input['user.name'] as string,

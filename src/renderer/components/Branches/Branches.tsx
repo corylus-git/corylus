@@ -408,7 +408,6 @@ export const Branches: React.FC = () => {
     const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
     const affected = useAffected();
-    console.log('Affected', affected);
     const branchTree = React.useMemo(
         () =>
             currentBranch !== undefined &&

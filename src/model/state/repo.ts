@@ -189,7 +189,6 @@ export const repoStore = create(
                 await Promise.all(loaders);
                 performance.mark('loadersEnd');
                 performance.measure('loaders', 'loadersStart', 'loadersEnd');
-                console.log(performance.getEntriesByType('measure'));
             },
             loadHistory: async (skip?: number, limit?: number): Promise<void> => {
                 Logger().debug('loadHistory', 'Getting total history size');

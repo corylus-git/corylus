@@ -141,7 +141,6 @@ export const stagingArea = create(
             },
             toggleBlock: (side: 'ours' | 'theirs', index: number): void => {
                 set((state) => {
-                    console.log('setting toggle block state', state.manualMerge);
                     if (state.manualMerge.found) {
                         Logger().debug('toggleBlock', 'Toggling conflict block selection', {
                             side,
@@ -191,7 +190,3 @@ async function loadConflict(path: string): Promise<IConflictedFile> {
 }
 
 export const useStagingArea = createHook(stagingArea);
-
-const subscriber = stagingArea.subscribe((s) => {
-    console.log('State changed', s);
-});

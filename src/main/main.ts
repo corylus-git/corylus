@@ -51,7 +51,6 @@ function createMainMenu() {
 }
 
 async function saveLogFile(ev: IpcMainEvent, ...args: any[]) {
-    console.log('Requested log file save');
     const result = await dialog.showSaveDialog(win!, {
         title: 'Save log buffer to file',
         defaultPath: `corylus-${new Date().toISOString().replace(/[^0-9-Z]/g, '-')}.json`,
