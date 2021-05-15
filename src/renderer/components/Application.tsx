@@ -51,11 +51,9 @@ const Application = () => {
         });
     }, []);
     React.useEffect(() => {
-        document.documentElement.style.setProperty(
-            '--lightness',
-            theme.current.name === 'Dark Green' ? '12%' : '94%'
-        );
-    }, [theme.current.name]);
+        document.documentElement.style.setProperty('--hue', theme.current.hue.toString());
+        document.documentElement.style.setProperty('--lightness', theme.current.lightness);
+    }, [theme.current]);
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme.current}>
