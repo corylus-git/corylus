@@ -2,7 +2,49 @@
     --hue: 120;
     --lightness: 12%;
 
+    /* the different interface colors */
+    --background: hsl(var(--hue), 0%, var(--lightness));
+    --foreground-value: var(--hue), 100%, calc(100% - var(--lightness)); /* need the value for calculations down below */
+    --foreground: hsl(var(--foreground-value));
+    --highlight: hsla(var(--foreground-value), 20%);
+    --selected: hsla(var(--foreground-value), 40%);
+    --border: var(--selected);
+    --input: hsl(var(--hue), 0%, calc(var(--lightness) - 5%));
+    --conflict: #ffcc00;
+    --conflict-text: #101010;
+    --code: hsl(var(--hue), 0%, calc(100% - var(lightness)));
+    --notify: hsl(calc(var(--hue) - 90), 100%, 46%);
 }
+
+/* The diff classes */
+.diff-inserted {
+    background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.3));
+}
+
+.diff-deleted {
+    background-color: hsl(0, 68%, calc(50% + (var(--lightness) - 50%) / 1.2));
+}
+
+.diff-context {
+    background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) * 1.2));
+}
+
+.pseudo-context {
+    color: var(--border);
+}
+
+.diff-inserted.selected {
+    background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.7));
+}
+
+.diff-deleted.selected {
+    background-color: hsl(0, 68%, calc(50% + (var(--lightness) - 50%) / 1.6));
+}
+
+.diff-context.selected {
+    background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) / 1.2));
+}
+
 body {
     margin: 0;
     padding: 0;

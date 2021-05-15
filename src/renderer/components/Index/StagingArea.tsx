@@ -11,7 +11,7 @@ const StagingHeaders = styled.h1`
     margin-left: 0.1rem;
     margin-right: 0.1rem;
     height: 1.5rem;
-    border-bottom: 1px solid ${(props) => props.theme.colors.border};
+    border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: row;
     padding-top: 0.3rem;

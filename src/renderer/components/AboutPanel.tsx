@@ -3,13 +3,8 @@ import React from 'react';
 import { StyledDialog } from './util/StyledDialog';
 import { remote } from 'electron';
 import { StyledButton } from './util/StyledButton';
-import styled from 'styled-components';
 
 const { app } = remote;
-
-const AboutLink = styled.a`
-    color: ${(props) => props.theme.colors.foreground};
-`;
 
 export const AboutPanel: React.FC<{ open: boolean; onClose: () => void }> = (props) => {
     return props.open ? (
@@ -18,7 +13,10 @@ export const AboutPanel: React.FC<{ open: boolean; onClose: () => void }> = (pro
                 <h1>Corylus {app.getVersion()}</h1>
                 <p>
                     Copyright © 2020-present Markus Brückner &lt;
-                    <AboutLink href="mailto:corylus@corylus.dev">corylus@corylus.dev</AboutLink>&gt;
+                    <a href="mailto:corylus@corylus.dev" style={{ color: 'var(--foreground)' }}>
+                        corylus@corylus.dev
+                    </a>
+                    &gt;
                 </p>
                 <pre>
                     This program is free software: you can redistribute it and/or modify it under

@@ -5,8 +5,8 @@ import { abortMerge } from '../../../model/actions/repo';
 import { usePendingCommit } from '../../../model/state/repo';
 
 const MergeStatusBarContainer = styled.div`
-    background: ${(props) => props.theme.colors.conflict};
-    color: ${(props) => props.theme.colors.conflictText};
+    background: var(--conflict);
+    color: var(--conflict-text);
     padding: 0.5rem;
     display: flex;
     flex-direction: row;

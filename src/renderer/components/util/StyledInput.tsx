@@ -1,10 +1,10 @@
 import styled from 'styled-components';
 
 export const StyledInput = styled.input`
-    border: 1px solid ${props => props.theme.colors.border};
-    background-color: ${props => props.theme.colors.input};
-    color: ${props => props.theme.colors.foreground};
+    border: 1px solid var(--border);
+    background-color: var(--input);
+    color: var(--foreground);
     ::placeholder {
-        color: ${props => props.theme.colors.border};
+        color: var(--border);
     }
 `;

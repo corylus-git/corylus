@@ -23,8 +23,8 @@ import { useTheme } from '../../model/state/theme';
 const ApplicationView = styled.div`
     height: 100%;
     width: 100%;
-    background-color: ${(props) => props.theme.colors.background};
-    color: ${(props) => props.theme.colors.foreground};
+    background-color: var(--background);
+    color: var(--foreground);
 `;
 
 const Application = () => {
@@ -50,6 +50,12 @@ const Application = () => {
             setShowAbout(true);
         });
     }, []);
+    React.useEffect(() => {
+        document.documentElement.style.setProperty(
+            '--lightness',
+            theme.current.name === 'Dark Green' ? '12%' : '94%'
+        );
+    }, [theme.current.name]);
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme.current}>

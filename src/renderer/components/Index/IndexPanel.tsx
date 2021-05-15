@@ -89,8 +89,8 @@ export const IndexPanel: React.FC = () => {
 };
 
 const CommitMessage = styled.textarea`
-    background-color: ${(props) => props.theme.colors.input};
-    color: ${(props) => props.theme.colors.foreground};
+    background-color: var(--input);
+    color: var(--foreground);
     width: 100%;
     :first-line {
         font-weight: bold;

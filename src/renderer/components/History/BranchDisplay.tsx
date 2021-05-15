@@ -7,7 +7,7 @@ const BranchName = styled.span`
     display: inline-block;
     padding-left: 2px;
     padding-right: 2px;
-    color: ${(props) => props.theme.colors.background};
+    color: var(--background);
     border-radius: 2px;
     margin-right: 0.5rem;
     height: 0.9rem;

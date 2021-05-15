@@ -19,7 +19,7 @@ const HistoryContainer = styled.div`
     grid-template-rows: 1fr 3rem;
     justify-items: center;
     z-index: 100;
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: var(--background);
     > .button {
         padding: 0.25rem;
         > button {

@@ -11,7 +11,7 @@ import { useStashes, repoStore } from '../../../model/state/repo';
 const { Menu, MenuItem } = remote;
 
 const StashDisplay = styled(HoverableDiv)`
-    border-bottom: 1px dotted ${(props) => props.theme.colors.border};
+    border-bottom: 1px dotted var(--border);
     padding-left: 0.5rem;
 `;
 

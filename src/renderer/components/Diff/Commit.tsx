@@ -41,7 +41,7 @@ function ChangesBar(props: { additions: number; deletions: number }) {
 }
 
 const CommitHeaderFrame = styled.div`
-    border-bottom: 1px dotted ${(props) => props.theme.colors.foreground};
+    border-bottom: 1px dotted var(--foreground);
     padding: 0.5rem;
     padding-bottom: 0;
     margin-bottom: 0.5rem;

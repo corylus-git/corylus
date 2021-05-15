@@ -20,7 +20,7 @@ const ConfigureGitFlowView = styled(StyledDialog)`
     }
 
     h2 {
-        border-bottom: 1px solid ${(props) => props.theme.colors.border};
+        border-bottom: 1px solid var(--border);
         font-size: 1.1rem;
     }
 
