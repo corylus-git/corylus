@@ -1,3 +1,8 @@
+:root {
+    --hue: 120;
+    --lightness: 12%;
+
+}
 body {
     margin: 0;
     padding: 0;

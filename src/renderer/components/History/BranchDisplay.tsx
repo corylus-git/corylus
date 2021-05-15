@@ -14,12 +14,12 @@ const BranchName = styled.span`
 `;
 
 export const BranchDisplay: React.FC<{ branch: BranchInfo; rail: number }> = (props) => {
-    const theme = useTheme();
     return (
         <BranchName
             style={{
-                backgroundColor:
-                    theme.colors.graph.borders[props.rail % theme.colors.graph.borders.length],
+                backgroundColor: `hsl(${
+                    props.rail * 100
+                }, 100%, calc(50% - (var(--lightness) - 50%) / 2))`,
             }}>
             {props.branch.remote ? `${props.branch.remote}/${props.branch.ref}` : props.branch.ref}
         </BranchName>

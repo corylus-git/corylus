@@ -1,6 +1,5 @@
 import React from 'react';
 import { x, BranchMergeLine, Rail, lineWidth, nodeRadius } from './RailLine';
-import { useTheme } from 'styled-components';
 
 export const GraphNode: React.FC<{
     rail: number;
@@ -10,7 +9,6 @@ export const GraphNode: React.FC<{
     incoming: readonly number[];
     rails: readonly Rail[];
 }> = (props) => {
-    const theme = useTheme();
     return (
         <svg viewBox={`0 0 ${x(props.rails.length + 1)} 50`} height="3rem">
             {!!props.outgoing && (
@@ -26,16 +24,16 @@ export const GraphNode: React.FC<{
             ))}
             <path
                 d={`M ${x(props.rail)} ${props.hasParent ? 50 : 25} V ${props.hasChild ? 0 : 25}`}
-                stroke={theme.colors.graph.borders[props.rail % theme.colors.graph.borders.length]}
+                stroke={`hsl(${props.rail * 100}, 100%, calc(50% - (var(--lightness) - 50%) / 2))`}
                 strokeWidth={lineWidth}
             />
             <circle
                 cx={x(props.rail)}
                 cy={25}
                 r={nodeRadius}
-                fill={theme.colors.graph.colors[props.rail % theme.colors.graph.colors.length]}
+                stroke={`hsl(${props.rail * 100}, 100%, calc(50% - (var(--lightness) - 50%) / 2))`}
+                fill={`hsl(${props.rail * 100}, 100%, calc(50% + (var(--lightness) - 50%) / 3))`}
                 strokeWidth={1}
-                stroke={theme.colors.graph.borders[props.rail % theme.colors.graph.borders.length]}
             />
             {props.rails.reduce((lines, r, index) => {
                 if (r !== undefined && index !== props.rail && index !== props.outgoing) {
@@ -44,11 +42,9 @@ export const GraphNode: React.FC<{
                         <path
                             key={`line-${index}`}
                             d={`M ${x(index)} 0 v 50`}
-                            stroke={
-                                theme.colors.graph.borders[
-                                    index % theme.colors.graph.borders.length
-                                ]
-                            }
+                            stroke={`hsl(${
+                                index * 100
+                            }, 100%, calc(50% - (var(--lightness) - 50%) / 2))`}
                             strokeWidth={lineWidth}
                         />,
                     ];
