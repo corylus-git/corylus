@@ -14,7 +14,7 @@ const TabContainer = styled.div`
 
 const TabHeader = styled.nav`
     display: flex;
-    border-bottom: 1px solid ${(props) => props.theme.colors.border};
+    border-bottom: 1px solid var(--border);
 `;
 
 const TabPanel = styled.div`
@@ -26,12 +26,12 @@ const TabDiv = styled.div<{ active: boolean } & ComponentProps<'div'>>`
     max-width: 15rem;
     margin-left: -1px; // collapse the border with the neighboring div
     padding-left: 0.5rem;
-    border-left: 1px solid ${(props) => props.theme.colors.border};
-    border-right: 1px solid ${(props) => props.theme.colors.border};
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
     border-collapse: collapse;
-    background-color: ${(props) => (props.active ? props.theme.colors.selected : undefined)};
+    background-color: ${(props) => (props.active ? 'var(--selected)' : undefined)};
     :hover {
-        background-color: ${(props) => props.theme.colors.highlight};
+        background-color: var(--highlight);
     }
     display: grid;
     grid-template-columns: 1fr 1.1rem;
@@ -70,8 +70,8 @@ const TabContent = styled.div`
 
 const AddButton = styled.div`
     margin-left: -1px; // collapse the border with the neighboring div
-    border-left: solid 1px ${(props) => props.theme.colors.border};
-    border-right: solid 1px ${(props) => props.theme.colors.border};
+    border-left: solid 1px var(--border);
+    border-right: solid 1px var(--border);
     width: 2rem;
     padding: 0;
     font-size: 150%;

@@ -2,7 +2,7 @@ import styled, { css } from 'styled-components';
 
 export const Hoverable = css`
     :hover {
-        background-color: ${(props) => props.theme.colors.highlight};
+        background-color: var(--highlight);
     }
 `;
 

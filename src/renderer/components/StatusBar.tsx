@@ -5,7 +5,7 @@ import { useProgress } from '../../model/state/progress';
 import { useCurrentBranch, useStatus } from '../../model/state/repo';
 
 const StatusBarView = styled.div`
-    border-top: 1px solid ${(props) => props.theme.colors.border};
+    border-top: 1px solid var(--border);
     text-align: right;
     padding-top: 2px;
     padding-right: 1rem;
@@ -22,7 +22,7 @@ const CurrentBranch = styled.pre`
 `;
 
 const Detached = styled.span`
-    color: ${(props) => props.theme.colors.notify};
+    color: var(--notify);
     font-style: italic;
     font-weight: bold;
 `;

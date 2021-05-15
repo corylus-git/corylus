@@ -20,7 +20,7 @@ const ManualMergeViewContainer = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: var(--background);
     display: grid;
     grid-template-rows: 1fr 2rem;
 `;
@@ -31,7 +31,7 @@ const ButtonContainer = styled.div`
     grid-column-gap: 1rem;
     align-items: center;
     justify-items: right;
-    border-top: 1px solid ${(props) => props.theme.colors.border};
+    border-top: 1px solid var(--border);
     padding-right: 1rem;
 `;
 

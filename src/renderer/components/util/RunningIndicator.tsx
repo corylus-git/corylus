@@ -11,7 +11,7 @@ const RunningIndicatorContainer = styled.div<{ factor: number }>`
 `;
 
 const Dot = styled(motion.div)<{ factor: number }>`
-    background-color: ${(props) => props.theme.colors.selected};
+    background-color: var(--selected);
     width: ${(props) => props.factor * 5}px;
     height: ${(props) => props.factor * 5}px;
     border-radius: 50%;

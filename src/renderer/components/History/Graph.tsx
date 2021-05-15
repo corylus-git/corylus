@@ -32,7 +32,7 @@ const CommitMessage = styled.div`
 const CommitEntry = styled(HoverableDiv)<{ isCurrent?: boolean }>`
     display: flex;
     min-height: 3rem;
-    background-color: ${(props) => (props.isCurrent ? props.theme.colors.selected : undefined)};
+    background-color: ${(props) => (props.isCurrent ? 'var(--selected)' : undefined)};
 `;
 
 function openContextMenu(

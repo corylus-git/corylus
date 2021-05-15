@@ -4,33 +4,11 @@ import { DiffLine, DiffChunk, FileDiff, parse } from '../../../util/diff-parser'
 import { Logger } from '../../../util/logger';
 import { Maybe, nothing, just } from '../../../util/maybe';
 
-const DiffLineDisplay = styled.div<{ selected: boolean }>`
+const DiffLineDisplay = styled.div`
     font-family: Fira Code;
     font-size: 90%;
     white-space: pre;
     padding-left: 0.5rem;
-    background-color: ${(props) =>
-        props.selected
-            ? props.theme.colors.diff.selected.context
-            : props.theme.colors.diff.default.context};
-`;
-
-const InsertedLine = styled(DiffLineDisplay)<{ selected: boolean }>`
-    background-color: ${(props) =>
-        props.selected
-            ? props.theme.colors.diff.selected.inserted
-            : props.theme.colors.diff.default.inserted};
-`;
-
-const DeletedLine = styled(DiffLineDisplay)<{ selected: boolean }>`
-    background-color: ${(props) =>
-        props.selected
-            ? props.theme.colors.diff.selected.deleted
-            : props.theme.colors.diff.default.deleted};
-`;
-
-const PseudoContextLine = styled(DiffLineDisplay)<{ selected: boolean }>`
-    color: ${(props) => props.theme.colors.border};
 `;
 
 type MouseLineEventHandler = (
@@ -40,21 +18,24 @@ type MouseLineEventHandler = (
 ) => void;
 
 export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
-    let Line = DiffLineDisplay;
+    let className = 'diff-context';
     switch (props.line.type) {
         case 'insert':
-            Line = InsertedLine;
+            className = 'diff-inserted';
             break;
         case 'delete':
-            Line = DeletedLine;
+            className = 'diff-deleted';
             break;
         case 'pseudo-context':
-            Line = PseudoContextLine;
+            className = 'pseudo-context';
             break;
     }
+    if (props.selected) {
+        className += ' selected';
+    }
     return (
-        <Line
-            selected={!!props.selected}
+        <DiffLineDisplay
+            className={className}
             onMouseDown={(ev) =>
                 props.onLineMouseDown?.(ev, props.parentChunkIndex, props.lineIndex)
             }
@@ -68,7 +49,7 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
                 )}
             </span>
             <span>{props.line.content}</span>
-        </Line>
+        </DiffLineDisplay>
     );
 };
 

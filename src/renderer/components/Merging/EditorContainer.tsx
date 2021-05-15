@@ -49,24 +49,20 @@ function calculateOutput(blocks: readonly IConflictBlock[]): readonly IMergedLin
 
 const ConflictContainer = styled.div`
     .glyph-conflict {
-        background-color: ${(props) => props.theme.colors.diff.conflict.conflict}40;
+        background-color: rgba(var(--diff-conflict-value), 64);
         ::before {
             content: '🗲';
         }
     }
     .line-conflict {
-        background-color: ${(props) => props.theme.colors.diff.conflict.conflict}40;
+        background-color: rgba(var(--diff-conflict-value), 64);
     }
     .glyph-ours {
-        background-color: ${(props) => props.theme.colors.diff.conflict.ours}40;
-        border: 1px solid ${(props) => props.theme.colors.diff.conflict.ours};
         ::before {
             content: 'A';
         }
     }
     .glyph-theirs {
-        background-color: ${(props) => props.theme.colors.diff.conflict.theirs}40;
-        border: 1px solid ${(props) => props.theme.colors.diff.conflict.theirs};
         ::before {
             content: 'B';
         }
@@ -100,14 +96,14 @@ function calculateDecorations(
                 options: {
                     isWholeLine: true,
                     className: `line-${l.source}`,
-                    glyphMarginClassName: `glyph-${l.source}`,
+                    glyphMarginClassName: `glyph-${l.source} diff-conflict-${l.source}`,
                     overviewRuler: {
                         color:
                             l.source === 'conflict'
-                                ? theme.colors.diff.conflict.conflict
+                                ? 'rgb(var(--diff-conflict-value))'
                                 : l.source === 'ours'
-                                ? theme.colors.diff.conflict.ours
-                                : theme.colors.diff.conflict.theirs,
+                                ? 'rgb(var(--diff-conflict-ours-value))'
+                                : 'rgb(var(--diff-conflict-theirs-value))',
                         position: monaco.editor.OverviewRulerLane.Full,
                     },
                 },

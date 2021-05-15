@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import React from 'react';
 
 const ConfigSectionContainer = styled.div`
-    border: 1px solid ${(props) => props.theme.colors.border};
+    border: 1px solid var(--border);
     margin: 0.5rem;
     margin-top: 1rem;
     position: relative;
@@ -14,7 +14,7 @@ const ConfigSectionContainer = styled.div`
 `;
 
 const ConfigSectionTitle = styled.span`
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: var(--background);
     display: inline-block;
     padding: 0 0.5rem;
     position: absolute;

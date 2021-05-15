@@ -27,9 +27,7 @@ export const BranchMergeLine: React.FC<{
     return (
         <path
             d={`M ${start.x},${start.y} Q ${start.x},${end.y} ${end.x},${end.y}`}
-            stroke={
-                theme.colors.graph.borders[props.sourceRail % theme.colors.graph.borders.length]
-            }
+            stroke={`hsl(${props.sourceRail * 100}, 100%, calc(50% - (var(--lightness) - 50%) / 2)`}
             strokeWidth={lineWidth}
             fill="transparent"
         />

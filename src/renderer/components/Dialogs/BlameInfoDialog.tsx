@@ -24,7 +24,7 @@ const BlameDialogContainer = styled(StyledDialog)`
 `;
 
 const BlockInfo = styled.div<{ lines: number }>`
-    border-top: 1px dashed ${(props) => props.theme.colors.border};
+    border-top: 1px dashed var(--border);
     font-size: 0.8rem;
     height: ${(props) => props.lines * 19 - 1}px;
     overflow: hidden;

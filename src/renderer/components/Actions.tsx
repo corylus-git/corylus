@@ -30,22 +30,21 @@ const ActionButton = styled.button<{ active?: boolean } & React.HTMLProps<HTMLBu
     border: 0;
     padding: 0;
     box-sizing: border-box;
-    background-color: ${(props) =>
-        props.active ? props.theme.colors.highlight : props.theme.colors.background};
+    background-color: ${(props) => (props.active ? 'var(--highlight)' : 'var(--background)')};
     position: relative;
-    color: ${(props) => props.theme.colors.foreground};
+    color: var(--foreground);
     :focus {
-        border: 1px solid ${(props) => props.theme.colors.foreground};
+        border: 1px solid var(--foreground);
         outline: none;
     }
 `;
 
 const ProgressDisplay = styled.div`
     position: absolute;
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: var(--background);
     width: 40rem;
     min-height: 5rem;
-    border: 1px solid ${(props) => props.theme.colors.highlight};
+    border: 1px solid var(--highlight);
     z-index: 100;
     bottom: 1rem;
     right: 1rem;
@@ -74,7 +73,7 @@ function RouteAction(props: {
 }
 
 const ActionsContainer = styled.div`
-    border-right: 1px solid ${(props) => props.theme.colors.border};
+    border-right: 1px solid var(--border);
     display: grid;
     grid-template-rows: repeat(10, fit-content(3rem)) 1fr fit-content(3rem);
 `;
@@ -89,8 +88,8 @@ const WorkflowButton = styled.button`
     right: 0.3rem;
     width: 1rem;
     height: 1rem;
-    color: ${(props) => props.theme.colors.foreground};
-    background-color: ${(props) => props.theme.colors.background};
+    color: var(--foreground);
+    background-color: var(--background);
     border: 0;
 `;
 
@@ -100,8 +99,8 @@ const ModificationIcon = styled.div`
     bottom: 0.1rem;
     right: 0.3rem;
     min-width: 1rem;
-    background-color: ${(props) => props.theme.colors.notify};
-    color: ${(props) => props.theme.colors.background};
+    background-color: var(--notify);
+    color: var(--background);
     border-radius: 0.5rem;
     text-align: center;
     padding-top: 0.05rem;

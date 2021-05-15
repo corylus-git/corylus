@@ -19,8 +19,8 @@ const CreateTagDialogView = styled(StyledDialog)`
         margin-bottom: 0;
     }
     textarea {
-        background-color: ${(props) => props.theme.colors.input};
-        color: ${(props) => props.theme.colors.foreground};
+        background-color: var(--input);
+        color: var(--foreground);
     }
 `;
 

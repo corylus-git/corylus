@@ -22,27 +22,17 @@ const ConflictView = styled.div`
     overflow: hidden;
 
     .emptyLine {
-        border-top: 0.1rem solid ${(props) => props.theme.colors.background};
-        border-bottom: 0.1rem solid ${(props) => props.theme.colors.background};
+        border-top: 0.1rem solid var(--background);
+        border-bottom: 0.1rem solid var(--background);
         height: 1.2rem;
         box-sizing: border-box;
         background: repeating-linear-gradient(
             45deg,
-            ${(props) => props.theme.colors.highlight} 0px,
-            ${(props) => props.theme.colors.highlight} 1px,
-            ${(props) => props.theme.colors.background} 2px,
-            ${(props) => props.theme.colors.background} 7px
+            var(--highlight) 0px,
+            var(--highlight) 1px,
+            var(--background) 2px,
+            var(--background) 7px
         );
-    }
-
-    .oursConflict {
-        border: 0.5px solid ${(props) => props.theme.colors.diff.conflict.ours};
-        background-color: ${(props) => props.theme.colors.diff.conflict.ours}40;
-    }
-
-    .theirsConflict {
-        border: 0.5px solid ${(props) => props.theme.colors.diff.conflict.theirs};
-        background-color: ${(props) => props.theme.colors.diff.conflict.theirs}40;
     }
 `;
 
@@ -50,12 +40,10 @@ const SideSelector = styled.button<{ selected?: boolean; lines: number; height: 
     ${Hoverable}
     width: 2rem;
     padding: 0;
-    border: 1px solid ${(props) => props.theme.colors.border};
+    border: 1px solid var(--border);
     text-align: center;
-    background-color: ${(props) =>
-        props.selected ? props.theme.colors.foreground : props.theme.colors.background};
-    color: ${(props) =>
-        props.selected ? props.theme.colors.background : props.theme.colors.foreground};
+    background-color: ${(props) => (props.selected ? 'var(--foreground)' : 'var(--background)')};
+    color: ${(props) => (props.selected ? 'var(--background)' : 'var(--foreground)')};
     font-size: 80%;
     box-sizing: border-box;
     margin: 0;
@@ -68,7 +56,7 @@ const SideSelector = styled.button<{ selected?: boolean; lines: number; height: 
 const CodeHeader = styled.h1`
     font-size: 1.3rem;
     text-align: center;
-    border-bottom: 1px solid ${(props) => props.theme.colors.border};
+    border-bottom: 1px var(--border);
     position: sticky;
 `;
 
@@ -78,10 +66,10 @@ const AuxillaryColumn = styled.div`
 `;
 
 const AuxillaryLeftColumn = styled(AuxillaryColumn)`
-    border-left: 1px dotted ${(props) => props.theme.colors.border};
+    border-left: 1px dotted var(--border);
 `;
 const AuxillaryRightColumn = styled(AuxillaryColumn)`
-    border-right: 1px dotted ${(props) => props.theme.colors.border};
+    border-right: 1px dotted var(--border);
 `;
 
 function mapLines(
@@ -167,7 +155,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                     );
                     editor.deltaDecorations(
                         [],
-                        calculateDecorations(lines, (l) => l.ours, 'oursConflict')
+                        calculateDecorations(lines, (l) => l.ours, 'diff-conflict-ours')
                     );
                 }}
             />
@@ -261,7 +249,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                     );
                     editor.deltaDecorations(
                         [],
-                        calculateDecorations(lines, (l) => l.theirs, 'theirsConflict')
+                        calculateDecorations(lines, (l) => l.theirs, 'diff-conflict-theirs')
                     );
                 }}
             />

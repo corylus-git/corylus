@@ -27,7 +27,7 @@ const VSep = styled.div`
 const SplitterBar = styled.div`
     height: 100%;
     width: 100%;
-    background-color: ${(props) => props.theme.colors.border};
+    background-color: var(--border);
 `;
 
 /**

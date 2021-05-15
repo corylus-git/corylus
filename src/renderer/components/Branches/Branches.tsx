@@ -131,8 +131,8 @@ const UpstreamMissing = styled.span`
     position: absolute;
     left: 0;
     bottom: 0.15rem;
-    background-color: ${(props) => props.theme.colors.conflict};
-    color: ${(props) => props.theme.colors.conflictText};
+    background-color: var(--conflict);
+    color: var(--conflict-text);
     border-radius: 50%;
     text-align: center;
     width: 0.5rem;
@@ -230,7 +230,7 @@ const BranchNodeDisplay: React.FC<{
                         viewBox="0 0 24 24"
                         width="0.75em"
                         height="0.75em"
-                        fill={theme.current.colors.background}
+                        fill="var(--background)"
                     />
                 </Affected>
             )}
@@ -325,9 +325,9 @@ function BranchTree(props: {
 const SectionHeader = styled.div`
     position: relative;
     font-size: 1rem;
-    border-top: 1px solid ${(props) => props.theme.colors.border};
-    border-bottom: 1px solid ${(props) => props.theme.colors.border};
-    background-color: ${(props) => props.theme.colors.highlight};
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background-color: var(--highlight);
     margin-left: 5px;
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
@@ -344,7 +344,7 @@ const SectionHeader = styled.div`
         background-color: unset;
 
         :hover {
-            background-color: ${(props) => props.theme.colors.background};
+            background-color: var(--background);
         }
     }
 `;
