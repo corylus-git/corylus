@@ -53,7 +53,7 @@ function openContextMenu(
                 }),
         },
         {
-            label: `Merge ${shortRef} into ${currentBranch.found && currentBranch.value}`,
+            label: `Merge ${shortRef} into ${currentBranch.found && currentBranch.value.ref}`,
             click: () => dialog.open({ type: 'request-merge', source: just(ref) }),
         },
         {
