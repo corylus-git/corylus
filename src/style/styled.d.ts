@@ -5,14 +5,5 @@ import 'styled-components';
 declare module 'styled-components' {
     export interface DefaultTheme {
         name: string;
-        colors: {
-            diff: {
-                conflict: {
-                    ours: string;
-                    theirs: string;
-                    conflict: string;
-                };
-            };
-        };
     }
 }

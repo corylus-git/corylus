@@ -34,16 +34,6 @@ const ConflictView = styled.div`
             var(--background) 7px
         );
     }
-
-    .oursConflict {
-        border: 0.5px solid ${(props) => props.theme.colors.diff.conflict.ours};
-        background-color: ${(props) => props.theme.colors.diff.conflict.ours}40;
-    }
-
-    .theirsConflict {
-        border: 0.5px solid ${(props) => props.theme.colors.diff.conflict.theirs};
-        background-color: ${(props) => props.theme.colors.diff.conflict.theirs}40;
-    }
 `;
 
 const SideSelector = styled.button<{ selected?: boolean; lines: number; height: number }>`
@@ -165,7 +155,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                     );
                     editor.deltaDecorations(
                         [],
-                        calculateDecorations(lines, (l) => l.ours, 'oursConflict')
+                        calculateDecorations(lines, (l) => l.ours, 'diff-conflict-ours')
                     );
                 }}
             />
@@ -259,7 +249,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                     );
                     editor.deltaDecorations(
                         [],
-                        calculateDecorations(lines, (l) => l.theirs, 'theirsConflict')
+                        calculateDecorations(lines, (l) => l.theirs, 'diff-conflict-theirs')
                     );
                 }}
             />
