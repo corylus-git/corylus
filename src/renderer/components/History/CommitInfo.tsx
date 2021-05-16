@@ -72,7 +72,10 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                 <Oid>
                     <Highlighter str={props.commit.short_oid} searchTerm={props.searchTerm} />:
                 </Oid>{' '}
-                <CommitMessage message={props.commit.message} searchTerm={props.searchTerm} />
+                <CommitMessage
+                    message={props.commit.message.split('\n', 2)[0]}
+                    searchTerm={props.searchTerm}
+                />
             </div>
             <p
                 style={{

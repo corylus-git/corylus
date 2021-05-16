@@ -607,7 +607,7 @@ export class SimpleGitBackend implements GitBackend {
     private commitFormat = {
         hash: '%H',
         shortHash: '%h',
-        message: '%s',
+        message: '%B',
         author_name: '%aN',
         author_email: '%aE',
         author_date: '%ai',
