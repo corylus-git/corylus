@@ -62,11 +62,20 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                 cursor: 'pointer',
             }}
             onClick={() => props.onCommitSelect(props.commit)}>
-            <div style={{ height: '1.2rem', overflow: 'hidden', margin: 0 }}>
+            <div
+                style={{
+                    height: '1.2rem',
+                    overflow: 'hidden',
+                    margin: 0,
+                    whiteSpace: 'nowrap',
+                }}>
                 <Oid>
                     <Highlighter str={props.commit.short_oid} searchTerm={props.searchTerm} />:
                 </Oid>{' '}
-                <CommitMessage message={props.commit.message} searchTerm={props.searchTerm} />
+                <CommitMessage
+                    message={props.commit.message.split('\n', 2)[0]}
+                    searchTerm={props.searchTerm}
+                />
             </div>
             <p
                 style={{
