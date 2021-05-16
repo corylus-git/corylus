@@ -1501,7 +1501,7 @@ function parseFileStatus(
     status: string,
     source: string | undefined = undefined
 ): readonly DiffStat[] {
-    const fileStatusFields = status?.split('\0');
+    const fileStatusFields = status?.split('\0').filter((field) => field !== '');
     Logger().debug('parseFileStatus', 'Split result', { status: status, split: fileStatusFields });
     const fileStatus: DiffStat[] = [];
     if (fileStatusFields) {
