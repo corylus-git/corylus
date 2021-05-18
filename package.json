@@ -20,9 +20,6 @@
         "dist": "npm run build && electron-builder",
         "postinstall": "electron-builder install-app-deps"
     },
-    "files": [
-        "build/icon.png"
-    ],
     "lint-staged": {
         "{src,test,mocks}/**/*.{json,css,scss,md}": [
             "prettier --config ./.prettierrc --write"
@@ -53,16 +50,17 @@
         "productName": "Corylus",
         "appId": "dev.corylus",
         "mac": {
-            "category": "development"
+            "category": "Development"
         },
         "directories": {
+            "buildResources": "build",
             "output": "release"
         },
         "files": [
             "dist/",
             "node_modules/",
             "package.json",
-            "build"
+            "build/"
         ],
         "linux": {
             "target": "deb"
