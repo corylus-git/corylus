@@ -35,6 +35,7 @@ import { AddIgnoreListItem } from './Dialogs/AddIgnoreListItem';
 import { InteractiveRebase } from './Dialogs/InteractiveRebase';
 import { Rebase } from './Dialogs/Rebase';
 import { RebaseStatusBar } from './Rebase/RebaseStatusBar';
+import { AutoStashDialog } from './Dialogs/AutoStashDialog';
 
 export const MainView = styled.div`
     display: grid;
@@ -63,6 +64,7 @@ const DialogsContainer: React.FC = () => (
         <AddIgnoreListItem />
         <InteractiveRebase />
         <Rebase />
+        <AutoStashDialog />
     </>
 );
 
