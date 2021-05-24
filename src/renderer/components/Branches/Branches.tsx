@@ -166,7 +166,6 @@ const BranchNodeDisplay: React.FC<{
     affected: boolean;
 }> = (props) => {
     const dialog = useDialog();
-    const theme = useTheme();
     if (props.path.length === 0) {
         return <TypeHeader>Branches</TypeHeader>;
     }

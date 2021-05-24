@@ -8,11 +8,11 @@ import { MergeResult } from 'simple-git/promise';
 import { IndexTreeNode } from '../../renderer/components/Index/IndexTree';
 import fs from 'fs';
 import path from 'path';
-import util from 'util';
 import { repoStore } from '../state/repo';
 import { progress } from '../state/progress';
 import { stagingArea } from '../state/stagingArea';
 import { trackError } from '../../util/error-display';
+import { dialogStore } from '../state/dialogs';
 
 export const commit = async (message: string, amend: boolean): Promise<void> => {
     Logger().debug('commit', 'Committing changes', { message: message, amend: amend });
@@ -26,9 +26,24 @@ export const commit = async (message: string, amend: boolean): Promise<void> => 
 export const changeBranch = trackError(
     'change branch',
     'changeBranch',
-    async (ref: string): Promise<void> => {
-        await repoStore.getState().backend.checkout(ref);
-        repoStore.getState().loadBranches();
+    async (ref: string, ignoreChanges = false, autoStashConfirmed = false): Promise<void> => {
+        await repoStore.getState().getStatus();
+        if (repoStore.getState().status.length !== 0 && !ignoreChanges) {
+            if (!autoStashConfirmed) {
+                dialogStore.getState().open({ type: 'auto-stash', target: ref });
+            } else {
+                Logger().debug('changeBranch', 'Requested auto-stashing changes during checkout');
+                await repoStore.getState().backend.stash('Auto-stash during checkout', true);
+                await repoStore.getState().backend.checkout(ref);
+                const stashes = await repoStore.getState().backend.listStashes();
+                await repoStore.getState().backend.applyStash(stashes[0], true);
+                repoStore.getState().loadBranches();
+            }
+        } else {
+            Logger().debug('changeBranch', 'Changing branch');
+            await repoStore.getState().backend.checkout(ref);
+            repoStore.getState().loadBranches();
+        }
     }
 );
 

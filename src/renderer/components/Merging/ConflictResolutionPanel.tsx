@@ -5,6 +5,7 @@ import { CommitMetaData } from '../Diff/Commit';
 import { Logger } from '../../../util/logger';
 import { resolveConflict } from '../../../model/actions/repo';
 import { SelectedConflict, useStagingArea } from '../../../model/state/stagingArea';
+import { useRepo } from '../../../model/state/repo';
 
 export interface ConflictResolutionPanelProps {
     onClose?: () => void;
@@ -17,7 +18,7 @@ const ConflictResolutionDisplay = styled.div`
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-gap: 1rem;
-    align-items: center;
+    align-items: top;
     justify-items: center;
     padding-left: 2rem;
     padding-right: 2rem;
@@ -43,22 +44,44 @@ export const ConflictResolutionPanel: React.FC<ConflictResolutionPanelProps> = (
                     resolveConflict(props.conflict.file.path, 'ours');
                     props.onClose?.();
                 }}>
-                <h2>Select our version</h2>
+                <h2>
+                    {props.conflict.theirs.type === 'commit'
+                        ? 'Select our version'
+                        : 'Discard patch'}
+                </h2>
             </ResolutionButton>
             <ResolutionButton
                 onClick={() => {
                     resolveConflict(props.conflict.file.path, 'theirs');
                     props.onClose?.();
                 }}>
-                <h2>Select incoming version (theirs)</h2>
+                <h2>
+                    {' '}
+                    {props.conflict.theirs.type === 'commit'
+                        ? 'Select incoming version (theirs)'
+                        : 'Apply patch'}
+                </h2>
             </ResolutionButton>
             <div>
                 <h3>Last commit:</h3>
                 <CommitMetaData commit={props.conflict.ours} />
             </div>
             <div>
-                <h3>Last commit:</h3>
-                <CommitMetaData commit={props.conflict.theirs} />
+                {props.conflict.theirs.type === 'commit' ? (
+                    <>
+                        <h3>Last commit:</h3>
+                        <CommitMetaData commit={props.conflict.theirs} />
+                    </>
+                ) : (
+                    <>
+                        <h3>Incoming patch</h3>
+                        <p>
+                            The current incoming conflict stems from a patch (e.g.{' '}
+                            <code>stash apply</code>)
+                        </p>
+                        <p>It does not have an underlying commit.</p>
+                    </>
+                )}
             </div>
             <ResolutionButton
                 className="full"

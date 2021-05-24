@@ -2,7 +2,8 @@ import { RequestInitializeGitflow } from '../../util/workflows/gitflow';
 import { Middleware } from './types';
 import produce from 'immer';
 import { Maybe, nothing } from '../../util/maybe';
-import create from 'zustand';
+import create from 'zustand/vanilla';
+import createHook from 'zustand';
 import { log } from './log';
 import { BranchInfo, Stash, RemoteMeta } from '../stateObjects';
 import { Logger } from '../../util/logger';
@@ -87,6 +88,10 @@ export type InteractiveRebase = {
     type: 'interactive-rebase';
     target: string;
 };
+export type AutoStash = {
+    type: 'auto-stash';
+    target: string;
+};
 /**
  * pseudo-state marking all dialogs closed
  */
@@ -99,7 +104,7 @@ export type NoDialog = {
  */
 export type SimpleDialogState = {
     type: 'simple-dialog';
-    dialog: 'RequestFetch' | 'RequestUpstream';
+    dialog: 'RequestFetch' | 'RequestUpstream' | 'AutoStash';
 };
 
 export type DialogState =
@@ -120,6 +125,7 @@ export type DialogState =
     | AddIgnoreListItem
     | Rebase
     | InteractiveRebase
+    | AutoStash
     // Gitflow initialization
     | RequestInitializeGitflow;
 
@@ -133,7 +139,7 @@ export type DialogActions = {
 const immer: Middleware<DialogState & DialogActions> = (config) => (set, get, api) =>
     config((fn: any) => set(produce(fn)), get, api);
 
-export const useDialog = create(
+export const dialogStore = create(
     log(
         immer((set, get) => ({
             type: 'no-dialog',
@@ -167,3 +173,5 @@ export const useDialog = create(
         }))
     )
 );
+
+export const useDialog = createHook(dialogStore);
