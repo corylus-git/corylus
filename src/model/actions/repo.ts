@@ -32,6 +32,7 @@ export const changeBranch = trackError(
             if (!autoStashConfirmed) {
                 dialogStore.getState().open({ type: 'auto-stash', target: ref });
             } else {
+                Logger().debug('changeBranch', 'Requested auto-stashing changes during checkout');
                 await repoStore.getState().backend.stash('Auto-stash during checkout', true);
                 await repoStore.getState().backend.checkout(ref);
                 const stashes = await repoStore.getState().backend.listStashes();
@@ -39,6 +40,7 @@ export const changeBranch = trackError(
                 repoStore.getState().loadBranches();
             }
         } else {
+            Logger().debug('changeBranch', 'Changing branch');
             await repoStore.getState().backend.checkout(ref);
             repoStore.getState().loadBranches();
         }
