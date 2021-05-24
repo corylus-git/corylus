@@ -1,4 +1,4 @@
-import { IndexStatus, Commit } from '../stateObjects';
+import { IndexStatus, Commit, Stash } from '../stateObjects';
 import { IConflictBlock, calculateBlocks } from '../../renderer/components/Merging/util/blocks';
 import { Maybe, nothing, just } from '../../util/maybe';
 import create from 'zustand/vanilla';
@@ -105,10 +105,33 @@ export const stagingArea = create(
                     file,
                 });
                 const ours = await repoStore.getState().backend.getCommit('HEAD');
-                const theirs = await repoStore.getState().backend.getCommit('MERGE_HEAD');
-                set((state) => {
-                    state.selectedConflict = just({ ours: ours, theirs: theirs, file: file });
-                });
+                try {
+                    const theirs = await repoStore.getState().backend.getCommit('MERGE_HEAD');
+                    set((state) => {
+                        state.selectedConflict = just({ ours: ours, theirs: theirs, file: file });
+                    });
+                } catch {
+                    // generate pseudo commit with changes from the marge index
+                    set((state) => {
+                        state.selectedConflict = just({
+                            ours,
+                            theirs: {
+                                type: 'stash',
+                                author: {
+                                    name: '',
+                                    email: '',
+                                    timestamp: new Date(),
+                                },
+                                message: '',
+                                oid: '',
+                                parents: [],
+                                ref: 'stash',
+                                short_oid: 'stash',
+                            },
+                            file: file,
+                        });
+                    });
+                }
             },
             deselectConflictedFile: (): void => {
                 set((state) => {
