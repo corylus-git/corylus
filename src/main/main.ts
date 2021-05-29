@@ -24,6 +24,12 @@ const installExtensions = async () => {
     ); // eslint-disable-line no-console
 };
 
+function getAssetPath(...params: string[]): string {
+    return app.isPackaged
+        ? path.join(process.resourcesPath, 'assets', ...params)
+        : path.join(__dirname, '../assets', ...params);
+}
+
 function createMainMenu() {
     const template: MenuItemConstructorOptions[] = [
         {
@@ -77,6 +83,7 @@ const createWindow = async () => {
             contextIsolation: false,
             enableRemoteModule: true,
         },
+        icon: getAssetPath('icon.png'),
     });
 
     ipcMain.on('save-log', saveLogFile);
