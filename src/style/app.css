@@ -99,3 +99,54 @@ body {
     grid-template-columns: 1rem 1.5rem fit-content(30rem) 1fr;
     gap: 0.5rem;
 }
+
+.in-progress {
+    animation-name: in-progress-active;
+    animation-duration: 2000ms;
+    animation-iteration-count: infinite;
+}
+
+@keyframes in-progress-active {
+    0% {
+        background: linear-gradient(
+            90deg,
+            hsla(var(--foreground-value), 0) 0%,
+            var(--highlight) 2%,
+            hsla(var(--foreground-value), 0) 30%
+        );
+        background-size: 200% 20%;
+        background-position: -75% 80%;
+    }
+
+    50% {
+        background: linear-gradient(
+            90deg,
+            hsla(var(--foreground-value), 0) 0%,
+            var(--highlight) 2%,
+            hsla(var(--foreground-value), 0) 30%
+        );
+        background-size: 200% 20%;
+        background-position: 75% 80%;
+    }
+
+    51% {
+        background: linear-gradient(
+            90deg,
+            hsla(var(--foreground-value), 0) 0%,
+            var(--highlight) 28%,
+            hsla(var(--foreground-value), 0) 30%
+        );
+        background-size: 200% 20%;
+        background-position: 75% 80%;
+    }
+    100% {
+        background: linear-gradient(
+            90deg,
+            hsla(var(--foreground-value), 0) 0%,
+            var(--highlight) 28%,
+            hsla(var(--foreground-value), 0) 30%
+        );
+        background-size: 200% 20%;
+        background-position: -75% 80%;
+    }
+}

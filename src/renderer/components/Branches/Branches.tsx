@@ -28,6 +28,7 @@ import RemoteIcon from '../icons/Remote.svg';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
 import { Affected } from './Affected';
 import { useTheme } from '../../../model/state/theme';
+import { isInProgress } from '../../../model/state/uiState';
 
 const { Menu, MenuItem } = remote;
 
@@ -166,6 +167,7 @@ const BranchNodeDisplay: React.FC<{
     affected: boolean;
 }> = (props) => {
     const dialog = useDialog();
+    const inProgress = isInProgress(props.branch.found ? props.branch.value.ref : '');
     if (props.path.length === 0) {
         return <TypeHeader>Branches</TypeHeader>;
     }
@@ -199,6 +201,7 @@ const BranchNodeDisplay: React.FC<{
     ].filter((part) => part);
     return (
         <Branch
+            className={inProgress ? 'in-progress' : undefined}
             title={
                 toOptional(props.branch)?.upstream?.upstreamMissing
                     ? ` Warning: the upstream branch for this branch (${

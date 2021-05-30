@@ -13,6 +13,7 @@ import { progress } from '../state/progress';
 import { stagingArea } from '../state/stagingArea';
 import { trackError } from '../../util/error-display';
 import { dialogStore } from '../state/dialogs';
+import { uiStore } from '../state/uiState';
 
 export const commit = async (message: string, amend: boolean): Promise<void> => {
     Logger().debug('commit', 'Committing changes', { message: message, amend: amend });
@@ -32,17 +33,30 @@ export const changeBranch = trackError(
             if (!autoStashConfirmed) {
                 dialogStore.getState().open({ type: 'auto-stash', target: ref });
             } else {
-                Logger().debug('changeBranch', 'Requested auto-stashing changes during checkout');
-                await repoStore.getState().backend.stash('Auto-stash during checkout', true);
-                await repoStore.getState().backend.checkout(ref);
-                const stashes = await repoStore.getState().backend.listStashes();
-                await repoStore.getState().backend.applyStash(stashes[0], true);
-                repoStore.getState().loadBranches();
+                uiStore.getState().startProgress(ref);
+                try {
+                    Logger().debug(
+                        'changeBranch',
+                        'Requested auto-stashing changes during checkout'
+                    );
+                    await repoStore.getState().backend.stash('Auto-stash during checkout', true);
+                    await repoStore.getState().backend.checkout(ref);
+                    const stashes = await repoStore.getState().backend.listStashes();
+                    await repoStore.getState().backend.applyStash(stashes[0], true);
+                    repoStore.getState().loadBranches();
+                } finally {
+                    uiStore.getState().stopProgress(ref);
+                }
             }
         } else {
-            Logger().debug('changeBranch', 'Changing branch');
-            await repoStore.getState().backend.checkout(ref);
-            repoStore.getState().loadBranches();
+            uiStore.getState().startProgress(ref);
+            try {
+                Logger().debug('changeBranch', 'Changing branch');
+                await repoStore.getState().backend.checkout(ref);
+                repoStore.getState().loadBranches();
+            } finally {
+                uiStore.getState().stopProgress(ref);
+            }
         }
     }
 );
