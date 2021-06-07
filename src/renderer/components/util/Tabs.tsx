@@ -1,4 +1,4 @@
-import React, { ComponentProps } from 'react';
+import React, { ComponentProps, useRef } from 'react';
 import styled from 'styled-components';
 import CloseIcon from '../icons/CloseIcon.svg';
 import { unsafeDefinitely } from '../../../util/maybe';
@@ -13,12 +13,23 @@ const TabContainer = styled.div`
 `;
 
 const TabHeader = styled.nav`
-    display: flex;
+    position: relative;
+    display: grid;
     border-bottom: 1px solid var(--border);
-`;
+    grid-template-columns: 1fr 2rem;
 
-const TabPanel = styled.div`
-    height: 100%;
+    .scroll-container {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+
+        .tabs-header-container {
+            display: flex;
+            overflow: hidden;
+            height: 1.5rem;
+        }
+    }
 `;
 
 const TabDiv = styled.div<{ active: boolean } & ComponentProps<'div'>>`
@@ -37,6 +48,7 @@ const TabDiv = styled.div<{ active: boolean } & ComponentProps<'div'>>`
     grid-template-columns: 1fr 1.1rem;
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
+    flex-grow: 1;
 `;
 
 const StyledCloseIcon = styled(CloseIcon)`
@@ -68,10 +80,13 @@ const TabContent = styled.div`
     height: 100%;
 `;
 
-const AddButton = styled.div`
+const NavButton = styled.button`
+    border: none;
     margin-left: -1px; // collapse the border with the neighboring div
     border-left: solid 1px var(--border);
     border-right: solid 1px var(--border);
+    color: var(--foreground);
+    background-color: var(--background);
     width: 2rem;
     padding: 0;
     font-size: 150%;
@@ -80,6 +95,41 @@ const AddButton = styled.div`
     cursor: pointer;
 `;
 
+function doScroll(
+    left: boolean,
+    scrollRef: React.RefObject<HTMLDivElement>,
+    leftRef: React.RefObject<HTMLButtonElement>,
+    rightRef: React.RefObject<HTMLButtonElement>
+) {
+    scrollRef.current?.scrollBy({ left: left ? -5 : 5, top: 0 });
+    showScrollButtons(scrollRef, leftRef, rightRef);
+}
+
+function showScrollButtons(
+    scrollRef: React.RefObject<HTMLDivElement>,
+    leftRef: React.RefObject<HTMLButtonElement>,
+    rightRef: React.RefObject<HTMLButtonElement>
+) {
+    if (leftRef.current) {
+        if (scrollRef.current?.scrollLeft === 0) {
+            leftRef.current.style.visibility = 'hidden';
+        } else {
+            leftRef.current.style.visibility = 'visible';
+        }
+    }
+    if (rightRef.current) {
+        if (
+            scrollRef.current &&
+            scrollRef.current.scrollLeft + scrollRef.current.clientWidth <
+                scrollRef.current.scrollWidth
+        ) {
+            rightRef.current.style.visibility = 'visible';
+        } else {
+            rightRef.current.style.visibility = 'hidden';
+        }
+    }
+}
+
 /**
  * An extendable tab component
  *
@@ -87,42 +137,89 @@ const AddButton = styled.div`
  */
 export const Tabs: React.FC = () => {
     const tabs = useTabs();
+    const leftRef = React.createRef<HTMLButtonElement>();
+    const rightRef = React.createRef<HTMLButtonElement>();
+    const scrollRef = React.createRef<HTMLDivElement>();
+    const intervalRef = React.useRef(0);
+
+    React.useEffect(() => showScrollButtons(scrollRef, leftRef, rightRef), [
+        scrollRef.current,
+        tabs,
+    ]);
+
     return (
-        <TabContainer>
+        <TabContainer onMouseUp={() => intervalRef.current && clearInterval(intervalRef.current)}>
             <TabHeader>
-                {tabs.left.map((tab) => (
-                    <Tab
-                        label={tab.title}
-                        active={false}
-                        key={tab.id}
-                        title={(tab.path.found && tab.path.value) || undefined}
-                        onClose={() => tabs.closeTab(tab.id)}
-                        onClick={() => tabs.switchTab(tab)}
-                    />
-                ))}
-                {tabs.active.found && (
-                    <Tab
-                        label={tabs.active.value.title}
-                        active={true}
-                        key={tabs.active.value.id}
-                        title={
-                            (tabs.active.value.path.found && tabs.active.value.path.value) ||
-                            undefined
-                        }
-                        onClose={() => tabs.closeTab(unsafeDefinitely(tabs.active).id)}
-                    />
-                )}
-                {tabs.right.map((tab) => (
-                    <Tab
-                        label={tab.title}
-                        active={false}
-                        key={tab.id}
-                        title={(tab.path.found && tab.path.value) || undefined}
-                        onClose={() => tabs.closeTab(tab.id)}
-                        onClick={() => tabs.switchTab(tab)}
-                    />
-                ))}
-                <AddButton onClick={(_) => tabs.addTab()}>+</AddButton>
+                <div className="scroll-container">
+                    <NavButton
+                        ref={leftRef}
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                        }}
+                        onMouseDown={(_) => {
+                            intervalRef.current = setInterval(
+                                () => doScroll(true, scrollRef, leftRef, rightRef),
+                                16
+                            );
+                        }}>
+                        &lt;
+                    </NavButton>
+                    <div className="tabs-header-container" ref={scrollRef}>
+                        {tabs.left.map((tab) => (
+                            <Tab
+                                label={tab.title}
+                                active={false}
+                                key={tab.id}
+                                title={(tab.path.found && tab.path.value) || undefined}
+                                onClose={() => tabs.closeTab(tab.id)}
+                                onClick={() => tabs.switchTab(tab)}
+                            />
+                        ))}
+                        {tabs.active.found && (
+                            <Tab
+                                label={tabs.active.value.title}
+                                active={true}
+                                key={tabs.active.value.id}
+                                title={
+                                    (tabs.active.value.path.found &&
+                                        tabs.active.value.path.value) ||
+                                    undefined
+                                }
+                                onClose={() => tabs.closeTab(unsafeDefinitely(tabs.active).id)}
+                            />
+                        )}
+                        {tabs.right.map((tab) => (
+                            <Tab
+                                label={tab.title}
+                                active={false}
+                                key={tab.id}
+                                title={(tab.path.found && tab.path.value) || undefined}
+                                onClose={() => tabs.closeTab(tab.id)}
+                                onClick={() => tabs.switchTab(tab)}
+                            />
+                        ))}
+                    </div>
+
+                    <NavButton
+                        ref={rightRef}
+                        onMouseDown={(_) => {
+                            intervalRef.current = setInterval(
+                                () => doScroll(false, scrollRef, leftRef, rightRef),
+                                16
+                            );
+                        }}
+                        style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                        }}>
+                        &gt;
+                    </NavButton>
+                </div>
+                <div>
+                    <NavButton onClick={(_) => tabs.addTab()}>+</NavButton>
+                </div>
             </TabHeader>
             <TabContent>
                 {tabs.active.found ? (
