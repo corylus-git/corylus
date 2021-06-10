@@ -5,6 +5,7 @@ import { unsafeDefinitely } from '../../../util/maybe';
 import { NewTab } from '../NewTab/NewTab';
 import { Repository } from '../Repository';
 import { useTabs } from '../../../model/state/tabs';
+import { Logger } from '../../../util/logger';
 
 const TabContainer = styled.div`
     display: grid;
@@ -55,25 +56,30 @@ const StyledCloseIcon = styled(CloseIcon)`
     cursor: pointer;
 `;
 
-const Tab: React.FC<{
-    active: boolean;
-    label: string;
-    title?: string;
-    onClick?: (ev: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
-    onClose: () => void;
-}> = (props) => (
-    <TabDiv active={!!props.active} onClick={props.onClick} title={props.title}>
-        <span>{props.label}</span>
-        <StyledCloseIcon
-            viewBox="0 0 24 24"
-            width="1rem"
-            height="1rem"
-            onClick={(ev) => {
-                props.onClose();
-                ev.stopPropagation();
-            }}
-        />
-    </TabDiv>
+const Tab = React.forwardRef(
+    (
+        props: {
+            active: boolean;
+            label: string;
+            title?: string;
+            onClick?: (ev: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+            onClose: () => void;
+        },
+        ref: React.ForwardedRef<HTMLDivElement>
+    ) => (
+        <TabDiv active={!!props.active} onClick={props.onClick} title={props.title} ref={ref}>
+            <span>{props.label}</span>
+            <StyledCloseIcon
+                viewBox="0 0 24 24"
+                width="1rem"
+                height="1rem"
+                onClick={(ev) => {
+                    props.onClose();
+                    ev.stopPropagation();
+                }}
+            />
+        </TabDiv>
+    )
 );
 
 const TabContent = styled.div`
@@ -141,11 +147,16 @@ export const Tabs: React.FC = () => {
     const rightRef = React.createRef<HTMLButtonElement>();
     const scrollRef = React.createRef<HTMLDivElement>();
     const intervalRef = React.useRef(0);
+    const activeRef = React.createRef<HTMLDivElement>();
 
     React.useEffect(() => showScrollButtons(scrollRef, leftRef, rightRef), [
         scrollRef.current,
         tabs,
     ]);
+    React.useEffect(() => {
+        Logger().silly('Tabs', 'Scrolling new active tab into view', { active: tabs.active });
+        activeRef.current?.scrollIntoView();
+    }, [tabs.active]);
 
     return (
         <TabContainer onMouseUp={() => intervalRef.current && clearInterval(intervalRef.current)}>
@@ -178,6 +189,7 @@ export const Tabs: React.FC = () => {
                         ))}
                         {tabs.active.found && (
                             <Tab
+                                ref={activeRef}
                                 label={tabs.active.value.title}
                                 active={true}
                                 key={tabs.active.value.id}
