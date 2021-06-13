@@ -29,6 +29,8 @@ const AllButton = styled(StyledButton)`
     border: 0;
 `;
 
+let splitterY: string | undefined = undefined;
+
 export const StagingArea: React.FC<{
     workdir: IndexStatus[] | undefined;
     staged: IndexStatus[] | undefined;
@@ -38,7 +40,7 @@ export const StagingArea: React.FC<{
     onSelectIndexEntry: (entry: IndexTreeNode) => void;
 }> = (props) => {
     return (
-        <Splitter horizontal>
+        <Splitter horizontal initialPosition={splitterY} onMove={(pos) => (splitterY = `${pos}px`)}>
             <div
                 style={{
                     position: 'relative',

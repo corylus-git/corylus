@@ -33,7 +33,7 @@ export const StatusBar: React.FC = () => {
     const status = useStatus();
 
     return (
-        <StatusBarView>
+        <StatusBarView className={progress.animate ? 'in-progress' : undefined}>
             <CurrentBranch>
                 {currentBranch.found && currentBranch.value.isDetached && (
                     <Detached>DETACHED HEAD: </Detached>
@@ -42,7 +42,6 @@ export const StatusBar: React.FC = () => {
                 {currentBranch.found && currentBranch.value.ref}
             </CurrentBranch>
             <div style={{ marginRight: '0.5rem' }}>{progress.message}</div>
-            <RunningIndicator active={progress.animate} />
         </StatusBarView>
     );
 };
