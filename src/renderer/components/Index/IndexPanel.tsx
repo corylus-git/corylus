@@ -9,10 +9,12 @@ import { ConflictResolutionPanel } from '../Merging/ConflictResolutionPanel';
 import { Formik, Form, Field } from 'formik';
 import { Logger } from '../../../util/logger';
 import styled from 'styled-components';
-import { nothing, just } from '../../../util/maybe';
+import { nothing, just, Maybe } from '../../../util/maybe';
 import { commit, stage, unstage, addDiff } from '../../../model/actions/repo';
 import { useStatus, useRepo, usePendingCommit, repoStore } from '../../../model/state/repo';
 import { useStagingArea } from '../../../model/state/stagingArea';
+
+let splitterX: string | undefined = undefined;
 
 export const IndexPanel: React.FC = () => {
     const stagingArea = useStagingArea();
@@ -31,7 +33,7 @@ export const IndexPanel: React.FC = () => {
 
     return (
         <div style={{ display: 'grid', gridTemplateRows: '1fr 10rem', marginLeft: '5px' }}>
-            <Splitter>
+            <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
                 <StagingArea
                     workdir={index.filter((s) => s.workdirStatus !== 'unmodified')}
                     staged={index.filter(
@@ -98,11 +100,15 @@ const CommitMessage = styled.textarea`
     }
 `;
 
+let commitMessage: Maybe<string> = nothing;
+let savedAttempt = false;
+
 function CommitForm(props: { onCommit?: () => void }) {
     const backend = useRepo((s) => s.backend);
     const pendingCommit = usePendingCommit();
-    const pendingCommitMessage =
-        (pendingCommit.found && just(pendingCommit.value.message)) || nothing;
+    const pendingCommitMessage = pendingCommit.found
+        ? just(pendingCommit.value.message)
+        : commitMessage;
     return (
         <div
             style={{
@@ -113,11 +119,12 @@ function CommitForm(props: { onCommit?: () => void }) {
                     commit(values.commitmsg, values.amend);
                     props.onCommit?.();
                     formik.resetForm();
+                    commitMessage = nothing;
                 }}
                 enableReinitialize
                 initialValues={{
                     commitmsg: pendingCommitMessage.found ? pendingCommitMessage.value : '',
-                    amend: false,
+                    amend: savedAttempt,
                 }}
                 initialErrors={
                     !pendingCommitMessage ? { commitmsg: 'No commit message supplied' } : {}
@@ -141,7 +148,15 @@ function CommitForm(props: { onCommit?: () => void }) {
                             boxSizing: 'border-box',
                         }}>
                         <label htmlFor="commitmsg">Commit Message</label>
-                        <Field as={CommitMessage} id="commitmsg" name="commitmsg" />
+                        <Field
+                            as={CommitMessage}
+                            id="commitmsg"
+                            name="commitmsg"
+                            onChange={(ev: any) => {
+                                formik.handleChange(ev);
+                                commitMessage = just(ev.target.value);
+                            }}
+                        />
                         <div style={{ gridColumn: 2, marginLeft: 'auto' }}>
                             <Field
                                 type="checkbox"
@@ -149,6 +164,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                                 name="amend"
                                 onChange={(ev: any) => {
                                     formik.handleChange(ev);
+                                    savedAttempt = ev.target.checked;
                                     if (!formik.values.amend) {
                                         // this needs to be the "wrong" way around, as we're seeing the value before re-rendering
                                         Logger().debug(
@@ -159,6 +175,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                                             .getCommit('HEAD')
                                             .then((commit) => {
                                                 formik.setFieldValue('commitmsg', commit.message);
+                                                commitMessage = just(commit.message);
                                             })
                                             .catch((e) =>
                                                 Logger().error(

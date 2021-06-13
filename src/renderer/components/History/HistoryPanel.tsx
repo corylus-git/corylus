@@ -8,6 +8,9 @@ import { Logger } from '../../../util/logger';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { useHistory } from '../../../model/state/repo';
 
+let splitterX: string | undefined = undefined;
+let splitterY = 'minmax(0,1fr)';
+
 /**
  * The main view showing the history of the open repository
  */
@@ -34,13 +37,16 @@ export const HistoryPanel: React.FC = () => {
     }, []);
 
     return (
-        <Splitter>
+        <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
             <Branches />
             <Splitter
                 horizontal
-                initialPosition="minmax(0,1fr)"
+                initialPosition={splitterY}
                 noWrap
-                onMove={(position) => setDimensions({ width: dimensions.width, height: position })}>
+                onMove={(position) => {
+                    setDimensions({ width: dimensions.width, height: position });
+                    splitterY = `${position}px`;
+                }}>
                 <NoScrollPanel ref={targetRef}>
                     <Graph
                         width={dimensions.width}
