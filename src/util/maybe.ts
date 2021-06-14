@@ -1,5 +1,3 @@
-import { immerable } from 'immer';
-
 export interface Just<TContent> {
     found: true;
     value: TContent;
