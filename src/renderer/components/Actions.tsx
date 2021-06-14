@@ -17,7 +17,7 @@ import { Hoverable } from './StyleBase';
 import { remote } from 'electron';
 import { Logger } from '../../util/logger';
 import { push } from '../../model/actions/repo';
-import { nothing, just } from '../../util/maybe';
+import { nothing, just, fromNullable } from '../../util/maybe';
 import { useDialog } from '../../model/state/dialogs';
 import { useBranches, useCurrentBranch, useStatus } from '../../model/state/repo';
 import { useWorkflows } from '../../model/state/workflows';
@@ -197,11 +197,11 @@ export const Actions: React.FC = () => {
                 onClick={() => {
                     const currentBranch = branches?.find((b) => b.current);
                     if (currentBranch) {
-                        if (currentBranch?.upstream) {
-                            push();
-                        } else {
-                            dialog.open({ type: 'request-upstream', forBranch: currentBranch });
-                        }
+                        dialog.open({
+                            type: 'request-upstream',
+                            forBranch: currentBranch,
+                            currentUpstream: fromNullable(currentBranch.upstream),
+                        });
                     }
                 }}
                 title="Push changes to remote repositories">

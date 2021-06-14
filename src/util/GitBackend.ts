@@ -202,12 +202,14 @@ export interface GitBackend {
      * @param options.remote The remote to push to. This is mostly when targeting different remotes.
      * @param options.branch The branch to push to at the remote.
      * @param options.upstream The name of the branch in the upstream repo
+     * @param options.setUpstream Set the given remote branch as the tracking branch
      * @param options.force Perform a force push
      */
     push(options?: {
         remote?: string;
         branch?: string;
         upstream?: string;
+        setUpstream?: boolean;
         force?: boolean;
     }): Promise<void>;
 
@@ -914,6 +916,7 @@ export class SimpleGitBackend implements GitBackend {
         remote?: string;
         branch?: string;
         upstream?: string;
+        setUpstream?: boolean;
         force?: boolean;
     }): Promise<void> => {
         let branch = options?.branch;
@@ -922,7 +925,9 @@ export class SimpleGitBackend implements GitBackend {
             opts.push('--force');
         }
         if (options?.remote && options?.upstream) {
-            opts.push('--set-upstream');
+            if (options.setUpstream) {
+                opts.push('--set-upstream');
+            }
             branch = `${branch}:${options.upstream}`;
         }
         try {

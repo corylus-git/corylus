@@ -86,13 +86,19 @@ export const fetchRemote = trackError(
 export const push = trackError(
     'push changes to upstream',
     'push',
-    async (sourceBranch?: string, remote?: string, upstream?: string): Promise<void> => {
+    async (
+        sourceBranch?: string,
+        remote?: string,
+        upstream?: string,
+        setUpstream?: boolean
+    ): Promise<void> => {
         try {
             progress.getState().setProgress('Pushing changes to upstream', true);
             await repoStore.getState().backend.push({
                 branch: sourceBranch,
                 remote: remote,
                 upstream: upstream,
+                setUpstream: setUpstream,
             });
             progress.getState().setProgress('Finished pushing changes', false, 5000);
             repoStore.getState().loadBranches();
