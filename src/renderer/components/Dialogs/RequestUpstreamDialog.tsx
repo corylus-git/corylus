@@ -7,10 +7,11 @@ import { Formik } from 'formik';
 import { StyledInput } from '../util/StyledInput';
 import { Logger } from '../../../util/logger';
 import { useDialog } from '../../../model/state/dialogs';
-import { useRemotes } from '../../../model/state/repo';
+import { useBranches, useRemotes } from '../../../model/state/repo';
 import { push } from '../../../model/actions/repo';
 import { BranchInfo, RemoteMeta, UpstreamInfo } from '../../../model/stateObjects';
 import { fromNullable, just, Maybe, nothing, toOptional, withDefault } from '../../../util/maybe';
+import { ExtendableDropDown } from '../shared/ExtendableDropDown';
 
 function selectTargetRemote(
     forBranch: Maybe<string>,
@@ -35,6 +36,7 @@ function selectTargetRemote(
 export const RequestUpstreamDialog: React.FC = () => {
     const dialog = useDialog();
     const remotes = useRemotes();
+    const branches = useBranches();
     if (dialog.type === 'request-upstream') {
         const upstream = selectTargetRemote(
             fromNullable(dialog.forBranch.ref),
@@ -103,9 +105,14 @@ export const RequestUpstreamDialog: React.FC = () => {
                                             ))}
                                         </select>
                                         <label htmlFor="upstream">Remote branch </label>
-                                        <StyledInput
-                                            id="upstream"
+                                        <ExtendableDropDown
                                             {...formik.getFieldProps('upstream')}
+                                            onChange={(value) => {
+                                                formik.setFieldValue('upstream', value);
+                                            }}
+                                            options={branches
+                                                .filter((b) => b.remote === formik.values.remote)
+                                                .map((b) => b.ref)}
                                         />
                                     </div>
                                 </>
