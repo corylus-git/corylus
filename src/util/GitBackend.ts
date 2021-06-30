@@ -226,7 +226,6 @@ export interface GitBackend {
         remote: Maybe<string>;
         branch: Maybe<string>;
         prune: boolean;
-        fetchAll: boolean;
         fetchTags: boolean;
     }): Promise<void>;
 
@@ -984,13 +983,12 @@ export class SimpleGitBackend implements GitBackend {
         remote: Maybe<string>;
         branch: Maybe<string>;
         prune: boolean;
-        fetchAll: boolean;
         fetchTags: boolean;
     }): Promise<void> => {
         try {
             const cmd = ['fetch'];
             options.prune && cmd.push('--prune');
-            options.fetchAll && cmd.push('--all');
+            !options.remote.found && cmd.push('--all');
             options.fetchTags && cmd.push('--tags');
             options.remote.found && cmd.push(options.remote.value);
             options.branch.found && cmd.push(options.branch.value);

@@ -68,7 +68,6 @@ export const fetchRemote = trackError(
         remote: Maybe<string>,
         refSpec: Maybe<string>,
         prune: boolean,
-        fetchAll: boolean,
         fetchTags: boolean
     ): Promise<void> => {
         try {
@@ -77,7 +76,6 @@ export const fetchRemote = trackError(
                 prune: prune,
                 remote: remote,
                 branch: refSpec,
-                fetchAll: fetchAll,
                 fetchTags: fetchTags,
             });
             progress.getState().setProgress('Finished fetching changes', false, 5000);
