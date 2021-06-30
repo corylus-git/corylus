@@ -84,6 +84,7 @@ function openContextMenu(
                             fetchRemote(
                                 just(branch.value.upstream!.remoteName),
                                 just(`${branch.value.upstream?.ref}:${branch.value.ref}`),
+                                false,
                                 false
                             );
                         }

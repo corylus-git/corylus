@@ -64,13 +64,19 @@ export const changeBranch = trackError(
 export const fetchRemote = trackError(
     'fetch remote changes',
     'fetchRemote',
-    async (remote: Maybe<string>, refSpec: Maybe<string>, prune: boolean): Promise<void> => {
+    async (
+        remote: Maybe<string>,
+        refSpec: Maybe<string>,
+        prune: boolean,
+        fetchAll: boolean
+    ): Promise<void> => {
         try {
             progress.getState().setProgress('Fetching remote changes', true);
             await repoStore.getState().backend.fetch({
                 prune: prune,
                 remote: remote,
                 branch: refSpec,
+                fetchAll: fetchAll,
             });
             progress.getState().setProgress('Finished fetching changes', false, 5000);
             repoStore.getState().loadHistory();

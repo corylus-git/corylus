@@ -220,8 +220,14 @@ export interface GitBackend {
      * @param options The configuration for the fetch operation
      * @param options.remote The remote to fetch. If no remote is given, all are fetched by default
      * @param options.prune Remove remote tracking branches no longer present in the remote repository
+     * @param option.fetchAll Fetch changes from all remotes
      */
-    fetch(options: { remote: Maybe<string>; branch: Maybe<string>; prune: boolean }): Promise<void>;
+    fetch(options: {
+        remote: Maybe<string>;
+        branch: Maybe<string>;
+        prune: boolean;
+        fetchAll: boolean;
+    }): Promise<void>;
 
     /**
      * Pull changes from upstream into the current tracking branch
@@ -977,6 +983,7 @@ export class SimpleGitBackend implements GitBackend {
         remote: Maybe<string>;
         branch: Maybe<string>;
         prune: boolean;
+        fetchAll: boolean;
     }): Promise<void> => {
         const opts = ['--verbose', '--progress'];
         if (options.prune) {
@@ -999,6 +1006,7 @@ export class SimpleGitBackend implements GitBackend {
             // });
             const cmd = ['fetch'];
             options.prune && cmd.push('--prune');
+            options.fetchAll && cmd.push('--all');
             options.remote.found && cmd.push(options.remote.value);
             options.branch.found && cmd.push(options.branch.value);
             await this._git.raw(cmd);
