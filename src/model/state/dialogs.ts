@@ -5,7 +5,7 @@ import { Maybe, nothing } from '../../util/maybe';
 import create from 'zustand/vanilla';
 import createHook from 'zustand';
 import { log } from './log';
-import { BranchInfo, Stash, RemoteMeta } from '../stateObjects';
+import { BranchInfo, Stash, RemoteMeta, UpstreamInfo } from '../stateObjects';
 import { Logger } from '../../util/logger';
 import { repoStore } from './repo';
 
@@ -63,6 +63,7 @@ export type RequestStashDrop = {
 export type RequestUpstream = {
     type: 'request-upstream';
     forBranch: BranchInfo;
+    currentUpstream: Maybe<UpstreamInfo>;
 };
 
 export type RequestCreateTag = {

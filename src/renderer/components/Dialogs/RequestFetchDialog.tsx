@@ -14,23 +14,33 @@ export const RequestFetchDialog: React.FC = () => {
     return dialog.type === 'simple-dialog' && dialog.dialog === 'RequestFetch' ? (
         <Modal isOpen={true}>
             <Formik
-                initialValues={{ fetchAll: true, prune: false }}
+                initialValues={{ fetchAll: false, prune: false }}
                 onSubmit={(values, _) => {
-                    fetchRemote(nothing, nothing, values.prune);
+                    fetchRemote(nothing, nothing, values.prune, values.fetchAll);
                     dialog.close();
                 }}>
                 {(formik) => (
                     <StyledDialog>
                         <form onSubmit={formik.handleSubmit} onReset={() => dialog.close()}>
                             <div>Fetch remotes</div>
-                            <StyledInput
-                                type="checkbox"
-                                id="prune"
-                                {...formik.getFieldProps('prune')}
-                            />
-                            <label htmlFor="prune">
-                                Remove tracking branches no longer present in remote repository
-                            </label>
+                            <div>
+                                <StyledInput
+                                    type="checkbox"
+                                    id="prune"
+                                    {...formik.getFieldProps('prune')}
+                                />
+                                <label htmlFor="prune">
+                                    Remove tracking branches no longer present in remote repository
+                                </label>
+                            </div>
+                            <div>
+                                <StyledInput
+                                    type="checkbox"
+                                    id="all"
+                                    {...formik.getFieldProps('fetchAll')}
+                                />
+                                <label htmlFor="all">Fetch changes from all remotes</label>
+                            </div>
                             <ButtonGroup>
                                 <StyledButton type="submit">OK</StyledButton>
                                 <StyledButton type="reset">Cancel</StyledButton>

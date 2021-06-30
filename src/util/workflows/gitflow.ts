@@ -174,6 +174,7 @@ export const startBranch = async (
             remote: fromNullable(sourceBranch!.upstream?.remoteName),
             branch: just(`${sourceBranch?.upstream?.ref}:${sourceBranch?.ref}`),
             prune: false,
+            fetchAll: false,
         });
     }
     dialog.open({
