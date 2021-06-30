@@ -6,17 +6,29 @@ import { ButtonGroup } from '../util/ButtonGroup';
 import { Formik } from 'formik';
 import { StyledInput } from '../util/StyledInput';
 import { fetchRemote } from '../../../model/actions/repo';
-import { nothing } from '../../../util/maybe';
+import { just, nothing } from '../../../util/maybe';
 import { useDialog } from '../../../model/state/dialogs';
+import { useRemotes } from '../../../model/state/repo';
 
 export const RequestFetchDialog: React.FC = () => {
     const dialog = useDialog();
+    const remotes = useRemotes();
     return dialog.type === 'simple-dialog' && dialog.dialog === 'RequestFetch' ? (
         <Modal isOpen={true}>
             <Formik
-                initialValues={{ fetchAll: false, prune: false }}
+                initialValues={{
+                    fetchAll: true,
+                    prune: false,
+                    tags: true,
+                    remote: remotes[0]?.remote,
+                }}
                 onSubmit={(values, _) => {
-                    fetchRemote(nothing, nothing, values.prune, values.fetchAll);
+                    fetchRemote(
+                        values.fetchAll ? nothing : just(values.remote),
+                        nothing,
+                        values.prune,
+                        values.tags
+                    );
                     dialog.close();
                 }}>
                 {(formik) => (
@@ -28,6 +40,7 @@ export const RequestFetchDialog: React.FC = () => {
                                     type="checkbox"
                                     id="prune"
                                     {...formik.getFieldProps('prune')}
+                                    checked={formik.values.prune}
                                 />
                                 <label htmlFor="prune">
                                     Remove tracking branches no longer present in remote repository
@@ -38,8 +51,29 @@ export const RequestFetchDialog: React.FC = () => {
                                     type="checkbox"
                                     id="all"
                                     {...formik.getFieldProps('fetchAll')}
+                                    checked={formik.values.fetchAll}
                                 />
                                 <label htmlFor="all">Fetch changes from all remotes</label>
+                                <div style={{ marginLeft: '2em' }}>
+                                    <label htmlFor="remotes">Select remote to fetch from </label>
+                                    <select
+                                        id="remotes"
+                                        disabled={formik.values.fetchAll}
+                                        {...formik.getFieldProps('remote')}>
+                                        {remotes.map((r) => (
+                                            <option key={r.remote}>{r.remote}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <StyledInput
+                                    type="checkbox"
+                                    id="tags"
+                                    {...formik.getFieldProps('tags')}
+                                    checked={formik.values.tags}
+                                />
+                                <label htmlFor="all">Fetch tags</label>
                             </div>
                             <ButtonGroup>
                                 <StyledButton type="submit">OK</StyledButton>

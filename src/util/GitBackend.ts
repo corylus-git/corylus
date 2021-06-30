@@ -226,7 +226,7 @@ export interface GitBackend {
         remote: Maybe<string>;
         branch: Maybe<string>;
         prune: boolean;
-        fetchAll: boolean;
+        fetchTags: boolean;
     }): Promise<void>;
 
     /**
@@ -983,52 +983,23 @@ export class SimpleGitBackend implements GitBackend {
         remote: Maybe<string>;
         branch: Maybe<string>;
         prune: boolean;
-        fetchAll: boolean;
+        fetchTags: boolean;
     }): Promise<void> => {
-        const opts = ['--verbose', '--progress'];
-        if (options.prune) {
-            opts.push('--prune');
-        }
-        const id = nanoid();
         try {
-            //     this._git.outputHandler((command, stdout, stderr) => {
-            //         stdout.on('data', (chunk: Buffer) =>
-            //             options.onProgress?.('TODO', chunk.toString())
-            //         );
-            //         stderr.on('data', (chunk: Buffer) =>
-            //             options.onProgress?.('TODO', chunk.toString())
-            //         );
-            // }
-            // this.events.next({
-            //     event: 'progress-started',
-            //     id: id,
-            //     message: `Fetching ${options?.remote ? 'from ' + options.remote : 'all remotes'}.`,
-            // });
             const cmd = ['fetch'];
             options.prune && cmd.push('--prune');
-            options.fetchAll && cmd.push('--all');
+            !options.remote.found && cmd.push('--all');
+            options.fetchTags && cmd.push('--tags');
             options.remote.found && cmd.push(options.remote.value);
             options.branch.found && cmd.push(options.branch.value);
             await this._git.raw(cmd);
         } finally {
-            // this.events.next({
-            //     event: 'progress-finished',
-            //     id: id,
-            //     message: `Finished fetching ${
-            //         options?.remote ? 'from ' + options.remote : 'all remotes'
-            //     }.`,
-            // });
             this._git.outputHandler(undefined);
         }
     };
 
     pull = async (remote: string, remoteBranch: string, noFF: boolean): Promise<void> => {
         try {
-            // this.events.next({
-            //     event: 'progress-started',
-            //     id: 'test',
-            //     message: `Pulling from ${remote}/${remoteBranch}`,
-            // });
             await this._git.pull(remote, remoteBranch, noFF ? ['--no-ff'] : undefined);
         } catch (e) {
             Logger().error('SimpleGitBackend', 'Pulling from remote branch failed', {
@@ -1041,12 +1012,6 @@ export class SimpleGitBackend implements GitBackend {
                 type: 'error',
                 autoClose: false,
             });
-        } finally {
-            // this.events.next({
-            //     event: 'progress-finished',
-            //     id: 'test',
-            //     message: `Finished pulling from ${remote}/${remoteBranch}`,
-            // });
         }
     };
 
