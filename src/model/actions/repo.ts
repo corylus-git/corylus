@@ -68,7 +68,8 @@ export const fetchRemote = trackError(
         remote: Maybe<string>,
         refSpec: Maybe<string>,
         prune: boolean,
-        fetchAll: boolean
+        fetchAll: boolean,
+        fetchTags: boolean
     ): Promise<void> => {
         try {
             progress.getState().setProgress('Fetching remote changes', true);
@@ -77,11 +78,13 @@ export const fetchRemote = trackError(
                 remote: remote,
                 branch: refSpec,
                 fetchAll: fetchAll,
+                fetchTags: fetchTags,
             });
             progress.getState().setProgress('Finished fetching changes', false, 5000);
             repoStore.getState().loadHistory();
             repoStore.getState().loadBranches();
             repoStore.getState().loadRemotes();
+            repoStore.getState().loadTags();
         } catch (e) {
             progress.getState().setProgress('Failed fetching changes', false, 5000);
             throw e;

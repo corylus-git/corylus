@@ -175,6 +175,7 @@ export const startBranch = async (
             branch: just(`${sourceBranch?.upstream?.ref}:${sourceBranch?.ref}`),
             prune: false,
             fetchAll: false,
+            fetchTags: false,
         });
     }
     dialog.open({

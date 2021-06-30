@@ -14,9 +14,9 @@ export const RequestFetchDialog: React.FC = () => {
     return dialog.type === 'simple-dialog' && dialog.dialog === 'RequestFetch' ? (
         <Modal isOpen={true}>
             <Formik
-                initialValues={{ fetchAll: false, prune: false }}
+                initialValues={{ fetchAll: true, prune: false, tags: true }}
                 onSubmit={(values, _) => {
-                    fetchRemote(nothing, nothing, values.prune, values.fetchAll);
+                    fetchRemote(nothing, nothing, values.prune, values.fetchAll, values.tags);
                     dialog.close();
                 }}>
                 {(formik) => (
@@ -28,6 +28,7 @@ export const RequestFetchDialog: React.FC = () => {
                                     type="checkbox"
                                     id="prune"
                                     {...formik.getFieldProps('prune')}
+                                    checked={formik.values.prune}
                                 />
                                 <label htmlFor="prune">
                                     Remove tracking branches no longer present in remote repository
@@ -38,8 +39,18 @@ export const RequestFetchDialog: React.FC = () => {
                                     type="checkbox"
                                     id="all"
                                     {...formik.getFieldProps('fetchAll')}
+                                    checked={formik.values.fetchAll}
                                 />
                                 <label htmlFor="all">Fetch changes from all remotes</label>
+                            </div>
+                            <div>
+                                <StyledInput
+                                    type="checkbox"
+                                    id="tags"
+                                    {...formik.getFieldProps('tags')}
+                                    checked={formik.values.tags}
+                                />
+                                <label htmlFor="all">Fetch tags</label>
                             </div>
                             <ButtonGroup>
                                 <StyledButton type="submit">OK</StyledButton>
