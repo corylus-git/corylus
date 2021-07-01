@@ -491,6 +491,8 @@ export const deleteRemote = trackError(
         Logger().debug('deleteRemote', 'Deleting remote', { name });
         await repoStore.getState().backend.deleteRemote(name);
         await repoStore.getState().loadRemotes();
+        await repoStore.getState().loadHistory();
+        await repoStore.getState().loadBranches();
     }
 );
 
