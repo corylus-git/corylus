@@ -123,6 +123,22 @@ function openContextMenu(
                     },
                 })
             );
+            menu.append(
+                new MenuItem({
+                    label: `Rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
+                    click: () => {
+                        dialog.open({ type: 'rebase', target: branch.value.ref });
+                    },
+                })
+            );
+            menu.append(
+                new MenuItem({
+                    label: `Interactive rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
+                    click: () => {
+                        dialog.open({ type: 'interactive-rebase', target: branch.value.ref });
+                    },
+                })
+            );
         }
         menu.popup({ window: remote.getCurrentWindow() });
     }
