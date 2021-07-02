@@ -15,14 +15,18 @@ import { trackError } from '../../util/error-display';
 import { dialogStore } from '../state/dialogs';
 import { uiStore } from '../state/uiState';
 
-export const commit = async (message: string, amend: boolean): Promise<void> => {
-    Logger().debug('commit', 'Committing changes', { message: message, amend: amend });
-    await repoStore.getState().backend.commit(message, amend);
-    Logger().debug('commit', 'Success');
-    repoStore.getState().loadHistory();
-    repoStore.getState().loadBranches();
-    repoStore.getState().getStatus();
-};
+export const commit = trackError(
+    'commit',
+    'commit',
+    async (message: string, amend: boolean): Promise<void> => {
+        Logger().debug('commit', 'Committing changes', { message: message, amend: amend });
+        await repoStore.getState().backend.commit(message, amend);
+        Logger().debug('commit', 'Success');
+        repoStore.getState().loadHistory();
+        repoStore.getState().loadBranches();
+        repoStore.getState().getStatus();
+    }
+);
 
 export const changeBranch = trackError(
     'change branch',
