@@ -99,7 +99,8 @@ function matchCommit(c: Commit, searchTerm: string): boolean {
         c.author.name?.toLocaleLowerCase().indexOf(searchTerm) !== -1 ||
         c.author.email?.toLocaleLowerCase().indexOf(searchTerm) !== -1 ||
         c.message?.toLocaleLowerCase().indexOf(searchTerm) !== -1 ||
-        c.short_oid.toLowerCase().indexOf(searchTerm) !== -1
+        c.short_oid.toLowerCase().indexOf(searchTerm) !== -1 ||
+        c.oid.toLowerCase().indexOf(searchTerm) !== -1
     );
 }
 

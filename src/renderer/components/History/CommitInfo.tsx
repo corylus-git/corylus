@@ -18,9 +18,17 @@ const SearchTerm = styled.span`
     color: black;
 `;
 
-const Highlighter: React.FC<{ str: string; searchTerm?: string }> = (props) => {
-    const parts =
-        (props.searchTerm && [...props.str.split(new RegExp(`(${props.searchTerm})`, 'gi'))]) || [];
+const Highlighter: React.FC<{ str: string; searchTerm?: string; fullHighlight?: boolean }> = (
+    props
+) => {
+    let parts: string[];
+    if (props.fullHighlight) {
+        parts = ['', props.str];
+    } else {
+        parts =
+            (props.searchTerm && [...props.str.split(new RegExp(`(${props.searchTerm})`, 'gi'))]) ||
+            [];
+    }
     if (parts.length === 0) {
         return <>{props.str}</>;
     }
@@ -70,7 +78,16 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                     whiteSpace: 'nowrap',
                 }}>
                 <Oid>
-                    <Highlighter str={props.commit.short_oid} searchTerm={props.searchTerm} />:
+                    <Highlighter
+                        str={props.commit.short_oid}
+                        searchTerm={props.searchTerm}
+                        fullHighlight={
+                            !!props.searchTerm &&
+                            props.searchTerm.length > props.commit.short_oid.length &&
+                            props.commit.oid.toLowerCase().includes(props.searchTerm.toLowerCase())
+                        }
+                    />
+                    :
                 </Oid>{' '}
                 <CommitMessage
                     message={props.commit.message.split('\n', 2)[0]}
