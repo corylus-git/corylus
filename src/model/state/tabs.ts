@@ -9,6 +9,7 @@ import { log } from './log';
 import { basename } from 'path';
 import { repoStore } from './repo';
 import { appSettings } from '../settings';
+import { stagingArea } from './stagingArea';
 
 export interface TabState {
     /**
@@ -120,6 +121,7 @@ export const tabsStore = create(
                             path: tab.path.value,
                         });
                         repoStore.getState().openRepo(tab.path.value);
+                        stagingArea.getState().reset();
                     }
                     all.forEach((t) => t.path.found && appSettings.updateHistory(t.path.value));
                     return {
