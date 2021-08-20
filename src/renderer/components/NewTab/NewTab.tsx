@@ -21,6 +21,7 @@ import { toast } from 'react-toastify';
 import { trackError } from '../../../util/error-display';
 import { Logger } from '../../../util/logger';
 import { structuredToast } from '../../../util/structuredToast';
+import { useMemo } from 'react';
 
 const { dialog } = remote;
 
@@ -141,31 +142,62 @@ const DirOpenButton = styled(StyledButton)`
     margin-left: 0.5rem;
 `;
 
-function DirectoryInput(props: { dir: string; onChange: (dir: string) => void }) {
-    return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 3em' }}>
-            <StyledInput
-                type="text"
-                placeholder="Local directory"
-                value={props.dir}
-                onChange={(ev) => props.onChange(ev.target.value)}
-            />
-            <DirOpenButton
-                onClick={() => {
-                    const dir = dialog.showOpenDialogSync({
-                        properties: ['openDirectory', 'promptToCreate'],
-                    });
-                    dir && dir.length > 0 && props.onChange(dir[0]);
-                }}>
-                <OpenIcon />
-            </DirOpenButton>
+const DirectoryInput: React.FC<{
+    dir: string;
+    onChange: (dir: string) => void;
+    suffix: string;
+}> = (props) => (
+    <div style={{ display: 'flex', flexDirection: 'row', alignContent: 'center' }}>
+        <StyledInput
+            style={{ flexGrow: 1 }}
+            type="text"
+            placeholder="Local directory"
+            value={props.dir}
+            onChange={(ev) => props.onChange(ev.target.value)}
+        />
+        <div
+            style={{
+                marginTop: 'auto',
+                marginBottom: 'auto',
+            }}>
+            {path.sep}
+            {props.suffix}
         </div>
-    );
+        <DirOpenButton
+            onClick={() => {
+                const dir = dialog.showOpenDialogSync({
+                    properties: ['openDirectory', 'promptToCreate'],
+                });
+                dir && dir.length > 0 && props.onChange(dir[0]);
+            }}>
+            <OpenIcon />
+        </DirOpenButton>
+    </div>
+);
+
+/**
+ * Determine the base name of a repository, i.e. the last "path" part to enable
+ * sub-dir creation based on the remote name.
+ *
+ * @param url The URL of the repository to determine the base name for
+ */
+function getRepoBaseName(url: string): string {
+    const scheme = url.match(/^[a-zA-Z0.9]+:\/\//);
+    const sshAlternateSyntaxHostPart = url.match(/^[^/]+:/);
+    if (scheme !== null || sshAlternateSyntaxHostPart !== null || path.sep === '/') {
+        // we have an input, which is separated by /
+        const p = path.posix.parse(url); // URLs also happen to parse as POSIX paths
+        return p.name;
+    }
+    // we're on the only platform with another separator -> Win32
+    const p = path.win32.parse(url);
+    return p.name;
 }
 
-function CloneDialog(props: { onClose: () => void }) {
+const CloneDialog: React.FC<{ onClose: () => void }> = (props) => {
     const [url, setUrl] = useState<string>('');
     const [dir, setDir] = useState<string>('');
+    const basename = useMemo(() => getRepoBaseName(url), [url]);
     return (
         <CloneDialogView>
             <StyledInput
@@ -173,17 +205,22 @@ function CloneDialog(props: { onClose: () => void }) {
                 placeholder="Repository URL"
                 onChange={(ev) => setUrl(ev.target.value)}
             />
-            <DirectoryInput dir={dir} onChange={(newDir) => setDir(newDir)} />
+            <DirectoryInput dir={dir} suffix={basename} onChange={(newDir) => setDir(newDir)} />
             <StatusBar />
             <ButtonGroup>
                 <StyledButton
                     onClick={() => {
-                        clone(url, dir)
-                            .then((_) => tabsStore.getState().openRepoInActive(dir))
+                        clone(url, path.join(dir, basename))
+                            .then((_) =>
+                                tabsStore.getState().openRepoInActive(path.join(dir, basename))
+                            )
                             .catch((e) => {
                                 toast.error(
                                     structuredToast(
-                                        `Could not clone repository from ${url} to ${dir}`,
+                                        `Could not clone repository from ${url} to ${path.join(
+                                            dir,
+                                            basename
+                                        )}`,
                                         e.toString().split('\n')
                                     ),
                                     { autoClose: false }
@@ -197,7 +234,7 @@ function CloneDialog(props: { onClose: () => void }) {
             </ButtonGroup>
         </CloneDialogView>
     );
-}
+};
 
 export const NewTab: React.FC = () => {
     const [cloneOpen, setCloneOpen] = useState(false);
