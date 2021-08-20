@@ -1021,27 +1021,15 @@ export class SimpleGitBackend implements GitBackend {
     };
 
     clone = async (url: string, dir: string): Promise<void> => {
-        const id = nanoid();
         try {
-            // this.events.next({
-            //     event: 'progress-started',
-            //     message: `Cloning ${url} to ${dir}`,
-            //     id: id,
-            // });
             const git = simpleGit(); // clone is one of the few commands, that can actually be executed without an open local repo
-            const result = await git.clone(url, dir);
+            await git.clone(url, dir);
         } catch (e) {
             toast(structuredToast(`Failed to clone ${url} to ${dir}`, e.message?.split(/\n/)), {
                 type: 'error',
                 autoClose: false,
             });
             Logger().error('SimpleGiteBackend', 'Clone failed', { url, dir, error: e });
-        } finally {
-            // this.events.next({
-            //     event: 'progress-finished',
-            //     message: `Finished cloning ${url} to ${dir}`,
-            //     id: id,
-            // });
         }
     };
 
