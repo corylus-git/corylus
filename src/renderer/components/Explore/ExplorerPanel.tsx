@@ -10,6 +10,7 @@ import { remote } from 'electron';
 import { FileHistory } from './FileHistory';
 import { useFiles, explorer } from '../../../model/state/explorer';
 import { SearchBox } from '../shared/SearchBox';
+import { repoStore, useRepo } from '../../../model/state/repo';
 
 const { Menu, MenuItem } = remote;
 
@@ -91,10 +92,11 @@ export const ExplorerPanel: React.FC<{ commit?: Commit }> = (props) => {
     const files = useFiles();
     const [searchTerm, setSearchTerm] = React.useState('');
     React.useEffect(() => {
+        explorer.getState().reset();
         if (!props.commit) {
             explorer.getState().loadWorkdir();
         }
-    }, [props.commit]);
+    }, [props.commit, repoStore.getState().path]);
     return (
         <ExplorerPanelView>
             <div>
