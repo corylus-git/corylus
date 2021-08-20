@@ -110,7 +110,7 @@ function FileDiff(props: {
         } else {
             setDiffString(nothing);
         }
-    }, [open]);
+    }, [open, props.commit]);
     return (
         <>
             {props.diff.additions + props.diff.deletions > 0 ? (
