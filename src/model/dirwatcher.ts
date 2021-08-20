@@ -17,10 +17,23 @@ export function useDirWatcher(path: string): void {
             }
             Logger().debug('dirWatcher', `Setting up directory watcher for ${path}`);
             const subj = new Subject<any>();
-            const watcher = fs.watch(path, (eventType, filename) => {
-                Logger().silly('dirWatcher', 'Received event', { type: eventType, file: filename });
-                subj.next(filename);
-            });
+            let watcher: fs.FSWatcher | undefined = undefined;
+            let interval: number | undefined = undefined;
+            try {
+                watcher = fs.watch(path, (eventType, filename) => {
+                    Logger().silly('dirWatcher', 'Received event', {
+                        type: eventType,
+                        file: filename,
+                    });
+                    subj.next(filename);
+                });
+            } catch (e) {
+                Logger().error('dirWatcher', 'Could not initialize directory watcher.', {
+                    error: e,
+                });
+                Logger().debug('dirWatcher', 'Falling back to polling');
+                interval = setInterval(() => repoStore.getState().getStatus(), 60_000);
+            }
             const subscription = subj
                 .pipe(
                     throttleTime(5000, undefined, { leading: true, trailing: true }) // ensure that the callback doesn't fire too often
@@ -35,7 +48,8 @@ export function useDirWatcher(path: string): void {
             return () => {
                 Logger().debug('dirWatcher', `Disabling directory watcher for ${path}`);
                 subscription.unsubscribe();
-                watcher.close();
+                watcher?.close();
+                interval && clearInterval(interval);
             };
         }
     }, [path]);
