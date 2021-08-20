@@ -8,6 +8,7 @@ import { MergeResult } from 'simple-git/promise';
 import { IndexTreeNode } from '../../renderer/components/Index/IndexTree';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { repoStore } from '../state/repo';
 import { progress } from '../state/progress';
 import { stagingArea } from '../state/stagingArea';
@@ -231,11 +232,14 @@ export const clone = trackError(
         try {
             Logger().debug('clone', 'Cloning remote URL', { url: url, localDir: localDir });
             progress.getState().setProgress(`Cloning ${url} into ${localDir}.`, true, 5000);
+            if (!fs.existsSync(localDir)) {
+                Logger().debug('clone', 'Target directory does not exist. Creating.');
+                fs.mkdirSync(localDir, { recursive: true });
+            }
             const backend = new SimpleGitBackend(localDir);
             await backend.clone(url, localDir);
             Logger().debug('clone', 'Success');
             progress.getState().setProgress(`Finished cloning ${url}.`, false, 5000);
-            repoStore.getState().openRepo(localDir);
         } catch (e) {
             progress.getState().setProgress(`Failed cloning ${url}.`, false, 5000);
             throw e;
