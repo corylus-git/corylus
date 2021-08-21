@@ -33,6 +33,7 @@ export type ExplorerActions = {
     closePathHistory: () => void;
     loadBlameInfo: (path: string) => Promise<void>;
     closeBlameInfo: () => void;
+    reset: () => void;
 };
 
 // Turn the set method into an immer proxy
@@ -98,6 +99,14 @@ export const explorer = create(
                 set((state) => {
                     state.blameInfo = nothing;
                     state.filePath = nothing;
+                });
+            },
+            reset: (): void => {
+                set((state) => {
+                    state.files = nothing;
+                    state.filePath = nothing;
+                    state.fileHistory = nothing;
+                    state.blameInfo = nothing;
                 });
             },
         }))

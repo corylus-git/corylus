@@ -44,6 +44,7 @@ export type StagingAreaActions = {
     requestManualMerge: (filePath: string) => Promise<void>;
     toggleBlock: (side: 'ours' | 'theirs', index: number) => void;
     finishManualMerge: () => void;
+    reset: () => void;
 };
 
 // Turn the set method into an immer proxy
@@ -188,6 +189,14 @@ export const stagingArea = create(
             finishManualMerge: (): void => {
                 Logger().debug('finishManualMerge', 'Closing Merge panel');
                 set((state) => {
+                    state.manualMerge = nothing;
+                });
+            },
+            reset: (): void => {
+                set((state) => {
+                    state.selectedDiff = nothing;
+                    state.selectedFile = nothing;
+                    state.selectedConflict = nothing;
                     state.manualMerge = nothing;
                 });
             },

@@ -101,7 +101,7 @@ const CommitMessage = styled.textarea`
 `;
 
 let commitMessage: Maybe<string> = nothing;
-let savedAttempt = false;
+let savedAmend = false;
 
 function CommitForm(props: { onCommit?: () => void }) {
     const backend = useRepo((s) => s.backend);
@@ -109,6 +109,10 @@ function CommitForm(props: { onCommit?: () => void }) {
     const pendingCommitMessage = pendingCommit.found
         ? just(pendingCommit.value.message)
         : commitMessage;
+    React.useEffect(() => {
+        commitMessage = nothing;
+        savedAmend = false;
+    }, [repoStore.getState().path]);
     return (
         <div
             style={{
@@ -120,11 +124,12 @@ function CommitForm(props: { onCommit?: () => void }) {
                     props.onCommit?.();
                     formik.resetForm();
                     commitMessage = nothing;
+                    savedAmend = false;
                 }}
                 enableReinitialize
                 initialValues={{
                     commitmsg: pendingCommitMessage.found ? pendingCommitMessage.value : '',
-                    amend: savedAttempt,
+                    amend: savedAmend,
                 }}
                 initialErrors={
                     !pendingCommitMessage ? { commitmsg: 'No commit message supplied' } : {}
@@ -164,7 +169,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                                 name="amend"
                                 onChange={(ev: any) => {
                                     formik.handleChange(ev);
-                                    savedAttempt = ev.target.checked;
+                                    savedAmend = ev.target.checked;
                                     if (!formik.values.amend) {
                                         // this needs to be the "wrong" way around, as we're seeing the value before re-rendering
                                         Logger().debug(
