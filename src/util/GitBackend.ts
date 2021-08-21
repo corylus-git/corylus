@@ -1034,14 +1034,10 @@ export class SimpleGitBackend implements GitBackend {
     };
 
     branch = async (name: string, source: string, noCheckout: boolean): Promise<void> => {
-        try {
-            if (noCheckout) {
-                await this._git.raw(['branch', name, source]);
-            } else {
-                await this._git.checkoutBranch(name, source);
-            }
-        } catch (e) {
-            Logger().error('SimpleGitBackend', 'Creating branch failed', { error: e });
+        if (noCheckout) {
+            await this._git.raw(['branch', name, source]);
+        } else {
+            await this._git.checkoutBranch(name, source);
         }
     };
 
