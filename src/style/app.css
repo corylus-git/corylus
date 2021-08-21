@@ -38,6 +38,12 @@
     color: var(--border);
 }
 
+.timeout {
+    background-color: var(--conflict);
+    color: var(--conflict-text);
+    font-weight: bold;
+}
+
 .diff-inserted.selected {
     background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.7));
 }

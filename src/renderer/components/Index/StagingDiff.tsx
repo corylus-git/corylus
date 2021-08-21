@@ -21,7 +21,7 @@ export const StagingDiff: React.FC<{
     isIndex?: boolean;
 }> = (props) => {
     const parsedDiff = React.useMemo(() => {
-        return parse(props.diff);
+        return parse(props.diff, 125);
     }, [props.diff]);
     const { onAddDiff, onDiscardDiff } = props;
     const isIndex = props.isIndex;
@@ -34,31 +34,34 @@ export const StagingDiff: React.FC<{
         ) + 1;
 
     function StagingChunk(props: ChunkRendererProps) {
+        const isPartial = props.chunk.lines[props.chunk.lines.length - 1]?.type === 'timeout';
         return (
             <div>
                 <StagingChunkHeader>
                     {props.chunk.header}
-                    <button
-                        onClick={() =>
-                            onAddDiff(
-                                serializeDiff(
-                                    parsedDiff[0].header,
-                                    modifyDiff(parsedDiff[0], {
-                                        first: {
-                                            chunkIndex: props.chunkIndex,
-                                            lineIndex: 0,
-                                        },
-                                        last: {
-                                            chunkIndex: props.chunkIndex,
-                                            lineIndex: props.chunk.lines.length - 1,
-                                        },
-                                    })
+                    {!isPartial && (
+                        <button
+                            onClick={() =>
+                                onAddDiff(
+                                    serializeDiff(
+                                        parsedDiff[0].header,
+                                        modifyDiff(parsedDiff[0], {
+                                            first: {
+                                                chunkIndex: props.chunkIndex,
+                                                lineIndex: 0,
+                                            },
+                                            last: {
+                                                chunkIndex: props.chunkIndex,
+                                                lineIndex: props.chunk.lines.length - 1,
+                                            },
+                                        })
+                                    )
                                 )
-                            )
-                        }>
-                        {isIndex ? 'Unstage chunk' : 'Stage chunk'}
-                    </button>
-                    {!isIndex ? (
+                            }>
+                            {isIndex ? 'Unstage chunk' : 'Stage chunk'}
+                        </button>
+                    )}
+                    {!isIndex && !isPartial ? (
                         <button
                             onClick={() =>
                                 onDiscardDiff(

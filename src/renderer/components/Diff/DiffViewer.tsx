@@ -29,6 +29,9 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
         case 'pseudo-context':
             className = 'pseudo-context';
             break;
+        case 'timeout':
+            className = 'timeout';
+            break;
     }
     if (props.selected) {
         className += ' selected';
@@ -267,7 +270,7 @@ export const DiffViewer: React.FC<{ file: FileDiff } & DiffViewerPropsBase> = (p
 export const StringDiffViewer: React.FC<{ diffString: string } & DiffViewerPropsBase> = (props) => {
     const parsedDiff = useMemo(() => {
         Logger().silly('StringDiffViewer', 'Parsing diff', { diff: props.diffString });
-        return parse(props.diffString);
+        return parse(props.diffString, 125);
     }, [props.diffString]);
     return parsedDiff.length > 0 ? (
         <DiffViewer file={parsedDiff[0]} chunk={props.chunk} line={props.line} selectable />
