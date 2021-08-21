@@ -2,7 +2,7 @@ import { toast } from 'react-toastify';
 import { Logger } from './logger';
 import { structuredToast } from './structuredToast';
 
-export function trackError<P extends any[], R>(
+export function trackError<P extends unknown[], R>(
     action: string,
     context: string,
     func: (...args: P) => Promise<R>
