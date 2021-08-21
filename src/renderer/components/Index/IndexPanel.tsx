@@ -109,6 +109,10 @@ function CommitForm(props: { onCommit?: () => void }) {
     const pendingCommitMessage = pendingCommit.found
         ? just(pendingCommit.value.message)
         : commitMessage;
+    React.useEffect(() => {
+        commitMessage = nothing;
+        savedAmend = false;
+    }, [repoStore.getState().path]);
     return (
         <div
             style={{
