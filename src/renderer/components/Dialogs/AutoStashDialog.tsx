@@ -10,8 +10,8 @@ import { Logger } from '../../../util/logger';
 
 async function doChange(dialog: AutoStash & DialogActions, autoStash: boolean) {
     Logger().debug('AutoStashDialog', `Stash was ${autoStash ? '' : 'not'} requested.`);
-    await changeBranch(dialog.target, !autoStash, autoStash);
     dialog.close();
+    await changeBranch(dialog.target, !autoStash, autoStash);
 }
 
 export const AutoStashDialog: React.FC = () => {
