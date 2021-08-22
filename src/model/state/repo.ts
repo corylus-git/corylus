@@ -448,6 +448,16 @@ export const usePendingCommit = (): Maybe<PendingCommit> =>
     useRepo((state: RepoState & RepoActions) => state.pendingCommit);
 
 /**
+ * Get the current conflicts in the repository
+ *
+ * @returns true if there are conflicts, false otherwise
+ */
+export const useConflicts = (): boolean =>
+    useRepo(
+        (state: RepoState & RepoActions) => state.status.find((s) => s.isConflicted) !== undefined
+    );
+
+/**
  * get the currently selected commit (e.g. for displaying commit details)
  */
 export const useSelectedCommit = (): Maybe<CommitStats> =>

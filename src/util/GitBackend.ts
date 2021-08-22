@@ -727,9 +727,9 @@ export class SimpleGitBackend implements GitBackend {
         }
     };
 
-    abortMerge = async () => {
+    abortMerge = async (): Promise<string | undefined> => {
         try {
-            await this._git.merge(['--abort']);
+            await this._git.reset(['--merge']);
             return undefined;
         } catch (e) {
             Logger().error('SimpleGitBackend', 'Could not abort merge', { error: e });
