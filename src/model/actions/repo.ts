@@ -157,7 +157,6 @@ export const merge = async (from: string, noFF: boolean): Promise<void> => {
         await repoStore.getState().backend.merge(from, noFF);
         repoStore.getState().loadBranches();
         repoStore.getState().loadHistory();
-        repoStore.getState().getStatus();
     } catch (e) {
         if (e.git && ((e.git as MergeResult)?.conflicts?.length ?? 0 !== 0)) {
             toast.error(
@@ -174,6 +173,8 @@ export const merge = async (from: string, noFF: boolean): Promise<void> => {
             });
         }
         throw e;
+    } finally {
+        repoStore.getState().getStatus();
     }
 };
 
