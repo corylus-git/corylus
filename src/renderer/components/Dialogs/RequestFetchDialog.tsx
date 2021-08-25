@@ -18,7 +18,7 @@ export const RequestFetchDialog: React.FC = () => {
             <Formik
                 initialValues={{
                     fetchAll: true,
-                    prune: false,
+                    prune: true,
                     tags: true,
                     remote: remotes[0]?.remote,
                 }}
