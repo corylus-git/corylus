@@ -3,7 +3,7 @@ import { execSync, exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
-import simpleGit, { SimpleGit, LogOptions } from 'simple-git';
+import simpleGit, { SimpleGit } from 'simple-git';
 import temp from 'temp';
 
 const writeAsync = util.promisify(fs.write);
@@ -32,7 +32,6 @@ import { Logger } from './logger';
 import { chunks } from './ImmutableArrayUtils';
 import { toast } from 'react-toastify';
 import { structuredToast } from './structuredToast';
-import { nanoid } from 'nanoid';
 import {
     IEffectiveConfig,
     IGitConfig,
@@ -40,6 +39,7 @@ import {
     IGitFlowConfig,
 } from '../model/IGitConfig';
 import { Maybe, fromNullable, nothing, just } from './maybe';
+import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from './configVariables';
 
 export type ProgressEventType = string;
 export type ProgressCallback = (type: ProgressEventType, output?: string) => void;
@@ -345,6 +345,14 @@ export interface GitBackend {
     getConfig(): Promise<IGitConfig>;
 
     /**
+     * Set the given config value in the local or global git configs
+     *
+     * @param key The key to set
+     * @param value The value to store
+     */
+    setConfigValue(key: string, value: string, target: 'local' | 'global'): Promise<void>;
+
+    /**
      * Reset a branch to a given commit
      *
      * @param branch The branch to reset
@@ -380,14 +388,6 @@ export interface GitBackend {
      * @param path The path of the file to load the blame info for
      */
     blame(path: string): Promise<readonly BlameInfo[]>;
-
-    /**
-     * Set a specific git configuration variable in the repository-specific config
-     *
-     * @param variable The name of the variable to set
-     * @param value The value of the variable to set
-     */
-    setConfigVariable(variable: string, value: string): Promise<void>;
 
     /**
      * Restore a given path to the state as in the index/repository
@@ -1298,12 +1298,23 @@ export class SimpleGitBackend implements GitBackend {
 
     private transformConfig = (input: ConfigValues): IEffectiveConfig => {
         const ret: IEffectiveConfig = {};
+        console.log(input);
         if (input['user.name'] || input['user.email']) {
             ret.user = {
                 name: input['user.name'] as string,
                 email: input['user.email'] as string,
             };
             Logger().silly('GitBackend', 'Found user information', { user: ret.user });
+        }
+        if (input[AUTOFETCHENABLED]) {
+            ret.corylus = {
+                autoFetchEnabled: input[AUTOFETCHENABLED] === 'true',
+            };
+            ret.corylus.autoFetchInterval = parseInt((input[AUTOFETCHINTERVAL] as string) ?? '5');
+        } else {
+            ret.corylus = {
+                autoFetchEnabled: false,
+            };
         }
         return ret;
     };
@@ -1334,8 +1345,16 @@ export class SimpleGitBackend implements GitBackend {
         return existing;
     }
 
-    setConfigVariable = async (variable: string, value: string): Promise<void> => {
-        await this._git.addConfig(variable, value);
+    setConfigValue = async (
+        variable: string,
+        value: string,
+        target: 'local' | 'global'
+    ): Promise<void> => {
+        if (target === 'local') {
+            await this._git.raw(['config', variable, value]);
+        } else {
+            await this._git.raw(['config', '--global', variable, value]);
+        }
     };
 
     restore = async (path: string): Promise<void> => {

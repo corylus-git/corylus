@@ -5,9 +5,10 @@ import { StyledInput } from '../util/StyledInput';
 import { Formik } from 'formik';
 import { effective } from '../../../model/IGitConfig';
 import { ConfigSection } from './ConfigSection';
-import { darkTheme } from '../../../style/dark-theme';
 import { useTheme, allThemes } from '../../../model/state/theme';
 import { useConfig } from '../../../model/state/repo';
+import { syncConfig } from '../../../model/actions/repo';
+import { StyledButton } from '../util/StyledButton';
 
 const ConfigPanelContainer = styled.div`
     width: 100%;
@@ -21,13 +22,24 @@ export const ConfigurationPanel: React.FC = () => {
         <ConfigPanelContainer>
             <Formik
                 initialValues={{
-                    username: effective(gitConfig)?.user?.name,
-                    useremail: effective(gitConfig)?.user?.email,
+                    username: effective(gitConfig)?.user?.name ?? '',
+                    useremail: effective(gitConfig)?.user?.email ?? '',
+                    autoFetchEnabled: !!effective(gitConfig)?.corylus?.autoFetchEnabled,
+                    autoFetchInterval: effective(gitConfig)?.corylus?.autoFetchInterval ?? 5,
                 }}
-                onSubmit={() => {}}
+                onSubmit={(values) =>
+                    syncConfig({
+                        global: {
+                            corylus: {
+                                autoFetchEnabled: values.autoFetchEnabled,
+                                autoFetchInterval: values.autoFetchInterval,
+                            },
+                        },
+                    })
+                }
                 enableReinitialize>
                 {(formik) => (
-                    <>
+                    <form onSubmit={formik.handleSubmit} onReset={formik.handleReset}>
                         <ConfigSection title="User">
                             <label htmlFor="username">Name:</label>
                             <StyledInput
@@ -62,7 +74,29 @@ export const ConfigurationPanel: React.FC = () => {
                                 ))}
                             </select>
                         </ConfigSection>
-                    </>
+                        <ConfigSection title="Remotes">
+                            <label htmlFor="autoFetchEnabled">
+                                Automatically fetch remote repositories
+                            </label>
+                            <input
+                                type="checkbox"
+                                id="autoFetchEnabled"
+                                checked={formik.values.autoFetchEnabled}
+                                {...formik.getFieldProps('autoFetchEnabled')}
+                            />
+                            <label htmlFor="autoFetchInterval">Fetch interval</label>
+                            <div>
+                                <input
+                                    type="number"
+                                    id="autoFetchInterval"
+                                    {...formik.getFieldProps('autoFetchInterval')}
+                                    disabled={!formik.values.autoFetchEnabled}
+                                />{' '}
+                                minutes
+                            </div>
+                        </ConfigSection>
+                        <StyledButton type="submit">Save</StyledButton>
+                    </form>
                 )}
             </Formik>
         </ConfigPanelContainer>

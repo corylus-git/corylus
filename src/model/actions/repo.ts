@@ -8,13 +8,14 @@ import { MergeResult } from 'simple-git/promise';
 import { IndexTreeNode } from '../../renderer/components/Index/IndexTree';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { repoStore } from '../state/repo';
 import { progress } from '../state/progress';
 import { stagingArea } from '../state/stagingArea';
 import { trackError } from '../../util/error-display';
 import { dialogStore } from '../state/dialogs';
 import { uiStore } from '../state/uiState';
+import { IGitConfig } from '../IGitConfig';
+import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from '../../util/configVariables';
 
 export const commit = trackError(
     'commit',
@@ -548,5 +549,25 @@ export const abortRebase = trackError(
             repoStore.getState().getRebaseStatus(),
         ];
         await Promise.all(promises);
+    }
+);
+
+export const syncConfig = trackError(
+    'syncing config',
+    'syncConfig',
+    async (values: IGitConfig): Promise<void> => {
+        const store = repoStore.getState().backend.setConfigValue;
+        await store(
+            AUTOFETCHENABLED,
+            values.global?.corylus?.autoFetchEnabled ? 'true' : 'false',
+            'global'
+        );
+        await store(
+            AUTOFETCHINTERVAL,
+            `${values.global?.corylus?.autoFetchInterval ?? 5}`,
+            'global'
+        );
+        await repoStore.getState().getConfig(); // reload the config after successful store
+        toast.success('Sucessfully stored config values');
     }
 );

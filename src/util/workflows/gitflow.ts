@@ -115,14 +115,14 @@ export const configure = async (config: IGitFlowConfigValues): Promise<void> => 
     Logger().info('GitFlow', 'Initializing Gitflow');
     // set the config
     Logger().info('Gitflow', 'Setting gitflow config', { config: config });
-    await backend.setConfigVariable('gitflow.branch.master', config.branch.master);
-    await backend.setConfigVariable('gitflow.branch.develop', config.branch.develop);
-    await backend.setConfigVariable('gitflow.prefix.feature', config.prefix.feature);
-    await backend.setConfigVariable('gitflow.prefix.bugfix', config.prefix.bugfix);
-    await backend.setConfigVariable('gitflow.prefix.release', config.prefix.release);
-    await backend.setConfigVariable('gitflow.prefix.hotfix', config.prefix.hotfix);
-    await backend.setConfigVariable('gitflow.prefix.support', config.prefix.support);
-    await backend.setConfigVariable('gitflow.prefix.versiontag', config.prefix.versiontag);
+    await backend.setConfigValue('gitflow.branch.master', config.branch.master, 'local');
+    await backend.setConfigValue('gitflow.branch.develop', config.branch.develop, 'local');
+    await backend.setConfigValue('gitflow.prefix.feature', config.prefix.feature, 'local');
+    await backend.setConfigValue('gitflow.prefix.bugfix', config.prefix.bugfix, 'local');
+    await backend.setConfigValue('gitflow.prefix.release', config.prefix.release, 'local');
+    await backend.setConfigValue('gitflow.prefix.hotfix', config.prefix.hotfix, 'local');
+    await backend.setConfigValue('gitflow.prefix.support', config.prefix.support, 'local');
+    await backend.setConfigValue('gitflow.prefix.versiontag', config.prefix.versiontag, 'local');
     // get the history in order to decide, whether we can create our branches at all
     const history = await backend.getHistory();
     if (history.length === 0) {

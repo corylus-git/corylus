@@ -36,6 +36,7 @@ import { InteractiveRebase } from './Dialogs/InteractiveRebase';
 import { Rebase } from './Dialogs/Rebase';
 import { RebaseStatusBar } from './Rebase/RebaseStatusBar';
 import { AutoStashDialog } from './Dialogs/AutoStashDialog';
+import { useAutoFetcher } from '../../util/AutoFetcher';
 
 export const MainView = styled.div`
     display: grid;
@@ -73,6 +74,7 @@ export const Repository: React.FC = () => {
     const path = repo.path;
     const dialog = useDialog();
     const __ = useDirWatcher(path);
+    const _autofetcher = useAutoFetcher(repo);
     const workflows = useWorkflows();
     const location = useLocation();
     React.useEffect(() => {

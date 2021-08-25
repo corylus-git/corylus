@@ -36,6 +36,13 @@ export interface IGitFlowConfig {
     gitFlow?: IGitFlowConfigValues;
 }
 
+export interface ICorylusConfig {
+    corylus?: {
+        autoFetchEnabled?: boolean;
+        autoFetchInterval?: number;
+    };
+}
+
 /**
  * The git configuration as handled by the program.
  *
@@ -44,11 +51,11 @@ export interface IGitFlowConfig {
  * the system configuration anyway.
  */
 export interface IGitConfig {
-    local?: IGitConfigValues & IGitFlowConfig;
-    global?: IGitConfigValues;
+    local?: IGitConfigValues & IGitFlowConfig & ICorylusConfig;
+    global?: IGitConfigValues & ICorylusConfig;
 }
 
 /**
  * The effective values of a config, i.e. the merged values from global and local
  */
-export type IEffectiveConfig = IGitConfigValues & IGitFlowConfig;
+export type IEffectiveConfig = IGitConfigValues & IGitFlowConfig & ICorylusConfig;

@@ -1,0 +1,36 @@
+import React from 'react';
+import { RepoActions, RepoState, repoStore, useConfig } from '../model/state/repo';
+import { Logger } from './logger';
+import { nothing } from './maybe';
+
+export function useAutoFetcher(repo: RepoState & RepoActions): void {
+    const config = useConfig();
+    React.useEffect(() => {
+        let timer: number | undefined = undefined;
+        console.log(config);
+        if (config.global?.corylus?.autoFetchEnabled) {
+            Logger().debug('useAutoFetcher', 'Starting auto fetcher.', {
+                interval: config.global.corylus.autoFetchInterval,
+            });
+            timer = setInterval(() => {
+                try {
+                    Logger().debug('autoFetcher', 'Fetching remotes');
+                    repoStore.getState().backend.fetch({
+                        fetchTags: true,
+                        branch: nothing,
+                        prune: true,
+                        remote: nothing,
+                    });
+                } catch (e) {
+                    Logger().error('autoFetcher', 'Could not fetch remotes', { error: e });
+                }
+            }, (config.global.corylus.autoFetchInterval ?? 5) * 60 * 1000);
+        }
+        return () => {
+            if (timer) {
+                Logger().debug('useAutoFetcher', 'Stopping auto fetcher.');
+                clearInterval(timer);
+            }
+        };
+    }, [repo.path, config]);
+}
