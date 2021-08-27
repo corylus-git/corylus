@@ -26,7 +26,7 @@ import { ConfigureGitFlow } from './Dialogs/ConfigureGitFlow';
 import { Logger } from '../../util/logger';
 import { BranchResetDialog } from './Dialogs/BranchResetDialog';
 import { useDialog } from '../../model/state/dialogs';
-import { useRepo } from '../../model/state/repo';
+import { useCurrentBranch, useRepo, useStatus } from '../../model/state/repo';
 import { useWorkflows } from '../../model/state/workflows';
 import { Gitflow } from '../../util/workflows/gitflow';
 import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
@@ -68,6 +68,35 @@ const DialogsContainer: React.FC = () => (
         <AutoStashDialog />
     </>
 );
+
+const CurrentBranch = styled.pre`
+    margin: 0;
+    padding: 0;
+    padding-left: 0.5rem;
+    font-size: 80%;
+`;
+
+const Detached = styled.span`
+    color: var(--notify);
+    font-style: italic;
+    font-weight: bold;
+`;
+
+const MainStatusBar: React.FC = () => {
+    const currentBranch = useCurrentBranch();
+    const status = useStatus();
+    return (
+        <StatusBar>
+            <CurrentBranch>
+                {currentBranch.found && currentBranch.value.isDetached && (
+                    <Detached>DETACHED HEAD: </Detached>
+                )}
+                {status.length > 0 && '*'}
+                {currentBranch.found && currentBranch.value.ref}
+            </CurrentBranch>
+        </StatusBar>
+    );
+};
 
 export const Repository: React.FC = () => {
     const repo = useRepo();
@@ -116,7 +145,7 @@ export const Repository: React.FC = () => {
                     <ExplorerPanel />
                 </Route>
             </div>
-            <StatusBar />
+            <MainStatusBar />
             <DialogsContainer />
         </MainView>
     );
