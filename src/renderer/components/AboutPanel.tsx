@@ -1,10 +1,8 @@
 import { Modal } from './util/Modal';
 import React from 'react';
 import { StyledDialog } from './util/StyledDialog';
-import { remote } from 'electron';
+import { app } from '@electron/remote';
 import { StyledButton } from './util/StyledButton';
-
-const { app } = remote;
 
 export const AboutPanel: React.FC<{ open: boolean; onClose: () => void }> = (props) => {
     return props.open ? (

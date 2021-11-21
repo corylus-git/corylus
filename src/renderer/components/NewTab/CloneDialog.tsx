@@ -10,8 +10,8 @@ import { toast } from 'react-toastify';
 import { structuredToast } from '../../../util/structuredToast';
 import styled from 'styled-components';
 import { StyledDialog } from '../util/StyledDialog';
-import { dialog } from 'electron';
 import OpenIcon from '../icons/OpenIcon.svg';
+import { dialog, getCurrentWindow } from '@electron/remote';
 
 export const CloneDialogView = styled(StyledDialog)`
     width: 40rem;
@@ -47,12 +47,14 @@ export const DirectoryInput: React.FC<{
             {props.suffix}
         </div>
         <DirOpenButton
-            onClick={() => {
-                const dir = dialog.showOpenDialogSync({
-                    properties: ['openDirectory', 'promptToCreate'],
-                });
-                dir && dir.length > 0 && props.onChange(dir[0]);
-            }}>
+            onClick={() =>
+                (async () => {
+                    const dir = await dialog.showOpenDialog(getCurrentWindow(), {
+                        properties: ['openDirectory', 'promptToCreate'],
+                    });
+                    dir.filePaths && dir.filePaths.length > 0 && props.onChange(dir.filePaths[0]);
+                })()
+            }>
             <OpenIcon />
         </DirOpenButton>
     </div>

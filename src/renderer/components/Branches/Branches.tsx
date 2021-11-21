@@ -6,7 +6,7 @@ import { TreeNode, Tree } from '../util/Tree/Tree';
 
 import '../../../style/app.css';
 import { insertPath } from '../util/Tree/utils';
-import { remote } from 'electron';
+import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
 import { Stashes } from './Stashes';
 import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
@@ -27,10 +27,7 @@ import { StyledButton } from '../util/StyledButton';
 import RemoteIcon from '../icons/Remote.svg';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
 import { Affected } from './Affected';
-import { useTheme } from '../../../model/state/theme';
 import { isInProgress } from '../../../model/state/uiState';
-
-const { Menu, MenuItem } = remote;
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -140,7 +137,7 @@ function openContextMenu(
                 })
             );
         }
-        menu.popup({ window: remote.getCurrentWindow() });
+        menu.popup({ window: getCurrentWindow() });
     }
 }
 
@@ -283,7 +280,7 @@ function remoteContextMenu(remoteRepo: RemoteMeta, dialog: DialogActions) {
             },
         },
     ]);
-    menu.popup({ window: remote.getCurrentWindow() });
+    menu.popup({ window: getCurrentWindow() });
 }
 
 const RemoteNameDisplay: React.FC<{ remote: RemoteMeta }> = (props) => {

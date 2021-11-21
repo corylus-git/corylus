@@ -6,7 +6,7 @@ import { BranchInfo, Commit } from '../../../model/stateObjects';
 import { GraphNode } from './GraphNode';
 import { RailLine } from './RailLine';
 import { FixedSizeList as List } from 'react-window';
-import { remote } from 'electron';
+import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
 import { SearchBox } from '../shared/SearchBox';
 import { map, Maybe, just, nothing } from '../../../util/maybe';
 import { DialogActions, useDialog } from '../../../model/state/dialogs';
@@ -22,8 +22,6 @@ import {
 import { useGraph } from '../../../model/state/graph';
 import { GraphLayoutData } from '../../../util/graphLayout';
 import { changeBranch } from '../../../model/actions/repo';
-
-const { Menu, MenuItem } = remote;
 
 const CommitMessage = styled.div`
     flex-grow: 1;
@@ -91,7 +89,7 @@ function openContextMenu(
             })
         );
     }
-    menu.popup({ window: remote.getCurrentWindow() });
+    menu.popup({ window: getCurrentWindow() });
 }
 
 function matchCommit(c: Commit, searchTerm: string): boolean {

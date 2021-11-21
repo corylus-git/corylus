@@ -4,11 +4,9 @@ import { Tree, TreeNode } from '../util/Tree/Tree';
 import { FileStatus } from '../shared/FileStatus';
 import { insertPath } from '../util/Tree/utils';
 import { Logger } from '../../../util/logger';
-import { remote } from 'electron';
+import { Menu, getCurrentWindow } from '@electron/remote';
 import { discardChanges } from '../../../model/actions/repo';
 import { useDialog, DialogActions } from '../../../model/state/dialogs';
-
-const { Menu, MenuItem } = remote;
 
 function openContextMenu(treeNode: IndexTreeNode, dialog: DialogActions) {
     const menu = Menu.buildFromTemplate([
@@ -28,7 +26,7 @@ function openContextMenu(treeNode: IndexTreeNode, dialog: DialogActions) {
         },
     ]);
     Logger().silly('IndexTree', 'Open context menu', { node: treeNode });
-    menu.popup({ window: remote.getCurrentWindow() });
+    menu.popup({ window: getCurrentWindow() });
 }
 
 export interface IndexTreeNode extends IndexStatus {

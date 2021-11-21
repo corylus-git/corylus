@@ -123,7 +123,7 @@ export const tabsStore = create(
                         repoStore.getState().openRepo(tab.path.value);
                         stagingArea.getState().reset();
                     }
-                    all.forEach((t) => t.path.found && appSettings.updateHistory(t.path.value));
+                    all.forEach((t) => t.path.found && appSettings().updateHistory(t.path.value));
                     return {
                         left: all.slice(0, index),
                         active: just(tab),
@@ -142,7 +142,7 @@ export const tabsStore = create(
                         path,
                     });
                     repoStore.getState().openRepo(path);
-                    appSettings.updateHistory(path);
+                    appSettings().updateHistory(path);
                 });
             },
             loadTabs: (tabs: readonly TabState[]): void => {

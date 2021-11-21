@@ -3,14 +3,12 @@ import { Tree, TreeNode } from '../util/Tree/Tree';
 import { TypeHeader } from './TypeHeader';
 import { HoverableDiv } from '../StyleBase';
 import styled from 'styled-components';
-import { remote } from 'electron';
+import { Menu, getCurrentWindow } from '@electron/remote';
 import { Tag } from '../../../model/stateObjects';
 import { deleteTag } from '../../../model/actions/repo';
 import { useTags, repoStore, useAffected } from '../../../model/state/repo';
 import { Affected } from './Affected';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
-
-const { Menu } = remote;
 
 const TagDisplay = styled(HoverableDiv)`
     padding: 2px;
@@ -28,7 +26,7 @@ function openContextMenu(tag: Tag) {
             },
         },
     ]);
-    menu.popup({ window: remote.getCurrentWindow() });
+    menu.popup({ window: getCurrentWindow() });
 }
 
 export const TagsList: React.FC = () => {

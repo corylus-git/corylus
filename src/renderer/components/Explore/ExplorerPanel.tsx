@@ -6,13 +6,11 @@ import { Tree, TreeNode } from '../util/Tree/Tree';
 import { RunningIndicator } from '../util/RunningIndicator';
 import { insertPath } from '../util/Tree/utils';
 import { FileStatus } from '../shared/FileStatus';
-import { remote } from 'electron';
+import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
 import { FileHistory } from './FileHistory';
 import { useFiles, explorer } from '../../../model/state/explorer';
 import { SearchBox } from '../shared/SearchBox';
 import { repoStore, useRepo } from '../../../model/state/repo';
-
-const { Menu, MenuItem } = remote;
 
 const ExplorerPanelView = styled.div`
     > div {
@@ -52,7 +50,7 @@ function openContextMenu(meta: FileStats) {
             },
         },
     ]);
-    menu.popup({ window: remote.getCurrentWindow() });
+    menu.popup({ window: getCurrentWindow() });
 }
 
 const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {

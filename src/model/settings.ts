@@ -4,6 +4,9 @@ import { allActivePaths } from './state/util';
 import { themeStore } from './state/theme';
 import { darkTheme } from '../style/dark-theme';
 import { Logger } from '../util/logger';
+import { app } from '@electron/remote';
+import path from 'path';
+import { Theme } from '../style/theme';
 
 /**
  * The settings known to the program
@@ -21,9 +24,28 @@ export interface ISettings {
      * value: the last time this repo was open
      */
     repositoryHistory: Map<string, Date>;
+
+    /**
+     * Update the given entry in the repository history.
+     * If the path already exists, update its access date, otherwise add it to
+     * the history
+     *
+     * @param path The path to add to the history
+     */
+    updateHistory(path: string): void;
+
+    /**
+     * The name of the theme currently in use by the app
+     */
+    theme: string;
 }
 
 class SettingsImpl implements ISettings {
+    constructor() {
+        // TODO temporary workaround because electron-settings is not compatible with enableRemoteModule: false
+        settings.configure({ dir: path.join(app.getPath('userData'), 'Settings') });
+    }
+
     get openTabs() {
         return (settings.getSync('openTabs') as string[]) ?? [];
     }
@@ -72,17 +94,24 @@ class SettingsImpl implements ISettings {
     }
 }
 
-export const appSettings = new SettingsImpl();
+export function appSettings(): ISettings {
+    if (_appSettings === undefined) {
+        _appSettings = new SettingsImpl();
+    }
+    return _appSettings;
+}
+
+let _appSettings: ISettings | undefined = undefined;
 
 export function startAppSettingsStorage(): void {
     tabsStore.subscribe(
-        (tabs: string[] | null) => (appSettings.openTabs = tabs ?? []),
+        (tabs: string[] | null) => (appSettings().openTabs = tabs ?? []),
         (s) => allActivePaths(s)
     );
     themeStore.subscribe(
         (theme: string | null) => {
             Logger().debug('appSettingsStorage', 'Syncing new theme to settings', { theme });
-            appSettings.theme = theme ?? darkTheme.name;
+            appSettings().theme = theme ?? darkTheme.name;
         },
         (s) => s.current.name
     );

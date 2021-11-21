@@ -36,13 +36,13 @@ const Application = () => {
 
     useEffect(() => {
         tabs.loadTabs(
-            appSettings.openTabs.map((t) => ({
+            appSettings().openTabs.map((t) => ({
                 id: nanoid(),
                 path: just(t),
                 title: basename(t),
             }))
         );
-        theme.switchTheme(appSettings.theme);
+        theme.switchTheme(appSettings().theme);
     }, []);
     Logger().debug('Application', 'Re-rendering <Application />', { theme: theme.current });
     React.useEffect(() => {

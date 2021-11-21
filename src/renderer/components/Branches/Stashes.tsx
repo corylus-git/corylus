@@ -2,13 +2,11 @@ import React from 'react';
 import { Stash } from '../../../model/stateObjects';
 import { HoverableDiv } from '../StyleBase';
 import styled from 'styled-components';
-import { remote } from 'electron';
+import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
 import { Tree, TreeNode } from '../util/Tree/Tree';
 import { TypeHeader } from './TypeHeader';
 import { DialogActions, useDialog } from '../../../model/state/dialogs';
 import { useStashes, repoStore } from '../../../model/state/repo';
-
-const { Menu, MenuItem } = remote;
 
 const StashDisplay = styled(HoverableDiv)`
     border-bottom: 1px dotted var(--border);
@@ -38,7 +36,7 @@ function openContextMenu(dialog: DialogActions, stash: Stash) {
                 }),
         })
     );
-    menu.popup({ window: remote.getCurrentWindow() });
+    menu.popup({ window: getCurrentWindow() });
 }
 
 export const Stashes: React.FC = () => {

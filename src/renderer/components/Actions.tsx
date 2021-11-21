@@ -14,15 +14,13 @@ import StashIcon from './icons/StashIcon.svg';
 import SettingsIcon from './icons/SettingsIcon.svg';
 import ExploreIcon from './icons/ExploreIcon.svg';
 import { Hoverable } from './StyleBase';
-import { remote } from 'electron';
 import { Logger } from '../../util/logger';
 import { push } from '../../model/actions/repo';
 import { nothing, just, fromNullable } from '../../util/maybe';
 import { useDialog } from '../../model/state/dialogs';
 import { useBranches, useCurrentBranch, useStatus } from '../../model/state/repo';
 import { useWorkflows } from '../../model/state/workflows';
-
-const { Menu } = remote;
+import { Menu, getCurrentWindow } from '@electron/remote';
 
 const ActionButton = styled.button<{ active?: boolean } & React.HTMLProps<HTMLButtonElement>>`
     ${Hoverable}
@@ -145,7 +143,7 @@ const BranchButton: React.FC = () => {
                         : Menu.buildFromTemplate(
                               workflows.workflows.flatMap((wf) => wf.currentMenu())
                           );
-                    menu.popup({ window: remote.getCurrentWindow() });
+                    menu.popup({ window: getCurrentWindow() });
                 }}>
                 ◢
             </WorkflowButton>

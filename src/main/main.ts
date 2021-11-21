@@ -12,6 +12,8 @@ import * as path from 'path';
 import * as url from 'url';
 import * as fs from 'fs';
 
+import { initialize as remoteInitialize, enable as remoteEnable } from '@electron/remote/main';
+
 let win: BrowserWindow | null;
 
 const installExtensions = async () => {
@@ -75,16 +77,19 @@ const createWindow = async () => {
         await installExtensions();
     }
 
+    remoteInitialize();
+
     win = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            enableRemoteModule: true,
         },
         icon: getAssetPath('icon.png'),
     });
+
+    remoteEnable(win.webContents);
 
     ipcMain.on('save-log', saveLogFile);
 

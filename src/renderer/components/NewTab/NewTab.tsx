@@ -8,7 +8,7 @@ import { StyledButton } from '../util/StyledButton';
 import { appSettings } from '../../../model/settings';
 import { RepositoryHistory } from './RepositoryHistory';
 import { init } from '../../../model/actions/repo';
-import { remote } from 'electron';
+import { dialog, getCurrentWindow } from '@electron/remote';
 import { useTabs } from '../../../model/state/tabs';
 
 import fs from 'fs';
@@ -17,8 +17,6 @@ import { toast } from 'react-toastify';
 import { Logger } from '../../../util/logger';
 import { structuredToast } from '../../../util/structuredToast';
 import { CloneDialog } from './CloneDialog';
-
-const { dialog } = remote;
 
 const NewTabView = styled.div<{ hasHistory: boolean }>`
     height: 100%;
@@ -61,55 +59,60 @@ function FunctionPanel(props: { onClone?: () => void }) {
     return (
         <FunctionPanelView>
             <RepoActionButton
-                onClick={() => {
-                    const dir = dialog.showOpenDialogSync({
-                        properties: ['openDirectory'],
-                    });
-                    dir &&
-                        dir.length > 0 &&
-                        init(dir[0])
-                            .then((_) => tabs.openRepoInActive(dir[0]))
-                            .catch((e) => {
-                                Logger().error(
-                                    'NewTab.init',
-                                    'Could not initialize new repository',
-                                    { error: e }
-                                );
-                                toast.error(
-                                    structuredToast(
+                onClick={() =>
+                    (async () => {
+                        const dir = await dialog.showOpenDialog(getCurrentWindow(), {
+                            properties: ['openDirectory'],
+                        });
+                        dir.filePaths &&
+                            dir.filePaths.length > 0 &&
+                            init(dir.filePaths[0])
+                                .then((_) => tabs.openRepoInActive(dir.filePaths[0]))
+                                .catch((e) => {
+                                    Logger().error(
+                                        'NewTab.init',
                                         'Could not initialize new repository',
-                                        e.toString().split('\n')
-                                    ),
-                                    { autoClose: false }
-                                );
-                            });
-                }}>
+                                        { error: e }
+                                    );
+                                    toast.error(
+                                        structuredToast(
+                                            'Could not initialize new repository',
+                                            e.toString().split('\n')
+                                        ),
+                                        { autoClose: false }
+                                    );
+                                });
+                    })()
+                }>
                 <div>
                     <InitIcon viewBox="0 0 24 24" height="3rem" width="3rem" />
                     <span>Init new local repository</span>
                 </div>
             </RepoActionButton>
             <RepoActionButton
-                onClick={() => {
-                    let retry = false;
-                    do {
-                        const dir = dialog.showOpenDialogSync({
-                            properties: ['openDirectory'],
-                        });
-                        if (dir && dir.length > 0) {
-                            if (fs.existsSync(path.join(dir[0], '.git'))) {
-                                tabs.openRepoInActive(dir[0]);
+                onClick={() =>
+                    (async () => {
+                        let retry = false;
+                        do {
+                            const dir = await dialog.showOpenDialog(getCurrentWindow(), {
+                                properties: ['openDirectory'],
+                            });
+                            if (dir.filePaths && dir.filePaths.length > 0) {
+                                if (fs.existsSync(path.join(dir.filePaths[0], '.git'))) {
+                                    tabs.openRepoInActive(dir.filePaths[0]);
+                                } else {
+                                    dialog.showErrorBox(
+                                        'Cannot open directory',
+                                        `${dir} is no Git repository (.git subdirectory missing or not accessible)`
+                                    );
+                                    retry = true;
+                                }
                             } else {
-                                dialog.showErrorBox(
-                                    'Cannot open directory',
-                                    `${dir} is no Git repository (.git subdirectory missing or not accessible)`
-                                );
+                                retry = false;
                             }
-                        } else {
-                            retry = false;
-                        }
-                    } while (retry);
-                }}>
+                        } while (retry);
+                    })()
+                }>
                 <div>
                     <OpenIcon viewBox="0 0 24 24" height="3rem" width="3rem" />
                     <span>Open local repository</span>
@@ -131,10 +134,10 @@ export const NewTab: React.FC = () => {
         <div style={{ height: '100%' }}>
             <NewTabView hasHistory={history.length !== 0}>
                 <FunctionPanel onClone={() => setCloneOpen(true)} />
-                {appSettings.repositoryHistory && (
+                {appSettings().repositoryHistory && (
                     <RepositoryHistory
-                        history={appSettings.repositoryHistory}
-                        alreadyOpen={appSettings.openTabs}
+                        history={appSettings().repositoryHistory}
+                        alreadyOpen={appSettings().openTabs}
                     />
                 )}
             </NewTabView>
