@@ -128,7 +128,7 @@ app.on('window-all-closed', () => {
     }
 });
 
-app.name = 'Corylus';
+app.name = 'corylus';
 
 app.on('activate', () => {
     if (win === null) {

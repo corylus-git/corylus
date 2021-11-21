@@ -43,7 +43,7 @@ export interface ISettings {
 class SettingsImpl implements ISettings {
     constructor() {
         // TODO temporary workaround because electron-settings is not compatible with enableRemoteModule: false
-        settings.configure({ dir: path.join(app.getPath('userData'), 'Settings') });
+        settings.configure({ dir: app.getPath('userData') });
     }
 
     get openTabs() {
