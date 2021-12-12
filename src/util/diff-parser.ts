@@ -195,7 +195,7 @@ function parseChunk(
 function parseLine(line: string): DiffLine {
     return {
         type: getLineType(line[0]),
-        content: line,
+        content: line.slice(1),
     };
 }
 

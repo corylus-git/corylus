@@ -22,16 +22,36 @@
 }
 
 /* The diff classes */
-.diff-inserted {
-    background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.3));
+.diff-insert {
+    background-color: hsl(120, 30%, calc(50% + (var(--lightness) - 50%) / 1.2));
 }
 
-.diff-deleted {
-    background-color: hsl(0, 68%, calc(50% + (var(--lightness) - 50%) / 1.2));
+.diff-insert > .line-number::after {
+    content: ' + ';
+}
+
+.diff-delete {
+    background-color: hsl(0, 30%, calc(50% + (var(--lightness) - 50%) / 1.1));
+}
+
+.diff-delete > .line-number::after {
+    content: ' - ';
 }
 
 .diff-context {
     background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) * 1.2));
+}
+
+.diff-context > .line-number::after {
+    content: '   ';
+}
+
+.diff-insert-highlight {
+    background-color: hsl(120, 75%, calc(50% + (var(--lightness) - 50%) / 1.8));
+}
+
+.diff-delete-highlight {
+    background-color: hsl(0, 75%, calc(50% + (var(--lightness) - 50%) / 1.8));
 }
 
 .pseudo-context {

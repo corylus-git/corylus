@@ -5898,7 +5898,7 @@ fast-deep-equal@^3.1.1:
 
 fast-diff@^1.1.2:
   version "1.2.0"
-  resolved "https://registry.yarnpkg.com/fast-diff/-/fast-diff-1.2.0.tgz"
+  resolved "https://registry.yarnpkg.com/fast-diff/-/fast-diff-1.2.0.tgz#73ee11982d86caaf7959828d519cfe927fac5f03"
   integrity sha512-xJuoT5+L99XlZ8twedaRf6Ax2TgQVxvgZOYoPKqZufmJib0tL2tegPBOZb1pVNgIhlqDlA0eO0c3wBvQcmzx4w==
 
 fast-glob@^3.0.3:
@@ -5922,6 +5922,11 @@ fast-levenshtein@^2.0.6, fast-levenshtein@~2.0.6:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
+
+fast-myers-diff@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/fast-myers-diff/-/fast-myers-diff-3.0.1.tgz#96cca8f6db3f35c37fe7c9e5dfcb32972ab58f24"
+  integrity sha512-e8p26utONwDXeSDkDqu4jaR3l3r6ZgQO2GWB178ePZxCfFoRPNTJVZylUEHHG6uZeRikL1zCc2sl4sIAs9c0UQ==
 
 fast-safe-stringify@^2.0.4:
   version "2.0.7"

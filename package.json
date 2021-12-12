@@ -154,6 +154,7 @@
         "async-lock": "^1.2.4",
         "date-fns": "^2.19.0",
         "electron-settings": "^4.0.2",
+        "fast-myers-diff": "^3.0.1",
         "formik": "^2.2.9",
         "framer-motion": "4.0.0",
         "immer": "^9.0.6",
