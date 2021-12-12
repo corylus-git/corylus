@@ -109,6 +109,7 @@ export const StagingDiff: React.FC<{
                                     lineIndex <= props.currentSelection.value.last.lineIndex))
                         }
                         maxLineNumberLength={maxLineNumberLength}
+                        highlights={{ ...line, spans: [] }}
                     />
                 ))}
             </div>

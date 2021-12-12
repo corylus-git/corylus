@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
+import { calculateHighlightAreas, Highlights } from '../../../util/diff-highlighter';
 import { DiffLine, DiffChunk, FileDiff, parse } from '../../../util/diff-parser';
 import { Logger } from '../../../util/logger';
 import { Maybe, nothing, just } from '../../../util/maybe';
@@ -46,12 +47,18 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
                 props.onLineMouseEnter?.(ev, props.parentChunkIndex, props.lineIndex)
             }
             onClick={(ev) => props.onLineClick?.(ev, props.parentChunkIndex, props.lineIndex)}>
-            <span>
+            <span className="line-number">
                 {`${props.line.newNumber ?? props.line.oldNumber ?? ''}`.padStart(
                     props.maxLineNumberLength
                 )}
             </span>
-            <span>{props.line.content}</span>
+            {props.highlights.spans.map((s, i) => (
+                <span
+                    key={`s-${i}`}
+                    className={s.highlight ? `diff-${props.line.type}-highlight` : undefined}>
+                    {s.content}
+                </span>
+            ))}
         </DiffLineDisplay>
     );
 };
@@ -76,6 +83,7 @@ export type LineRendererProps = {
     onLineClick?: MouseLineEventHandler;
     selected?: boolean;
     maxLineNumberLength: number;
+    highlights: Highlights;
 };
 
 export interface DiffViewerPropsBase {
@@ -114,6 +122,7 @@ const ChunkHeader = styled.div`
  * The default block renderer used when no custom renderer is set
  */
 export const DefaultBlockRenderer: React.FC<ChunkRendererProps> = (props) => {
+    const highlights = calculateHighlightAreas(props.chunk);
     return (
         <div>
             <ChunkHeader>{props.chunk.header}</ChunkHeader>
@@ -127,6 +136,7 @@ export const DefaultBlockRenderer: React.FC<ChunkRendererProps> = (props) => {
                     onLineMouseEnter={props.onLineMouseEnter}
                     onLineClick={props.onLineClick}
                     maxLineNumberLength={props.maxLineNumberLength}
+                    highlights={highlights[lineIndex]}
                 />
             ))}
         </div>
