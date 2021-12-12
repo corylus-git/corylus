@@ -1,5 +1,5 @@
 import { DiffChunk, DiffLine } from './diff-parser';
-import diff from 'fast-diff';
+import { diff_core } from 'fast-myers-diff';
 
 export interface Highlights extends Omit<DiffLine, 'content'> {
     spans: { content: string; highlight: boolean }[];
@@ -43,16 +43,16 @@ function getHighlights(inserts: DiffLine[], deletes: DiffLine[]): Highlights[] {
     for (let i = 0; i < maxLength; i++) {
         // at the moment we consider adjecent lines of insert/delete blocks in side-by-side view as
         //  old->new pairs. Optimal alignment of the lines to minimizes edits may come later
-        const d = diff(deletes[i]?.content ?? '', inserts[i]?.content ?? '');
+        const d = tokenDiff(deletes[i]?.content ?? '', inserts[i]?.content ?? '');
         if (i < inserts.length) {
             // this diff applies to the insert side
             insertHighlights.push({
                 type: 'insert',
                 spans: d
-                    .filter((edit) => edit[0] !== diff.DELETE)
+                    .filter((edit) => edit.op !== 'delete')
                     .map((edit) => ({
-                        content: edit[1],
-                        highlight: edit[0] === diff.INSERT,
+                        content: edit.value,
+                        highlight: edit.op === 'insert',
                     })),
             });
         }
@@ -61,14 +61,95 @@ function getHighlights(inserts: DiffLine[], deletes: DiffLine[]): Highlights[] {
             deleteHighlights.push({
                 type: 'delete',
                 spans: d
-                    .filter((edit) => edit[0] !== diff.INSERT)
+                    .filter((edit) => edit.op !== 'insert')
                     .map((edit) => ({
-                        content: edit[1],
-                        highlight: edit[0] === diff.DELETE,
+                        content: edit.value,
+                        highlight: edit.op === 'delete',
                     })),
             });
         }
     }
 
     return deleteHighlights.concat(insertHighlights);
+}
+
+type Diff = {
+    op: 'insert' | 'delete' | 'equal';
+    value: string;
+};
+
+function tokenDiff(oldStr: string, newStr: string): Diff[] {
+    const oldToken = tokenize(oldStr);
+    const newToken = tokenize(newStr);
+
+    const diffs = diff_core(
+        0,
+        oldToken.length,
+        0,
+        newToken.length,
+        (i, j) => oldToken[i] === newToken[j]
+    );
+
+    let ret: Diff[] = [];
+    let lastIdx = 0;
+    for (const [sx, ex, sy, ey] of diffs) {
+        if (sx > lastIdx) {
+            // we have an equal part before the diff
+            ret = [
+                ...ret,
+                ...oldToken.slice(lastIdx, sx).map(
+                    (token) =>
+                        ({
+                            op: 'equal',
+                            value: token,
+                        } as Diff)
+                ),
+            ];
+            lastIdx = ex;
+        }
+        oldToken.slice(sx, ex).forEach((token) => {
+            ret.push({
+                op: 'delete',
+                value: token,
+            });
+        });
+        newToken.slice(sy, ey).forEach((token) => {
+            ret.push({
+                op: 'insert',
+                value: token,
+            });
+        });
+    }
+
+    return ret;
+}
+
+const word = /^[\w\d-_]+/;
+const whitespace = /^\s+/;
+const any = /^./;
+
+/**
+ * Split a string into its constituent tokens
+ *
+ * @param str The string to split
+ * @param tokens A set of regex each representing a specific token to match/extract. Tokens are matched in
+ *  order the regex appear in the parameter list. Therefore, if token regex overlap (which they shouldn't),
+ *  the earlier ones match first. The last match should always be a catch-all operator
+ * @returns The input string split apart into its constituent tokens.
+ */
+function tokenize(str: string): string[] {
+    let currentIndex = 0;
+    const ret: string[] = [];
+    while (currentIndex < str.length) {
+        const tmpStr = str.slice(currentIndex);
+        for (const r of [word, whitespace, any]) {
+            const match = r.exec(tmpStr);
+            if (match) {
+                ret.push(match[0]);
+                currentIndex += match[0].length;
+                break;
+            }
+        }
+    }
+    return ret;
 }

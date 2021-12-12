@@ -22,10 +22,8 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
     let className = 'diff-context';
     switch (props.line.type) {
         case 'insert':
-            className = 'diff-inserted';
-            break;
         case 'delete':
-            className = 'diff-deleted';
+            className = `diff-${props.line.type}`;
             break;
         case 'pseudo-context':
             className = 'pseudo-context';
@@ -33,6 +31,10 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
         case 'timeout':
             className = 'timeout';
             break;
+    }
+    if (props.highlights.spans.every((s) => s.highlight)) {
+        // if all spans are highlighted, we highlight the whole line instead of only the text
+        className += ` ${className}-highlight`;
     }
     if (props.selected) {
         className += ' selected';
