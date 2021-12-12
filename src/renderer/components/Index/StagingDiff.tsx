@@ -4,6 +4,7 @@ import { serializeDiff, modifyDiff } from '../../../util/diff';
 import styled from 'styled-components';
 import { parse } from '../../../util/diff-parser';
 import { Logger } from '../../../util/logger';
+import { calculateHighlightAreas } from '../../../util/diff-highlighter';
 
 const StagingChunkHeader = styled.div`
     font-size: 90%;
@@ -35,6 +36,7 @@ export const StagingDiff: React.FC<{
 
     function StagingChunk(props: ChunkRendererProps) {
         const isPartial = props.chunk.lines[props.chunk.lines.length - 1]?.type === 'timeout';
+        const highlights = calculateHighlightAreas(props.chunk);
         return (
             <div>
                 <StagingChunkHeader>
@@ -109,7 +111,7 @@ export const StagingDiff: React.FC<{
                                     lineIndex <= props.currentSelection.value.last.lineIndex))
                         }
                         maxLineNumberLength={maxLineNumberLength}
-                        highlights={{ ...line, spans: [] }}
+                        highlights={highlights[lineIndex]}
                     />
                 ))}
             </div>
