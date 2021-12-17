@@ -11,6 +11,7 @@
     --border: var(--selected);
     --input: hsl(var(--hue), 0%, calc(var(--lightness) - 5%));
     --conflict: #ffcc00;
+    --contains-commit: #0074ad;
     --conflict-text: #101010;
     --code: hsl(var(--hue), 0%, calc(100% - var(--lightness)));
     --notify: hsl(calc(var(--hue) - 90), 100%, calc(50% - (var(--lightness) - 50%) / 1.7));

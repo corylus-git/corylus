@@ -3,7 +3,7 @@ import styled from 'styled-components';
 export const Affected = styled.span`
     display: inline-block;
     position: relative;
-    background-color: var(--notify);
+    background-color: var(--contains-commit);
     border-radius: 50%;
     text-align: center;
     width: 0.75rem;
