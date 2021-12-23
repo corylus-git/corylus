@@ -38,7 +38,7 @@ import {
     IGitConfigValues,
     IGitFlowConfig,
 } from '../model/IGitConfig';
-import { Maybe, fromNullable, nothing, just } from './maybe';
+import { Maybe, fromNullable, nothing, just, Nothing } from './maybe';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from './configVariables';
 
 export type ProgressEventType = string;
@@ -451,6 +451,14 @@ export interface GitBackend {
         tags: boolean,
         commits: boolean
     ): Promise<{ branches: string[]; tags: string[]; refs: string[] }>;
+
+    /**
+     * Get the contents of a file in a specific commit
+     *
+     * @param ref The ref of the commit/stash/etc. to get the file version from
+     * @param path The path to the file within the repository
+     */
+    getFileContents(ref: string, path: string): Promise<Maybe<Buffer>>;
 }
 
 export class SimpleGitBackend implements GitBackend {
@@ -1475,6 +1483,15 @@ export class SimpleGitBackend implements GitBackend {
         }
         Logger().debug('getAffectedRefs', 'Returning affected refs', { affected: refs });
         return refs;
+    };
+
+    getFileContents = async (ref: string, path: string): Promise<Maybe<Buffer>> => {
+        const tree = await this._git.raw(['ls-tree', ref, path]);
+        const [_flags, _type, id, ..._rest] = tree.split(/\s+/g);
+        if (id === undefined) {
+            return nothing;
+        }
+        return just(await this._git.binaryCatFile(['blob', id]));
     };
 }
 
