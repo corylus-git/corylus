@@ -446,6 +446,7 @@ export const discardChanges = trackError(
                 break;
         }
         repoStore.getState().getStatus();
+        stagingArea.getState().deselectDiff();
     }
 );
 
