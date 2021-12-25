@@ -31,14 +31,14 @@ function calculateOutput(blocks: readonly IConflictBlock[]): readonly IMergedLin
                 .concat(
                     block.oursSelected
                         ? block.lines
-                              .filter((l) => !!l.ours)
+                              .filter((l) => l.ours !== undefined)
                               .map((l) => ({ source: 'ours', content: l.ours! }))
                         : []
                 )
                 .concat(
                     block.theirsSelected
                         ? block.lines
-                              .filter((l) => !!l.theirs)
+                              .filter((l) => l.theirs !== undefined)
                               .map((l) => ({ source: 'theirs', content: l.theirs! }))
                         : []
                 );

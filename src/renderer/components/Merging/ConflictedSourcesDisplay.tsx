@@ -95,7 +95,7 @@ function calculateDecorations(
     return lines.reduce((existing, l, index) => {
         if (l.isConflict) {
             const value = accessor(l);
-            const c = value ? className : 'emptyLine';
+            const c = value !== undefined ? className : 'emptyLine';
             return existing.concat({
                 range: new monaco.Range(index + 1, 1, index + 1, 1),
                 options: {
@@ -163,8 +163,8 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                 {props.blocks.map((block, index) => {
                     const [ourLines, theirLines] = block.lines.reduce(
                         ([ours, theirs], l) => [
-                            l.ours ? ours + 1 : ours,
-                            l.theirs ? theirs + 1 : theirs,
+                            l.ours !== undefined ? ours + 1 : ours,
+                            l.theirs !== undefined ? theirs + 1 : theirs,
                         ],
                         [0, 0]
                     );
@@ -194,8 +194,8 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                 {props.blocks.map((block, index) => {
                     const [ourLines, theirLines] = block.lines.reduce(
                         ([ours, theirs], l) => [
-                            l.ours ? ours + 1 : ours,
-                            l.theirs ? theirs + 1 : theirs,
+                            l.ours !== undefined ? ours + 1 : ours,
+                            l.theirs !== undefined ? theirs + 1 : theirs,
                         ],
                         [0, 0]
                     );
