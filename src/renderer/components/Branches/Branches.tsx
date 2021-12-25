@@ -28,12 +28,14 @@ import RemoteIcon from '../icons/Remote.svg';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
 import { Affected } from './Affected';
 import { isInProgress } from '../../../model/state/uiState';
+import { Hoverable } from '../StyleBase';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
 }
 
 const Branch = styled.span<{ current: boolean } & React.HTMLProps<HTMLSpanElement>>`
+    ${Hoverable}
     font-weight: ${(props) => (props.current ? 'bold' : 'inherit')};
     font-style: ${(props) => (props.current ? 'italic' : 'inherit')};
     text-overflow: ellipsis;
