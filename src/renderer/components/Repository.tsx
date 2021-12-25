@@ -15,7 +15,7 @@ import styled from 'styled-components';
 import { MergeStatusBar } from './Merging/MergeStatusBar';
 import { CheckoutRemoteDialog } from './Dialogs/CheckoutRemote';
 import { PullDialog } from './Dialogs/PullDialog';
-import { useDirWatcher } from '../../model/dirwatcher';
+import { useDirWatcher } from '../../workers/dirwatcher';
 import { ConfigurationPanel } from './Configuration/ConfigurationPanel';
 import { ManualMergePanel } from './Merging/ManualMergePanel';
 import { StatusBar } from './StatusBar';

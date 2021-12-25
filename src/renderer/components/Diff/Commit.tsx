@@ -4,12 +4,9 @@ import { Commit, DiffStat } from '../../../model/stateObjects';
 import '../../../style/app.css';
 import { ArrowRight } from '../icons/ArrowRight';
 import { ArrowDown } from '../icons/ArrowDown';
-import { StringDiffViewer } from './DiffViewer';
 import { FileStatus } from '../shared/FileStatus';
 import styled from 'styled-components';
-import { Maybe, nothing, just } from '../../../util/maybe';
-import { useRepo, useSelectedCommit } from '../../../model/state/repo';
-import { Logger } from '../../../util/logger';
+import { useSelectedCommit } from '../../../model/state/repo';
 import { getFileType } from '../../../util/filetypes';
 import { ImageDiff } from './ImageDiff';
 import { TextFileDiff } from './TextFileDiff';
@@ -54,7 +51,6 @@ const CommitHeaderFrame = styled.div`
 export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
     return (
         <>
-            9
             <p style={{ margin: 0 }}>
                 Author: {props.commit.author.name} &lt;{props.commit.author.email}&gt; (
                 {props.commit.author.timestamp.toLocaleString()})
