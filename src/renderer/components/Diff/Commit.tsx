@@ -10,6 +10,9 @@ import styled from 'styled-components';
 import { Maybe, nothing, just } from '../../../util/maybe';
 import { useRepo, useSelectedCommit } from '../../../model/state/repo';
 import { Logger } from '../../../util/logger';
+import { getFileType } from '../../../util/filetypes';
+import { ImageDiff } from './ImageDiff';
+import { TextFileDiff } from './TextFileDiff';
 
 export interface CommitProps {
     commit?: Commit;
@@ -51,6 +54,7 @@ const CommitHeaderFrame = styled.div`
 export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
     return (
         <>
+            9
             <p style={{ margin: 0 }}>
                 Author: {props.commit.author.name} &lt;{props.commit.author.email}&gt; (
                 {props.commit.author.timestamp.toLocaleString()})
@@ -86,34 +90,12 @@ function FileDiff(props: {
     diff: DiffStat;
     toParent?: string;
 }) {
-    const backend = useRepo((state) => state.backend);
     const [open, setOpen] = React.useState(false);
-    const [diffString, setDiffString] = React.useState<Maybe<string>>(nothing);
-    React.useEffect(() => {
-        if (open) {
-            backend
-                .getDiff({
-                    source: props.source,
-                    commitId: props.commit,
-                    toParent: props.toParent,
-                    path: props.diff.path,
-                    untracked: props.diff.status === 'untracked',
-                })
-                .then((result) => {
-                    Logger().debug('FileDiff', 'Loaded diff', {
-                        path: props.diff.path,
-                        commit: props.commit,
-                        result,
-                    });
-                    setDiffString(just(result));
-                });
-        } else {
-            setDiffString(nothing);
-        }
-    }, [open, props.commit]);
+    const mimeType = getFileType(props.diff.path);
+
     return (
         <>
-            {props.diff.additions + props.diff.deletions > 0 ? (
+            {props.diff.additions + props.diff.deletions > 0 || mimeType ? (
                 <div onClick={() => setOpen(!open)}>{open ? <ArrowDown /> : <ArrowRight />}</div>
             ) : (
                 <div></div>
@@ -130,10 +112,15 @@ function FileDiff(props: {
             <ChangesBar additions={props.diff.additions} deletions={props.diff.deletions} />
             {open && (
                 <div style={{ gridColumn: '1 / span 4', marginRight: '5px' }}>
-                    {diffString.found ? (
-                        <StringDiffViewer diffString={diffString.value} />
+                    {mimeType ? (
+                        <ImageDiff
+                            oldPath={props.diff.oldPath ?? props.diff.path}
+                            newPath={props.diff.path}
+                            oldRef={`${props.commit}^`}
+                            newRef={props.commit}
+                        />
                     ) : (
-                        'Loading diff...'
+                        <TextFileDiff {...props} />
                     )}
                 </div>
             )}
