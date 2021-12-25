@@ -1,6 +1,7 @@
 import * as React from 'react';
 import '../../../style/app.css';
 import styled from 'styled-components';
+import { HoverableDiv } from '../StyleBase';
 
 export const SplitterPanel = styled.div`
     min-width: 100%;
@@ -12,15 +13,15 @@ export const SplitterPanel = styled.div`
     overflow: auto;
 `;
 
-const HSep = styled.div`
-    padding-top: 5px;
-    padding-bottom: 5px;
+const HSep = styled(HoverableDiv)`
+    padding-top: 3px;
+    padding-bottom: 3px;
     cursor: ns-resize;
 `;
 
-const VSep = styled.div`
-    padding-left: 5px;
-    padding-right: 5px;
+const VSep = styled(HoverableDiv)`
+    padding-left: 3px;
+    padding-right: 3px;
     cursor: ew-resize;
 `;
 
@@ -58,10 +59,10 @@ export const Splitter: React.FC<{
     };
 
     if (props.horizontal) {
-        gridStyle.gridTemplateRows = `${splitterPosition} 11px minmax(0,1fr)`;
+        gridStyle.gridTemplateRows = `${splitterPosition} 7px minmax(0,1fr)`;
         gridStyle.width = '100%';
     } else {
-        gridStyle.gridTemplateColumns = `${splitterPosition} 11px minmax(0,1fr)`;
+        gridStyle.gridTemplateColumns = `${splitterPosition} 7px minmax(0,1fr)`;
         gridStyle.height = '100%';
     }
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -74,8 +75,8 @@ export const Splitter: React.FC<{
             onMouseMove={(ev) => {
                 if (dragging.current) {
                     const newPos = props.horizontal
-                        ? ev.clientY - absContainerPos.current.top - 5
-                        : ev.clientX - absContainerPos.current.left - 5;
+                        ? ev.clientY - absContainerPos.current.top - 3
+                        : ev.clientX - absContainerPos.current.left - 3;
                     setSplitterPosition(`${newPos}px`);
                     props.onMove?.(newPos);
                 }
