@@ -17,8 +17,11 @@ export const Rebase: React.FC = () => {
                     <ButtonGroup>
                         <StyledButton
                             onClick={async () => {
-                                await rebase(dialog.target);
-                                dialog.close();
+                                try {
+                                    await rebase(dialog.target);
+                                } finally {
+                                    dialog.close();
+                                }
                             }}>
                             Rebase
                         </StyledButton>
