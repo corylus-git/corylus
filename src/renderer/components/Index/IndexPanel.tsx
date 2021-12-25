@@ -13,8 +13,56 @@ import { nothing, just, Maybe } from '../../../util/maybe';
 import { commit, stage, unstage, addDiff } from '../../../model/actions/repo';
 import { useStatus, useRepo, usePendingCommit, repoStore } from '../../../model/state/repo';
 import { useStagingArea } from '../../../model/state/stagingArea';
+import { getFileType } from '../../../util/filetypes';
+import { ImageDiff } from '../Diff/ImageDiff';
 
 let splitterX: string | undefined = undefined;
+
+const DiffDisplayPanel: React.FC = (props) => {
+    const stagingArea = useStagingArea();
+    if (stagingArea.selectedFile.found) {
+        const fileType = getFileType(stagingArea.selectedFile.value.path);
+        if (fileType) {
+            return (
+                <div>
+                    <h1 style={{ fontSize: '150%' }}>
+                        {stagingArea.selectedFile.value.path} @Working directory
+                    </h1>
+                    <ImageDiff
+                        newPath={stagingArea.selectedFile.value.path}
+                        newRef="workdir"
+                        oldPath={stagingArea.selectedFile.value.path}
+                        oldRef="HEAD"
+                    />
+                </div>
+            );
+        }
+        return (
+            <div>
+                <StagingDiffPanel
+                    file={stagingArea.selectedFile.value}
+                    diff={stagingArea.selectedDiff}
+                    onAddDiff={(diff, path, source, isIndex) =>
+                        addDiff(diff, path, source, isIndex)
+                    }
+                />
+            </div>
+        );
+    }
+    if (stagingArea.selectedConflict.found) {
+        return (
+            <div>
+                <ConflictResolutionPanel
+                    conflict={stagingArea.selectedConflict.value}
+                    onClose={() => {
+                        stagingArea.deselectConflictedFile();
+                    }}
+                />
+            </div>
+        );
+    }
+    return <></>;
+};
 
 export const IndexPanel: React.FC = () => {
     const stagingArea = useStagingArea();
@@ -59,25 +107,7 @@ export const IndexPanel: React.FC = () => {
                         }
                     }}
                 />
-                <div>
-                    {stagingArea.selectedFile.found && (
-                        <StagingDiffPanel
-                            file={stagingArea.selectedFile.value}
-                            diff={stagingArea.selectedDiff}
-                            onAddDiff={(diff, path, source, isIndex) =>
-                                addDiff(diff, path, source, isIndex)
-                            }
-                        />
-                    )}
-                    {stagingArea.selectedConflict.found && (
-                        <ConflictResolutionPanel
-                            conflict={stagingArea.selectedConflict.value}
-                            onClose={() => {
-                                stagingArea.deselectConflictedFile();
-                            }}
-                        />
-                    )}
-                </div>
+                <DiffDisplayPanel />
             </Splitter>
             <CommitForm
                 onCommit={() => {

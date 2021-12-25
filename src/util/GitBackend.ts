@@ -458,7 +458,7 @@ export interface GitBackend {
      * @param ref The ref of the commit/stash/etc. to get the file version from
      * @param path The path to the file within the repository
      */
-    getFileContents(ref: string, path: string): Promise<Maybe<Buffer>>;
+    getFileContents(ref: 'workdir' | string, path: string): Promise<Maybe<Buffer>>;
 }
 
 export class SimpleGitBackend implements GitBackend {
@@ -1485,8 +1485,14 @@ export class SimpleGitBackend implements GitBackend {
         return refs;
     };
 
-    getFileContents = async (ref: string, path: string): Promise<Maybe<Buffer>> => {
-        const tree = await this._git.raw(['ls-tree', ref, path]);
+    getFileContents = async (ref: 'workdir' | string, p: string): Promise<Maybe<Buffer>> => {
+        if (ref === 'workdir') {
+            Logger().debug('SimpleGitBackend', 'Loading file from working directory', {
+                path: path.join(this.dir, p),
+            });
+            return just(await fs.promises.readFile(path.join(this.dir, p)));
+        }
+        const tree = await this._git.raw(['ls-tree', ref, p]);
         const [_flags, _type, id, ..._rest] = tree.split(/\s+/g);
         if (id === undefined) {
             return nothing;

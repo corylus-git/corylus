@@ -10,7 +10,7 @@ import styled from 'styled-components';
 
 export type ImageDiffProps = {
     oldRef: string;
-    newRef: string;
+    newRef: 'index' | string;
     oldPath: string;
     newPath: string;
 };
@@ -35,7 +35,7 @@ type LoadedImageData = {
 
 async function loadImage(
     backend: GitBackend,
-    ref: string,
+    ref: 'workdir' | string,
     path: string
 ): Promise<Maybe<LoadedImageData>> {
     const fileData = await backend.getFileContents(ref, path);
@@ -59,6 +59,10 @@ async function loadImage(
         size,
     });
 }
+
+const DiffImage = styled.img`
+    max-width: 100%;
+`;
 
 const DiffNewImageContainer = styled.div`
     position: relative;
@@ -151,8 +155,10 @@ export const ImageDiff: React.FC<ImageDiffProps> = (props) => {
     return diffImage || newImage ? (
         <>
             <DiffNewImageContainer>
-                {newImage.value?.found && <img className="new" src={newImage.value.value.url} />}
-                {diffImage && <img className="diff" src={diffImage} />}
+                {newImage.value?.found && (
+                    <DiffImage className="new" src={newImage.value.value.url} />
+                )}
+                {diffImage && <DiffImage className="diff" src={diffImage} />}
             </DiffNewImageContainer>
             {differentDimensions && <p>Image was resized.</p>}
         </>
