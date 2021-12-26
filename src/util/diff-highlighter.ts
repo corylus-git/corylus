@@ -121,6 +121,20 @@ function tokenDiff(oldStr: string, newStr: string): Diff[] {
         });
     }
 
+    if (lastIdx < oldToken.length) {
+        // another run of equal parts after the last diff
+        ret = [
+            ...ret,
+            ...oldToken.slice(lastIdx).map(
+                (token) =>
+                    ({
+                        op: 'equal',
+                        value: token,
+                    } as Diff)
+            ),
+        ];
+    }
+
     return ret;
 }
 
