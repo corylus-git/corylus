@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import pixelmatch from 'pixelmatch';
+import styled from 'styled-components';
+import { useAsync } from 'react-use';
+import mime from 'mime-types';
+
 import { useRepo } from '../../../model/state/repo';
-import { getFileType } from '../../../util/filetypes';
 import { fromNullable, just, Maybe, nothing } from '../../../util/maybe';
 import { Logger } from '../../../util/logger';
 import { GitBackend } from '../../../util/GitBackend';
-import { useAsync } from 'react-use';
-import styled from 'styled-components';
 
 export type ImageDiffProps = {
     oldRef: string;
@@ -42,7 +43,9 @@ async function loadImage(
     if (!fileData.found) {
         return nothing;
     }
-    const url = URL.createObjectURL(new Blob([fileData.value], { type: getFileType(path) ?? '' }));
+    const url = URL.createObjectURL(
+        new Blob([fileData.value], { type: mime.lookup(path) || 'text/plain' })
+    );
     const img = new Image();
     const prom = new Promise<LoadedImageData['size']>((resolve) => {
         img.onload = (ev) => {

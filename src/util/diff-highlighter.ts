@@ -121,7 +121,7 @@ function tokenDiff(oldStr: string, newStr: string): Diff[] {
         });
     }
 
-    if (lastIdx < oldToken.length) {
+    if (lastIdx < newToken.length && lastIdx < oldToken.length) {
         // another run of equal parts after the last diff
         ret = [
             ...ret,

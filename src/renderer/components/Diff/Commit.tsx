@@ -1,15 +1,16 @@
 import * as React from 'react';
-import { Commit, DiffStat } from '../../../model/stateObjects';
+import styled from 'styled-components';
+import mime from 'mime-types';
 
+import { Commit, DiffStat } from '../../../model/stateObjects';
 import '../../../style/app.css';
 import { ArrowRight } from '../icons/ArrowRight';
 import { ArrowDown } from '../icons/ArrowDown';
 import { FileStatus } from '../shared/FileStatus';
-import styled from 'styled-components';
 import { useSelectedCommit } from '../../../model/state/repo';
-import { getFileType } from '../../../util/filetypes';
 import { ImageDiff } from './ImageDiff';
 import { TextFileDiff } from './TextFileDiff';
+import { isSupportedImageType } from '../../../util/filetypes';
 
 export interface CommitProps {
     commit?: Commit;
@@ -87,7 +88,7 @@ function FileDiff(props: {
     toParent?: string;
 }) {
     const [open, setOpen] = React.useState(false);
-    const mimeType = getFileType(props.diff.path);
+    const mimeType = mime.lookup(props.diff.path) || 'text/plain';
 
     return (
         <>
@@ -108,7 +109,7 @@ function FileDiff(props: {
             <ChangesBar additions={props.diff.additions} deletions={props.diff.deletions} />
             {open && (
                 <div style={{ gridColumn: '1 / span 4', marginRight: '5px' }}>
-                    {mimeType ? (
+                    {isSupportedImageType(mimeType) ? (
                         <ImageDiff
                             oldPath={props.diff.oldPath ?? props.diff.path}
                             newPath={props.diff.path}

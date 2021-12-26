@@ -1,36 +1,39 @@
 import * as React from 'react';
+import styled from 'styled-components';
+import { Formik, Form, Field } from 'formik';
+import mime from 'mime-types';
+
 import { Splitter } from '../util/Splitter';
 import { IndexStatus } from '../../../model/stateObjects';
-
 import { StagingArea } from './StagingArea';
 import { StyledButton } from '../util/StyledButton';
 import { StagingDiffPanel } from './StagingDiffPanel';
 import { ConflictResolutionPanel } from '../Merging/ConflictResolutionPanel';
-import { Formik, Form, Field } from 'formik';
 import { Logger } from '../../../util/logger';
-import styled from 'styled-components';
 import { nothing, just, Maybe } from '../../../util/maybe';
 import { commit, stage, unstage, addDiff } from '../../../model/actions/repo';
 import { useStatus, useRepo, usePendingCommit, repoStore } from '../../../model/state/repo';
 import { useStagingArea } from '../../../model/state/stagingArea';
-import { getFileType } from '../../../util/filetypes';
 import { ImageDiff } from '../Diff/ImageDiff';
+import { isSupportedImageType } from '../../../util/filetypes';
 
 let splitterX: string | undefined = undefined;
 
-const DiffDisplayPanel: React.FC = (props) => {
+const DiffDisplayPanel: React.FC = () => {
     const stagingArea = useStagingArea();
     if (stagingArea.selectedFile.found) {
-        const fileType = getFileType(stagingArea.selectedFile.value.path);
-        if (fileType) {
+        const source = stagingArea.selectedFile.value.source;
+        const fileType = mime.lookup(stagingArea.selectedFile.value.path) || 'text/plain';
+        if (isSupportedImageType(fileType)) {
             return (
                 <div>
                     <h1 style={{ fontSize: '150%' }}>
-                        {stagingArea.selectedFile.value.path} @Working directory
+                        {stagingArea.selectedFile.value.path} @
+                        {source === 'workdir' ? 'Working directory' : 'Index'}
                     </h1>
                     <ImageDiff
                         newPath={stagingArea.selectedFile.value.path}
-                        newRef="workdir"
+                        newRef={source}
                         oldPath={stagingArea.selectedFile.value.path}
                         oldRef="HEAD"
                     />
