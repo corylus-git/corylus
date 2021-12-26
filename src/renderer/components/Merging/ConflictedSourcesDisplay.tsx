@@ -49,8 +49,7 @@ const SideSelector = styled.button<{ selected?: boolean; lines: number; height: 
     margin: 0;
     padding: 0;
     display: block;
-    height: ${(props) => props.lines * 19}px;
-    margin-bottom: ${(props) => (props.height - props.lines) * 19}px;
+    height: ${(props) => props.height * 19}px;
 `;
 
 const CodeHeader = styled.h1`
@@ -95,7 +94,7 @@ function calculateDecorations(
     return lines.reduce((existing, l, index) => {
         if (l.isConflict) {
             const value = accessor(l);
-            const c = value ? className : 'emptyLine';
+            const c = value !== undefined ? className : 'emptyLine';
             return existing.concat({
                 range: new monaco.Range(index + 1, 1, index + 1, 1),
                 options: {
@@ -112,6 +111,7 @@ export interface ConflictedSourcesDisplayProps {
     blocks: readonly IConflictBlock[];
     onToggleBlock: (side: 'ours' | 'theirs', index: number) => void;
     onScroll?: (top: number) => void;
+    type: string;
 }
 
 export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> = (props) => {
@@ -128,7 +128,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
             <div></div>
             <CodeHeader>Theirs (B)</CodeHeader>
             <MonacoEditor
-                language="typescript"
+                language={props.type}
                 theme="vs-dark"
                 value={mapLines(lines, (l) => l.ours)}
                 options={{
@@ -163,12 +163,12 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                 {props.blocks.map((block, index) => {
                     const [ourLines, theirLines] = block.lines.reduce(
                         ([ours, theirs], l) => [
-                            l.ours ? ours + 1 : ours,
-                            l.theirs ? theirs + 1 : theirs,
+                            l.ours !== undefined ? ours + 1 : ours,
+                            l.theirs !== undefined ? theirs + 1 : theirs,
                         ],
                         [0, 0]
                     );
-                    if (block.isConflict && block.lines[0].ours) {
+                    if (block.isConflict) {
                         return (
                             <SideSelector
                                 key={index}
@@ -194,12 +194,12 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                 {props.blocks.map((block, index) => {
                     const [ourLines, theirLines] = block.lines.reduce(
                         ([ours, theirs], l) => [
-                            l.ours ? ours + 1 : ours,
-                            l.theirs ? theirs + 1 : theirs,
+                            l.ours !== undefined ? ours + 1 : ours,
+                            l.theirs !== undefined ? theirs + 1 : theirs,
                         ],
                         [0, 0]
                     );
-                    if (block.isConflict && block.lines[0].theirs) {
+                    if (block.isConflict) {
                         return (
                             <SideSelector
                                 key={index}
@@ -222,7 +222,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                 })}
             </AuxillaryRightColumn>
             <MonacoEditor
-                language="typescript"
+                language={props.type}
                 theme="vs-dark"
                 value={mapLines(lines, (l) => l.theirs)}
                 options={{

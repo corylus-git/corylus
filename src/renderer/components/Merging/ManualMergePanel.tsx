@@ -12,6 +12,7 @@ import { Maybe, nothing, just } from '../../../util/maybe';
 import { saveManualMerge } from '../../../model/actions/repo';
 import { useStagingArea } from '../../../model/state/stagingArea';
 import { IConflictBlock } from './util/blocks';
+import mime from 'mime-types';
 
 const ManualMergeViewContainer = styled.div`
     z-index: 20;
@@ -46,6 +47,7 @@ export const ManualMergePanel: React.FC = () => {
 
     if (stagingArea.manualMerge.found) {
         const p = stagingArea.manualMerge.value.path;
+        const mimeType = mime.lookup(p) || 'text/plain';
         return (
             <Modal isOpen={true}>
                 <ManualMergeViewContainer>
@@ -56,6 +58,7 @@ export const ManualMergePanel: React.FC = () => {
                                 stagingArea.toggleBlock(side, index);
                             }}
                             onScroll={(t) => mergeEditorRef.current?.setScrollTop(t)}
+                            type={mimeType}
                         />
                         <EditorContainer
                             blocks={stagingArea.manualMerge.value.blocks}
@@ -66,6 +69,7 @@ export const ManualMergePanel: React.FC = () => {
                                 setCode(just(content));
                             }}
                             editorMounted={(editor) => (mergeEditorRef.current = editor)}
+                            type={mimeType}
                         />
                     </Splitter>
                     <ButtonContainer>
@@ -78,7 +82,7 @@ export const ManualMergePanel: React.FC = () => {
                             disabled={
                                 code.found &&
                                 stagingArea.manualMerge.value.blocks.some(
-                                    (b: any) => b.isConflict && !b.oursSelected && !b.theirsSelected
+                                    (b) => b.isConflict && !b.oursSelected && !b.theirsSelected
                                 )
                             }>
                             Resolve

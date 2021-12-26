@@ -4,6 +4,7 @@ import { IConflictBlock } from './util/blocks';
 import styled, { useTheme, DefaultTheme } from 'styled-components';
 import React from 'react';
 import ReactResizeDetector from 'react-resize-detector';
+import mime from 'mime-types';
 
 interface IMergedLine {
     source: 'ours' | 'theirs' | 'both' | 'conflict';
@@ -31,14 +32,14 @@ function calculateOutput(blocks: readonly IConflictBlock[]): readonly IMergedLin
                 .concat(
                     block.oursSelected
                         ? block.lines
-                              .filter((l) => !!l.ours)
+                              .filter((l) => l.ours !== undefined)
                               .map((l) => ({ source: 'ours', content: l.ours! }))
                         : []
                 )
                 .concat(
                     block.theirsSelected
                         ? block.lines
-                              .filter((l) => !!l.theirs)
+                              .filter((l) => l.theirs !== undefined)
                               .map((l) => ({ source: 'theirs', content: l.theirs! }))
                         : []
                 );
@@ -77,6 +78,7 @@ export interface IEditorContainerProps {
     blocks: readonly IConflictBlock[] | undefined;
     onChange: (code: string) => void;
     editorMounted?: (editor: monaco.editor.ICodeEditor) => void;
+    type: string;
 }
 
 function calculateDecorations(
@@ -144,7 +146,7 @@ export const EditorContainer: React.FC<IEditorContainerProps> = (props) => {
                 overflow: 'hidden',
             }}>
             <MonacoEditor
-                language="typescript"
+                language={props.type}
                 theme="vs-dark"
                 value={editedCode}
                 options={{
