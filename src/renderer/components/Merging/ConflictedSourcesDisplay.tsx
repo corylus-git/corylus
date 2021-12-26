@@ -49,8 +49,7 @@ const SideSelector = styled.button<{ selected?: boolean; lines: number; height: 
     margin: 0;
     padding: 0;
     display: block;
-    height: ${(props) => props.lines * 19}px;
-    margin-bottom: ${(props) => (props.height - props.lines) * 19}px;
+    height: ${(props) => props.height * 19}px;
 `;
 
 const CodeHeader = styled.h1`
@@ -169,7 +168,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                         ],
                         [0, 0]
                     );
-                    if (block.isConflict && block.lines[0].ours) {
+                    if (block.isConflict) {
                         return (
                             <SideSelector
                                 key={index}
@@ -200,7 +199,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                         ],
                         [0, 0]
                     );
-                    if (block.isConflict && block.lines[0].theirs) {
+                    if (block.isConflict) {
                         return (
                             <SideSelector
                                 key={index}
