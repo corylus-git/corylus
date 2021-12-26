@@ -112,6 +112,7 @@ export interface ConflictedSourcesDisplayProps {
     blocks: readonly IConflictBlock[];
     onToggleBlock: (side: 'ours' | 'theirs', index: number) => void;
     onScroll?: (top: number) => void;
+    type: string;
 }
 
 export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> = (props) => {
@@ -128,7 +129,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
             <div></div>
             <CodeHeader>Theirs (B)</CodeHeader>
             <MonacoEditor
-                language="typescript"
+                language={props.type}
                 theme="vs-dark"
                 value={mapLines(lines, (l) => l.ours)}
                 options={{
@@ -222,7 +223,7 @@ export const ConflictedSourcesDisplay: React.FC<ConflictedSourcesDisplayProps> =
                 })}
             </AuxillaryRightColumn>
             <MonacoEditor
-                language="typescript"
+                language={props.type}
                 theme="vs-dark"
                 value={mapLines(lines, (l) => l.theirs)}
                 options={{
