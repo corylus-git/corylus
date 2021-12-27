@@ -16,7 +16,6 @@ import {
     useTags,
     useSelectedCommit,
     useRepo,
-    RepoActions,
     HistoryInfo,
 } from '../../../model/state/repo';
 import { useGraph } from '../../../model/state/graph';
