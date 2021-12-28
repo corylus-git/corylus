@@ -808,14 +808,14 @@ export class SimpleGitBackend implements GitBackend {
                 sourceCommit = `${sourceCommit}^3`;
             }
             let command = options.toParent
-                ? ['diff', '--format=', `${options.toParent}..${sourceCommit}`]
-                : ['diff', '--format=', `${sourceCommit}^!`];
+                ? ['diff', '--histogram', '--format=', `${options.toParent}..${sourceCommit}`]
+                : ['diff', '--histogram', '--format=', `${sourceCommit}^!`];
             if (options.path) {
                 command = command.concat(['--', options.path]);
             }
             return this._git.raw(command) ?? Promise.resolve('');
         }
-        let diffoptions = [] as string[];
+        let diffoptions = ['--histogram'] as string[];
         if (options.source === 'index') {
             diffoptions = diffoptions.concat('--staged');
         }
