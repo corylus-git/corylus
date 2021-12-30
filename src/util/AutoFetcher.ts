@@ -12,7 +12,7 @@ export function useAutoFetcher(repo: RepoState & RepoActions): void {
             Logger().debug('useAutoFetcher', 'Starting auto fetcher.', {
                 interval: config.global.corylus.autoFetchInterval,
             });
-            timer = setInterval(() => {
+            timer = window.setInterval(() => {
                 try {
                     Logger().debug('autoFetcher', 'Fetching remotes');
                     repoStore.getState().backend.fetch({

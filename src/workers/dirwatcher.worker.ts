@@ -42,7 +42,7 @@ function watchDir(rp: string, changed: () => void): void {
             error: e,
         });
         Logger().debug('dirWatcher', 'Falling back to polling');
-        interval = setInterval(() => repoStore.getState().getStatus(), 60_000);
+        interval = window.setInterval(() => repoStore.getState().getStatus(), 60_000);
     }
 }
 

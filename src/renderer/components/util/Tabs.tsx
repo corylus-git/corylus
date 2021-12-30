@@ -169,7 +169,7 @@ export const Tabs: React.FC = () => {
                             left: 0,
                         }}
                         onMouseDown={(_) => {
-                            intervalRef.current = setInterval(
+                            intervalRef.current = window.setInterval(
                                 () => doScroll(true, scrollRef, leftRef, rightRef),
                                 16
                             );
@@ -216,7 +216,7 @@ export const Tabs: React.FC = () => {
                     <NavButton
                         ref={rightRef}
                         onMouseDown={(_) => {
-                            intervalRef.current = setInterval(
+                            intervalRef.current = window.setInterval(
                                 () => doScroll(false, scrollRef, leftRef, rightRef),
                                 16
                             );

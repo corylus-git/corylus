@@ -71,7 +71,7 @@ export const RequestCreateTagDialog: React.FC = () => {
                                     if (timer.current) {
                                         clearTimeout(timer.current);
                                     }
-                                    timer.current = setTimeout(() => {
+                                    timer.current = window.setTimeout(() => {
                                         timer.current = undefined;
                                         value.current = postNormalize(value.current);
                                         setTagName(value.current);
