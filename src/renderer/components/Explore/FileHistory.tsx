@@ -2,12 +2,13 @@ import React from 'react';
 import { Logger } from '../../../util/logger';
 import styled from 'styled-components';
 import { StyledButton } from '../util/StyledButton';
-import { Graph, GraphRenderer } from '../History/Graph';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { CommitDetailsView } from '../Diff/Commit';
 import { useFileHistory, explorer } from '../../../model/state/explorer';
 import { calculateGraphLayout } from '../../../util/graphLayout';
+import { GraphRenderer } from '../History/GraphRenderer';
+import { useBranches, useTags } from '../../../model/state/repo';
 
 const HistoryContainer = styled.div`
     position: absolute;
@@ -37,6 +38,8 @@ export const FileHistory: React.FC = () => {
     );
     const targetRef = React.useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+    const tags = useTags();
+    const branches = useBranches();
 
     React.useLayoutEffect(resizer, [history, targetRef.current]);
 
@@ -74,6 +77,8 @@ export const FileHistory: React.FC = () => {
                             rails={graph.rails}
                             totalCommits={graph.lines.length}
                             first={0}
+                            tags={tags}
+                            branches={branches}
                         />
                     </NoScrollPanel>
                     <SplitterPanel>
