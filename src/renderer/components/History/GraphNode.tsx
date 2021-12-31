@@ -8,9 +8,13 @@ export const GraphNode: React.FC<{
     outgoing?: number;
     incoming: readonly number[];
     rails: readonly Rail[];
+    reverse?: boolean;
 }> = (props) => {
     return (
-        <svg viewBox={`0 0 ${x(props.rails.length + 1)} 50`} height="3rem">
+        <svg
+            transform={props.reverse ? 'scale(1, -1)' : undefined}
+            viewBox={`0 0 ${x(props.rails.length + 1)} 50`}
+            height="3rem">
             {!!props.outgoing && (
                 <BranchMergeLine sourceRail={props.outgoing} targetRail={props.rail} />
             )}
@@ -28,6 +32,7 @@ export const GraphNode: React.FC<{
                 strokeWidth={lineWidth}
             />
             <circle
+                className="node"
                 cx={x(props.rail)}
                 cy={25}
                 r={nodeRadius}

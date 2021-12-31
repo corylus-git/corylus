@@ -38,7 +38,7 @@ import {
     IGitConfigValues,
     IGitFlowConfig,
 } from '../model/IGitConfig';
-import { Maybe, fromNullable, nothing, just, Nothing } from './maybe';
+import { Maybe, fromNullable, nothing, just } from './maybe';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from './configVariables';
 
 export type ProgressEventType = string;

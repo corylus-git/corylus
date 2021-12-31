@@ -1,113 +1,133 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Modal } from '../util/Modal';
 import { StyledDialog } from '../util/StyledDialog';
 import { Formik, useField } from 'formik';
 import { ButtonGroup } from '../util/ButtonGroup';
 import { StyledButton } from '../util/StyledButton';
 import { useDialog } from '../../../model/state/dialogs';
-import { useRepo } from '../../../model/state/repo';
-import { useQuery } from 'react-query';
-import { Commit } from '../../../model/stateObjects';
+import { useBranches, useRepo, useTags } from '../../../model/state/repo';
 import styled from 'styled-components';
 import { rebase } from '../../../model/actions/repo';
-import { Hoverable } from '../StyleBase';
+import { DropDownList, Hoverable } from '../StyleBase';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { NoScrollPanel } from '../util/NoScrollPanel';
+import { useAsync } from 'react-use';
+import { calculateGraphLayout } from '../../../util/graphLayout';
+import { GraphLine } from '../History/GraphRenderer';
+import { SelectableList, SelectableListEntryProps } from '../util/SelectableList';
 
 type RebaseAction = 'pick' | 'squash' | 'drop';
-
-type PickerEntryProps = {
-    commit: Commit;
-    name: string;
-    hasPredecessor?: boolean;
-    isSelected: boolean;
-    onSelect: (commit: Commit, ctrlPressed: boolean, shiftPressed: boolean) => void;
-    onChange: (newValue: RebaseAction) => void;
-};
-
-const PickerEntry: React.FC<PickerEntryProps> = (props) => {
-    const [field, meta] = useField(props.name);
-    return (
-        <PickerEntryContainer
-            isSelected={props.isSelected}
-            onClick={(ev) => props.onSelect(props.commit, ev.ctrlKey, ev.shiftKey)}>
-            <td>
-                <select
-                    {...field}
-                    onChange={(ev) => {
-                        switch (ev.target.value) {
-                            case 'pick':
-                            case 'squash':
-                            case 'drop':
-                                props.onChange(ev.target.value);
-                                break;
-                        }
-                        field.onChange(ev);
-                    }}>
-                    <option>pick</option>
-                    {props.hasPredecessor && <option>squash</option>}
-                    <option>drop</option>
-                </select>
-            </td>
-            <td>{props.commit.short_oid}</td>
-            <td>{props.commit.author.timestamp.toLocaleString()}</td>
-            <td>{props.commit.author.name}</td>
-            <td>
-                <span>{props.commit.message}</span>
-            </td>
-        </PickerEntryContainer>
-    );
-};
-
-const PickerEntryContainer = styled.tr<{ isSelected: boolean }>`
-    ${Hoverable}
-    td {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        background-color: ${(props) => (props.isSelected ? 'var(--selected)' : undefined)};
-    }
-`;
 
 function hasPredecessor(value: RebaseAction[], index: number): boolean {
     return value.slice(0, index).some((a) => a === 'pick');
 }
 
+const CommitPickerLine = styled.div`
+    display: grid;
+    grid-template-columns: 7em 1fr;
+    align-items: center;
+`;
+
 const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) => {
     const repo = useRepo();
-    const query = useQuery('interactive-rebase', () =>
-        repo.backend.getHistory(undefined, undefined, undefined, `${props.target}..HEAD`)
+    const history = useAsync(
+        () => repo.backend.getHistory(undefined, undefined, undefined, `${props.target}..HEAD`),
+        [props.target]
     );
-    const reverseHistory = React.useMemo(() => [...(query.data ?? [])].reverse(), [query.data]);
-    const [selectedCommits, setSelectedCommits] = React.useState<Commit[]>([]);
+    const tags = useTags();
+    const branches = useBranches();
+    const graph = React.useMemo(() => {
+        const layout = calculateGraphLayout([...(history.value ?? [])]);
+        return {
+            rails: [...layout.rails].reverse(),
+            lines: [...layout.lines].reverse(),
+        };
+    }, [history]);
+    const [rebaseActions, setRebaseActions] = React.useState<RebaseAction[]>([]);
+    const currentSelection = React.useRef<number[]>([]);
 
-    const onSelectEntry = (commit: Commit, ctrlPressed: boolean, shiftPressed: boolean) => {
-        if (ctrlPressed) {
-            if (selectedCommits.includes(commit)) {
-                setSelectedCommits(selectedCommits.filter((c) => c !== commit));
-            } else {
-                setSelectedCommits([...selectedCommits, commit]);
-            }
-        } else if (shiftPressed) {
-            if (!selectedCommits.includes(commit)) {
-                if (selectedCommits.length === 0) {
-                    setSelectedCommits([commit]);
+    React.useEffect(() => {
+        if (history.value) {
+            setRebaseActions(history.value.map((_) => 'pick'));
+        }
+    }, [history.value]);
+
+    const selectAction = (action: RebaseAction, index: number) => {
+        if (history.value) {
+            const newActions = [...rebaseActions];
+            newActions[index] = action;
+            if (currentSelection.current.includes(index)) {
+                // Note: we're working in timeline order as to not break the hasPredecessor call below
+                for (let idx = newActions.length - 1; idx >= 0; idx--) {
+                    if (
+                        currentSelection.current.includes(idx) &&
+                        (hasPredecessor(newActions, idx) || action !== 'squash')
+                    ) {
+                        newActions[idx] = action;
+                    }
                 }
-                const startIdx = reverseHistory.findIndex((c) => c === selectedCommits[0]);
-                const endIdx = reverseHistory.findIndex((c) => c === commit);
-                const direction = startIdx < endIdx ? 1 : -1;
-                const sc = [selectedCommits[0]];
-                for (let i = startIdx + direction; i !== endIdx + direction; i += direction) {
-                    sc.push(reverseHistory[i]);
-                }
-                setSelectedCommits(sc);
             }
-        } else {
-            setSelectedCommits([commit]);
+            setRebaseActions(newActions);
         }
     };
 
-    if (query.isLoading) {
+    const executeRebase = () => {
+        (async () => {
+            const reverseHistory = [...history.value!].reverse();
+            const commitActions = rebaseActions.map((action, index) => ({
+                action: action,
+                commit: reverseHistory[index],
+            }));
+            try {
+                await rebase(props.target, commitActions);
+            } finally {
+                props.onClose();
+            }
+        })();
+    };
+
+    const CommitPickerEntry: React.FC<SelectableListEntryProps> = (props) => {
+        return (
+            <CommitPickerLine
+                style={props.style}
+                className={`rebase-${rebaseActions[props.index]}`}>
+                <div>
+                    <DropDownList
+                        onChange={(ev) => {
+                            switch (ev.target.value) {
+                                case 'pick':
+                                case 'squash':
+                                case 'drop':
+                                    selectAction(ev.target.value, props.index);
+                                    break;
+                            }
+                        }}
+                        value={rebaseActions[props.index]}>
+                        <option>pick</option>
+                        {hasPredecessor(rebaseActions, props.index) && <option>squash</option>}
+                        <option>drop</option>
+                    </DropDownList>
+                </div>
+                <div>
+                    <GraphLine
+                        branches={branches}
+                        tags={tags}
+                        data={props.data}
+                        index={props.index}
+                        selected={props.selected}
+                        lines={graph.lines}
+                        style={{}}
+                        reverse
+                    />
+                </div>
+            </CommitPickerLine>
+        );
+    };
+
+    if (history.loading) {
         return <>Loading...</>;
     }
-    if (query.error) {
+    if (history.error) {
         return <h2>Could not load differences to target.</h2>;
     }
 
@@ -115,15 +135,15 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
         <Modal isOpen={true}>
             <StyledDialog>
                 <h2>Interactive rebase</h2>
-                <Formik
+                {/* <Formik
                     initialValues={{
-                        action: (reverseHistory?.map((_) => 'pick') ?? []) as RebaseAction[],
+                        action: (history.value?.map((_) => 'pick') ?? []) as RebaseAction[],
                     }}
                     onSubmit={(value, _) => {
                         (async () => {
                             const commitActions = value.action.map((action, index) => ({
                                 action: action,
-                                commit: reverseHistory![index],
+                                commit: history.value![index],
                             }));
                             try {
                                 await rebase(props.target, commitActions);
@@ -132,67 +152,34 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
                             }
                         })();
                     }}
-                    onReset={() => props.onClose()}>
-                    {(formik) => (
-                        <form onSubmit={formik.handleSubmit} onReset={formik.handleReset}>
-                            <div style={{ maxHeight: '80vh', overflow: 'scroll' }}>
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Action</th>
-                                            <th>Commit</th>
-                                            <th>Time</th>
-                                            <th>Author</th>
-                                            <th>Message</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reverseHistory?.map((entry, index) => (
-                                            <PickerEntry
-                                                key={entry.oid}
-                                                name={`action[${index}]`}
-                                                commit={entry}
-                                                hasPredecessor={hasPredecessor(
-                                                    formik.values.action,
-                                                    index
-                                                )}
-                                                onSelect={onSelectEntry}
-                                                isSelected={
-                                                    !!selectedCommits.find((c) => c === entry)
-                                                }
-                                                onChange={(
-                                                    newValue: 'pick' | 'squash' | 'drop'
-                                                ) => {
-                                                    const values = [...formik.values.action];
-                                                    // Note: we're working in history order as to not break the hasPredecessor call below
-                                                    for (const [
-                                                        idx,
-                                                        c,
-                                                    ] of reverseHistory.entries()) {
-                                                        if (
-                                                            selectedCommits.includes(c) &&
-                                                            (hasPredecessor(values, idx) ||
-                                                                newValue !== 'squash')
-                                                        ) {
-                                                            values[idx] = newValue;
-                                                        }
-                                                    }
-                                                    formik.setValues({ action: values });
-                                                }}
-                                            />
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div>
-                                <ButtonGroup>
-                                    <StyledButton type="submit">Rebase</StyledButton>
-                                    <StyledButton type="reset">Cancel</StyledButton>
-                                </ButtonGroup>
-                            </div>
-                        </form>
-                    )}
-                </Formik>
+                    onReset={() => props.onClose()}> */}
+                <NoScrollPanel style={{ height: '80vh', width: '80vw' }}>
+                    <AutoSizer>
+                        {({ width, height }) => (
+                            <SelectableList
+                                width={width}
+                                height={height}
+                                itemSize={48}
+                                itemCount={history.value?.length ?? 0}
+                                multi
+                                onSelectionChange={(s) => {
+                                    currentSelection.current = s;
+                                }}>
+                                {CommitPickerEntry}
+                            </SelectableList>
+                        )}
+                    </AutoSizer>
+                </NoScrollPanel>
+                <div>
+                    <ButtonGroup>
+                        <StyledButton type="submit" onClick={executeRebase}>
+                            Rebase
+                        </StyledButton>
+                        <StyledButton type="reset" onClick={props.onClose}>
+                            Cancel
+                        </StyledButton>
+                    </ButtonGroup>
+                </div>
             </StyledDialog>
         </Modal>
     );

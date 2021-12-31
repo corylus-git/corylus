@@ -9,3 +9,9 @@ export const Hoverable = css`
 export const HoverableDiv = styled.div`
     ${Hoverable}
 `;
+
+export const DropDownList = styled.select`
+    border: 1px solid (--border);
+    background-color: var(--background);
+    color: var(--foreground);
+`;
