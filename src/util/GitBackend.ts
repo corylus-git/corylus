@@ -437,6 +437,11 @@ export interface GitBackend {
     abortRebase(): Promise<void>;
 
     /**
+     * continue the currently running rebase
+     */
+    continueRebase(): Promise<void>;
+
+    /**
      * Get the refs a commit is contained in, i.e. who contain the given ref
      * in their histories.
      *
@@ -1430,6 +1435,10 @@ export class SimpleGitBackend implements GitBackend {
             );
             const doneString = await readFileAsync(`${this.dir}/${rebaseMergePath}/done`, 'utf8');
             const patch = await this._git.raw(['rebase', '--show-current-patch']);
+            const message = await await readFileAsync(
+                `${this.dir}/${rebaseMergePath}/message`,
+                'utf8'
+            );
             const todo = await Promise.all(
                 todoString
                     .split('\n')
@@ -1446,6 +1455,7 @@ export class SimpleGitBackend implements GitBackend {
                 todo,
                 patch,
                 done,
+                message,
             });
         } catch (e) {
             Logger().silly('SimpleGitBasend.getRebaseStatus', 'Could not load rebase status', {
@@ -1465,6 +1475,10 @@ export class SimpleGitBackend implements GitBackend {
 
     abortRebase = async (): Promise<void> => {
         await this._git.rebase(['--abort']);
+    };
+
+    continueRebase = async (): Promise<void> => {
+        await this._git.rebase(['--continue']);
     };
 
     getAffectedRefs = async (

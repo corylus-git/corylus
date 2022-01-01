@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { StyledButton } from '../util/StyledButton';
-import { abortMerge, abortRebase } from '../../../model/actions/repo';
+import { abortMerge, abortRebase, continueRebase } from '../../../model/actions/repo';
 import { useConflicts, useRebaseStatus } from '../../../model/state/repo';
 
 const MergeStatusBarContainer = styled.div`
@@ -17,12 +17,15 @@ export const MergeStatusBar: React.FunctionComponent = () => {
     const isRebase = useRebaseStatus();
 
     const statusText = isRebase.found
-        ? 'This repository has a rebase operation in progress. Abort?'
+        ? 'This repository has a rebase operation in progress. Continue or abort?'
         : 'The repository has merge conflicts pending. Please resolve the conflicts or abort the merge.';
 
-    return hasConflicts ? (
+    return hasConflicts || isRebase.found ? (
         <MergeStatusBarContainer>
             <span style={{ flex: 1 }}>{statusText}</span>
+            {isRebase.found && (
+                <StyledButton onClick={continueRebase}>Continue rebase</StyledButton>
+            )}
             <StyledButton onClick={() => (isRebase.found ? abortRebase() : abortMerge())}>
                 {isRebase.found ? 'Abort rebase' : 'Abort merge'}
             </StyledButton>

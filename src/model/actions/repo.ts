@@ -555,6 +555,22 @@ export const abortRebase = trackError(
     }
 );
 
+export const continueRebase = trackError(
+    'continue rebase',
+    'continueRebase',
+    async (): Promise<void> => {
+        Logger().debug('continueRebase', 'Continuing current rebase');
+        await repoStore.getState().backend.continueRebase();
+        const promises = [
+            repoStore.getState().loadHistory(),
+            repoStore.getState().loadBranches(),
+            repoStore.getState().loadTags(),
+            repoStore.getState().getStatus(),
+        ];
+        await Promise.all(promises);
+    }
+);
+
 export const syncConfig = trackError(
     'sync config',
     'syncConfig',
