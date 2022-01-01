@@ -1430,8 +1430,18 @@ export class SimpleGitBackend implements GitBackend {
             );
             const doneString = await readFileAsync(`${this.dir}/${rebaseMergePath}/done`, 'utf8');
             const patch = await this._git.raw(['rebase', '--show-current-patch']);
-            const todo = await Promise.all(todoString.split('\n').map(this.parseRebaseAction));
-            const done = await Promise.all(doneString.split('\n').map(this.parseRebaseAction));
+            const todo = await Promise.all(
+                todoString
+                    .split('\n')
+                    .filter((l) => l.length > 0)
+                    .map(this.parseRebaseAction)
+            );
+            const done = await Promise.all(
+                doneString
+                    .split('\n')
+                    .filter((l) => l.length > 0)
+                    .map(this.parseRebaseAction)
+            );
             return just({
                 todo,
                 patch,
