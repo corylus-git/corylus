@@ -10,6 +10,7 @@ const writeAsync = util.promisify(fs.write);
 const tempOpenAsync = util.promisify(temp.open);
 const execAsync = util.promisify(exec);
 const readFileAsync = util.promisify(fs.readFile);
+const statAsync = util.promisify(fs.stat);
 
 import {
     BranchInfo,
@@ -38,7 +39,7 @@ import {
     IGitConfigValues,
     IGitFlowConfig,
 } from '../model/IGitConfig';
-import { Maybe, fromNullable, nothing, just, Nothing } from './maybe';
+import { Maybe, fromNullable, nothing, just } from './maybe';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from './configVariables';
 
 export type ProgressEventType = string;
@@ -435,6 +436,11 @@ export interface GitBackend {
      * abort the currently running rebase
      */
     abortRebase(): Promise<void>;
+
+    /**
+     * continue the currently running rebase
+     */
+    continueRebase(): Promise<void>;
 
     /**
      * Get the refs a commit is contained in, i.e. who contain the given ref
@@ -1424,21 +1430,61 @@ export class SimpleGitBackend implements GitBackend {
             const rebaseMergePath = (
                 await this._git.raw(['rev-parse', '--git-path', 'rebase-merge'])
             ).replace(/\n/, '');
+            if (!(await statAsync(`${this.dir}/${rebaseMergePath}`).catch((_) => false))) {
+                Logger().silly(
+                    'SimpleGitBackend.getRebaseStatus',
+                    'Could not access rebase-merge directory. Probably no rebase in progress.'
+                );
+                return nothing;
+            }
             const todoString = await readFileAsync(
                 `${this.dir}/${rebaseMergePath}/git-rebase-todo`,
                 'utf8'
             );
             const doneString = await readFileAsync(`${this.dir}/${rebaseMergePath}/done`, 'utf8');
-            const patch = await this._git.raw(['rebase', '--show-current-patch']);
-            const todo = await Promise.all(todoString.split('\n').map(this.parseRebaseAction));
-            const done = await Promise.all(doneString.split('\n').map(this.parseRebaseAction));
+            const patch = await this._git.raw(['rebase', '--show-current-patch']).catch((e) => {
+                Logger().debug(
+                    'SimpleGitBackend.getRebaseStatus',
+                    'Could not read current patch. Assuming empty.',
+                    {
+                        error: e,
+                    }
+                );
+                return '';
+            });
+            const message = await readFileAsync(
+                `${this.dir}/${rebaseMergePath}/message`,
+                'utf8'
+            ).catch((e) => {
+                Logger().debug(
+                    'SimpleGitBackend.getRebaseStatus',
+                    'Could not open rebase commit message.',
+                    {
+                        error: e,
+                    }
+                );
+                return '';
+            });
+            const todo = await Promise.all(
+                todoString
+                    .split('\n')
+                    .filter((l) => l.length > 0)
+                    .map(this.parseRebaseAction)
+            );
+            const done = await Promise.all(
+                doneString
+                    .split('\n')
+                    .filter((l) => l.length > 0)
+                    .map(this.parseRebaseAction)
+            );
             return just({
                 todo,
                 patch,
                 done,
+                message,
             });
         } catch (e) {
-            Logger().silly('SimpleGitBasend.getRebaseStatus', 'Could not load rebase status', {
+            Logger().error('SimpleGitBackend.getRebaseStatus', 'Could not load rebase status', {
                 error: e,
             });
             return nothing;
@@ -1455,6 +1501,11 @@ export class SimpleGitBackend implements GitBackend {
 
     abortRebase = async (): Promise<void> => {
         await this._git.rebase(['--abort']);
+    };
+
+    continueRebase = async (): Promise<void> => {
+        // TODO the custom editor is a workaround to ensure GIT using the existing commit message under all circumstances. Is there a better way?
+        await this._git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
     };
 
     getAffectedRefs = async (

@@ -11,8 +11,14 @@ import { StagingDiffPanel } from './StagingDiffPanel';
 import { ConflictResolutionPanel } from '../Merging/ConflictResolutionPanel';
 import { Logger } from '../../../util/logger';
 import { nothing, just, Maybe } from '../../../util/maybe';
-import { commit, stage, unstage, addDiff } from '../../../model/actions/repo';
-import { useStatus, useRepo, usePendingCommit, repoStore } from '../../../model/state/repo';
+import { commit, stage, unstage, addDiff, continueRebase } from '../../../model/actions/repo';
+import {
+    useStatus,
+    useRepo,
+    usePendingCommit,
+    repoStore,
+    useRebaseStatus,
+} from '../../../model/state/repo';
 import { useStagingArea } from '../../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../../util/filetypes';
@@ -139,12 +145,16 @@ let savedAmend = false;
 function CommitForm(props: { onCommit?: () => void }) {
     const backend = useRepo((s) => s.backend);
     const pendingCommit = usePendingCommit();
-    const pendingCommitMessage = pendingCommit.found
+    const rebaseStatus = useRebaseStatus();
+    let pendingCommitMessage = pendingCommit.found
         ? just(pendingCommit.value.message)
         : commitMessage;
+    if (rebaseStatus.found) {
+        pendingCommitMessage = just(rebaseStatus.value.message);
+    }
     React.useEffect(() => {
         commitMessage = nothing;
-        savedAmend = false;
+        savedAmend = rebaseStatus.found;
     }, [repoStore.getState().path]);
     return (
         <div
@@ -153,8 +163,12 @@ function CommitForm(props: { onCommit?: () => void }) {
             }}>
             <Formik
                 onSubmit={(values, formik) => {
-                    commit(values.commitmsg, values.amend);
-                    props.onCommit?.();
+                    if (rebaseStatus.found) {
+                        continueRebase();
+                    } else {
+                        commit(values.commitmsg, values.amend);
+                        props.onCommit?.();
+                    }
                     formik.resetForm();
                     commitMessage = nothing;
                     savedAmend = false;
@@ -188,6 +202,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                         <label htmlFor="commitmsg">Commit Message</label>
                         <Field
                             as={CommitMessage}
+                            disabled={rebaseStatus.found}
                             id="commitmsg"
                             name="commitmsg"
                             onChange={(ev: any) => {
@@ -200,6 +215,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                                 type="checkbox"
                                 id="amend"
                                 name="amend"
+                                disabled={rebaseStatus.found}
                                 onChange={(ev: any) => {
                                     formik.handleChange(ev);
                                     savedAmend = ev.target.checked;
@@ -229,7 +245,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                                 Amend latest commit
                             </label>
                             <StyledButton type="submit" disabled={!formik.isValid}>
-                                Commit
+                                {rebaseStatus.found ? 'Continue rebase' : 'Commit'}
                             </StyledButton>
                         </div>
                     </Form>

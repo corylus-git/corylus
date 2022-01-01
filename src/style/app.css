@@ -132,6 +132,20 @@ body {
     animation-iteration-count: infinite;
 }
 
+.rebase-drop {
+    opacity: 50%;
+}
+.rebase-drop .node {
+    visibility: hidden;
+}
+
+.rebase-squash .rails {
+    margin-right: 1em;
+}
+.rebase-squash .node {
+    visibility: hidden;
+}
+
 @keyframes in-progress-active {
     0% {
         background: linear-gradient(

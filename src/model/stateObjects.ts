@@ -298,6 +298,10 @@ export interface RebaseStatusInfo {
      */
     patch: string;
     /**
+     * The current message of the commit that caused the conflict
+     */
+    message: string;
+    /**
      * The commits that are still open to be rebased
      */
     todo: readonly RebaseAction[];

@@ -9,7 +9,6 @@ export interface CommitInfoProps {
     branches: readonly BranchInfo[];
     tags: readonly Tag[];
     rail: number;
-    onCommitSelect: (commit: Commit) => void;
     searchTerm?: string;
 }
 
@@ -68,8 +67,7 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                 padding: '5px',
                 boxSizing: 'border-box',
                 cursor: 'pointer',
-            }}
-            onClick={() => props.onCommitSelect(props.commit)}>
+            }}>
             <div
                 style={{
                     height: '1.2rem',

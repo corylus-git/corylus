@@ -34,7 +34,6 @@ import { useLocation } from 'react-router';
 import { AddIgnoreListItem } from './Dialogs/AddIgnoreListItem';
 import { InteractiveRebase } from './Dialogs/InteractiveRebase';
 import { Rebase } from './Dialogs/Rebase';
-import { RebaseStatusBar } from './Rebase/RebaseStatusBar';
 import { AutoStashDialog } from './Dialogs/AutoStashDialog';
 import { useAutoFetcher } from '../../util/AutoFetcher';
 
@@ -123,7 +122,6 @@ export const Repository: React.FC = () => {
         <MainView>
             <div>
                 <MergeStatusBar />
-                <RebaseStatusBar />
             </div>
             <div
                 style={{

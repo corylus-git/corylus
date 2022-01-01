@@ -16,22 +16,13 @@ import {
     useTags,
     useSelectedCommit,
     useRepo,
-    RepoActions,
     HistoryInfo,
 } from '../../../model/state/repo';
 import { useGraph } from '../../../model/state/graph';
 import { GraphLayoutData } from '../../../util/graphLayout';
 import { changeBranch } from '../../../model/actions/repo';
-
-const CommitMessage = styled.div`
-    flex-grow: 1;
-`;
-
-const CommitEntry = styled(HoverableDiv)<{ isCurrent?: boolean }>`
-    display: flex;
-    min-height: 3rem;
-    background-color: ${(props) => (props.isCurrent ? 'var(--selected)' : undefined)};
-`;
+import { ListSelector, SelectableList, SelectableListEntryProps } from '../util/SelectableList';
+import { GraphRenderer } from './GraphRenderer';
 
 function openContextMenu(
     dialog: DialogActions,
@@ -102,88 +93,39 @@ function matchCommit(c: Commit, searchTerm: string): boolean {
     );
 }
 
-export interface SizableControlProps {
+export const Graph: React.FC<{
     width: number;
     height: number;
-}
-
-export const GraphRenderer: React.FC<
-    SizableControlProps & GraphLayoutData & { totalCommits: number; first: number }
-> = (props) => {
+    history: HistoryInfo;
+}> = (props) => {
+    const entries = useGraph();
     const dialog = useDialog();
     const currentBranch = useCurrentBranch();
     const selectedCommit = useSelectedCommit();
     const setSelectedCommit = useRepo((s) => s.selectCommit);
-    const listRef = React.createRef<List>();
     const [searchTerm, setSearchTerm] = React.useState<string>();
     const [matches, setMatches] = React.useState<number[]>([]);
     const [currentMatchIndex, setCurrentMatchIndex] = React.useState<number>(0);
     const branches = useBranches();
     const tags = useTags();
-    const lines = props.lines;
+    const lines = entries.lines;
+    const listSelector = React.useRef<ListSelector>(null);
 
-    React.useEffect(() => {
-        matches.length !== 0 && listRef.current?.scrollToItem(matches[currentMatchIndex], 'center');
-    }, [matches, currentMatchIndex]);
     React.useEffect(() => {
         const index = lines.findIndex(
             (l) => selectedCommit.found && l.commit.oid === selectedCommit.value.commit.oid
         );
         if (index !== -1) {
-            listRef.current?.scrollToItem(index, 'center');
+            listSelector.current?.scrollToItem(index);
+            listSelector.current?.selectItems([index]);
         }
     }, [selectedCommit]);
-
-    const commitSelected = (commit: Commit) => {
-        setSelectedCommit(commit);
-    };
-
-    const ListEntry = (props: { index: number; style: any }) => {
-        const e = lines![props.index];
-        if (!e) {
-            return <></>;
+    React.useEffect(() => {
+        const index = matches[currentMatchIndex];
+        if (index !== undefined) {
+            listSelector.current?.scrollToItem(index);
         }
-        let width = e.rails.length - 1;
-        while (e.rails[width] === undefined && width > 0) {
-            width--;
-        }
-        if (e.incoming.length > 0) {
-            width = Math.max(e.incoming[e.incoming.length - 1], width);
-        }
-        width++;
-        return (
-            <CommitEntry
-                key={e.commit.oid}
-                style={props.style}
-                onContextMenu={() =>
-                    openContextMenu(dialog, e.commit.oid, e.commit.short_oid, currentBranch)
-                }
-                isCurrent={
-                    selectedCommit.found && e.commit.oid === selectedCommit.value.commit.oid
-                }>
-                <RailLine size={width}>
-                    <GraphNode
-                        rail={e.rail}
-                        hasChild={e.hasChild}
-                        hasParent={e.hasParent}
-                        incoming={e.incoming}
-                        outgoing={e.outgoing}
-                        rails={e.rails}
-                    />
-                </RailLine>
-                <CommitMessage>
-                    <CommitInfo
-                        commit={e.commit}
-                        branches={branches}
-                        tags={tags}
-                        onCommitSelect={commitSelected}
-                        rail={e.rail}
-                        searchTerm={searchTerm}
-                    />
-                </CommitMessage>
-            </CommitEntry>
-        );
-    };
+    }, [currentMatchIndex, matches]);
 
     return (
         <>
@@ -214,36 +156,22 @@ export const GraphRenderer: React.FC<
                 onNext={() => setCurrentMatchIndex(currentMatchIndex + 1)}
                 onPrevious={() => setCurrentMatchIndex(currentMatchIndex - 1)}
             />
-            <List
-                style={{
-                    marginTop: '0.5rem',
-                }}
-                itemSize={48}
-                itemCount={props.totalCommits}
+            <GraphRenderer
                 width={props.width}
                 height={props.height}
-                ref={listRef}>
-                {ListEntry}
-            </List>
+                lines={entries.lines}
+                rails={entries.rails}
+                totalCommits={props.history.historySize}
+                first={props.history.first}
+                branches={branches}
+                tags={tags}
+                onOpenContextMenu={(commit) =>
+                    openContextMenu(dialog, commit.oid, commit.short_oid, currentBranch)
+                }
+                onCommitsSelected={(c) => setSelectedCommit(c[0])}
+                searchTerm={searchTerm}
+                ref={listSelector}
+            />
         </>
-    );
-};
-
-export const Graph: React.FC<{
-    width: number;
-    height: number;
-    history: HistoryInfo;
-}> = (props) => {
-    const entries = useGraph();
-
-    return (
-        <GraphRenderer
-            width={props.width}
-            height={props.height}
-            lines={entries.lines}
-            rails={entries.rails}
-            totalCommits={props.history.historySize}
-            first={props.history.first}
-        />
     );
 };
