@@ -521,7 +521,7 @@ export const addToGitIgnore = trackError(
 );
 
 export const rebase = trackError(
-    'rebasing commits',
+    'rebase commits',
     'rebase',
     async (
         target: string,
@@ -533,14 +533,14 @@ export const rebase = trackError(
             repoStore.getState().loadHistory(),
             repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
-            repoStore.getState().getRebaseStatus(),
+            repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
     }
 );
 
 export const abortRebase = trackError(
-    'aborting rebase',
+    'abort rebase',
     'abortRebase',
     async (): Promise<void> => {
         Logger().debug('abortRebase', 'Aborting current rebase');
@@ -549,14 +549,14 @@ export const abortRebase = trackError(
             repoStore.getState().loadHistory(),
             repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
-            repoStore.getState().getRebaseStatus(),
+            repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
     }
 );
 
 export const syncConfig = trackError(
-    'syncing config',
+    'sync config',
     'syncConfig',
     async (values: IGitConfig): Promise<void> => {
         const store = repoStore.getState().backend.setConfigValue;

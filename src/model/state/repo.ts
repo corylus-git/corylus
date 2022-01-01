@@ -113,7 +113,6 @@ export type RepoActions = {
     selectCommit(ref: Commit | string | CommitStats): Promise<void>;
     deselectCommit(): void;
     selectStash(stash: Stash): Promise<void>;
-    getRebaseStatus(): Promise<void>;
     /**
      * The asynchronous lock used to synchronize critical operations on this repo
      */
@@ -184,7 +183,6 @@ export const repoStore = create(
                     get().loadRemotes(),
                     get().getStatus(),
                     get().getConfig(),
-                    get().getRebaseStatus(),
                 ];
                 await Promise.all(loaders);
                 performance.mark('loadersEnd');
@@ -263,8 +261,10 @@ export const repoStore = create(
             },
             getStatus: async (): Promise<void> => {
                 const status = await get().backend.getStatus();
+                const rebaseStatus = await get().backend.getRebaseStatus();
                 set((state) => {
                     state.status = status;
+                    state.rebaseStatus = rebaseStatus;
                 });
                 // check whether there's a merge currently going on
                 if (fs.existsSync(path.join(get().backend.dir, '.git', 'MERGE_MODE'))) {
