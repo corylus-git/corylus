@@ -10,6 +10,7 @@ const writeAsync = util.promisify(fs.write);
 const tempOpenAsync = util.promisify(temp.open);
 const execAsync = util.promisify(exec);
 const readFileAsync = util.promisify(fs.readFile);
+const statAsync = util.promisify(fs.stat);
 
 import {
     BranchInfo,
@@ -1429,16 +1430,41 @@ export class SimpleGitBackend implements GitBackend {
             const rebaseMergePath = (
                 await this._git.raw(['rev-parse', '--git-path', 'rebase-merge'])
             ).replace(/\n/, '');
+            if (!(await statAsync(`${this.dir}/${rebaseMergePath}`).catch((_) => false))) {
+                Logger().silly(
+                    'SimpleGitBackend.getRebaseStatus',
+                    'Could not access rebase-merge directory. Probably no rebase in progress.'
+                );
+                return nothing;
+            }
             const todoString = await readFileAsync(
                 `${this.dir}/${rebaseMergePath}/git-rebase-todo`,
                 'utf8'
             );
             const doneString = await readFileAsync(`${this.dir}/${rebaseMergePath}/done`, 'utf8');
-            const patch = await this._git.raw(['rebase', '--show-current-patch']);
-            const message = await await readFileAsync(
+            const patch = await this._git.raw(['rebase', '--show-current-patch']).catch((e) => {
+                Logger().debug(
+                    'SimpleGitBackend.getRebaseStatus',
+                    'Could not read current patch. Assuming empty.',
+                    {
+                        error: e,
+                    }
+                );
+                return '';
+            });
+            const message = await readFileAsync(
                 `${this.dir}/${rebaseMergePath}/message`,
                 'utf8'
-            );
+            ).catch((e) => {
+                Logger().debug(
+                    'SimpleGitBackend.getRebaseStatus',
+                    'Could not open rebase commit message.',
+                    {
+                        error: e,
+                    }
+                );
+                return '';
+            });
             const todo = await Promise.all(
                 todoString
                     .split('\n')
@@ -1458,7 +1484,7 @@ export class SimpleGitBackend implements GitBackend {
                 message,
             });
         } catch (e) {
-            Logger().silly('SimpleGitBasend.getRebaseStatus', 'Could not load rebase status', {
+            Logger().error('SimpleGitBackend.getRebaseStatus', 'Could not load rebase status', {
                 error: e,
             });
             return nothing;
