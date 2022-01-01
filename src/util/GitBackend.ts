@@ -1504,7 +1504,8 @@ export class SimpleGitBackend implements GitBackend {
     };
 
     continueRebase = async (): Promise<void> => {
-        await this._git.rebase(['--continue']);
+        // TODO the custom editor is a workaround to ensure GIT using the existing commit message under all circumstances. Is there a better way?
+        await this._git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
     };
 
     getAffectedRefs = async (

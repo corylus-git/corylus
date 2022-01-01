@@ -163,8 +163,12 @@ function CommitForm(props: { onCommit?: () => void }) {
             }}>
             <Formik
                 onSubmit={(values, formik) => {
-                    commit(values.commitmsg, values.amend);
-                    props.onCommit?.();
+                    if (rebaseStatus.found) {
+                        continueRebase();
+                    } else {
+                        commit(values.commitmsg, values.amend);
+                        props.onCommit?.();
+                    }
                     formik.resetForm();
                     commitMessage = nothing;
                     savedAmend = false;
@@ -241,7 +245,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                                 Amend latest commit
                             </label>
                             <StyledButton type="submit" disabled={!formik.isValid}>
-                                Commit
+                                {rebaseStatus.found ? 'Continue rebase' : 'Commit'}
                             </StyledButton>
                         </div>
                     </Form>
