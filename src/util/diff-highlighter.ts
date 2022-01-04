@@ -105,20 +105,20 @@ function tokenDiff(oldStr: string, newStr: string): Diff[] {
                         } as Diff)
                 ),
             ];
-            lastIdx = ex;
         }
-        oldToken.slice(sx, ex).forEach((token) => {
+        oldToken.slice(sx, ex).forEach((token) =>
             ret.push({
                 op: 'delete',
                 value: token,
-            });
-        });
-        newToken.slice(sy, ey).forEach((token) => {
+            })
+        );
+        newToken.slice(sy, ey).forEach((token) =>
             ret.push({
                 op: 'insert',
                 value: token,
-            });
-        });
+            })
+        );
+        lastIdx = ex;
     }
 
     if (lastIdx < newToken.length && lastIdx < oldToken.length) {
@@ -139,7 +139,7 @@ function tokenDiff(oldStr: string, newStr: string): Diff[] {
 }
 
 const word = /^[\w\d-_]+/;
-const whitespace = /^\s+/;
+const whitespace = /^\s/;
 const any = /^./;
 
 /**
