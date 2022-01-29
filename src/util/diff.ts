@@ -61,7 +61,7 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
                         return newLines.concat({
                             ...l,
                             type: 'context',
-                            content: ` ${l.content.slice(1)}`,
+                            content: l.content,
                         } as DiffLine);
                     }
                     Logger().silly('modifyDiff', 'Leaving insert outside the collection', {
@@ -89,7 +89,7 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
                         return newLines.concat({
                             ...l,
                             type: 'context',
-                            content: ` ${l.content.slice(1)}`,
+                            content: l.content,
                         } as DiffLine);
                     }
                     Logger().silly('modifyDiff', 'Leaving insert outside the collection', {
@@ -139,7 +139,21 @@ function correctHeader(block: DiffChunk, newStartCorrection: number): [DiffChunk
 
 export function serializeDiff(diffHeader: string[], diff: FileDiff): string {
     const diffLines = diffHeader.concat(
-        ...diff.chunks.map((b) => [b.header].concat(b.lines.map((l) => l.content)))
+        ...diff.chunks.map((b) => [b.header].concat(b.lines.map((l) => {
+            switch (l.type)
+            {
+                case 'context':
+                    return ` ${l.content}`;
+                case 'delete':
+                    return `-${l.content}`;
+                case 'insert':
+                    return `+${l.content}`;
+                case 'pseudo-context':
+                    return ` ${l.content}`;
+                default:
+                    return "";
+            }
+        })))
     );
     Logger().silly('modifyDiff', 'Serializing diff', { diff: diffLines });
     return `${diffLines.join('\n')}\n`;
