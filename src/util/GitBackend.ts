@@ -205,6 +205,7 @@ export interface GitBackend {
      * @param options.upstream The name of the branch in the upstream repo
      * @param options.setUpstream Set the given remote branch as the tracking branch
      * @param options.force Perform a force push
+     * @param options.pushTags Push all tags to upstream as well
      */
     push(options?: {
         remote?: string;
@@ -212,6 +213,7 @@ export interface GitBackend {
         upstream?: string;
         setUpstream?: boolean;
         force?: boolean;
+        pushTags?: boolean;
     }): Promise<void>;
 
     /**
@@ -614,10 +616,10 @@ export class SimpleGitBackend implements GitBackend {
             return (
                 remotes?.map(
                     (remote) =>
-                        ({
-                            remote: remote.name,
-                            url: remote.refs.fetch, // our model currently supports only one URL
-                        } as RemoteMeta)
+                    ({
+                        remote: remote.name,
+                        url: remote.refs.fetch, // our model currently supports only one URL
+                    } as RemoteMeta)
                 ) || []
             );
         } catch (e) {
@@ -938,6 +940,7 @@ export class SimpleGitBackend implements GitBackend {
         upstream?: string;
         setUpstream?: boolean;
         force?: boolean;
+        pushTags?: boolean;
     }): Promise<void> => {
         let branch = options?.branch;
         const opts = ['--verbose', '--progress'];
@@ -950,25 +953,15 @@ export class SimpleGitBackend implements GitBackend {
             }
             branch = `${branch}:${options.upstream}`;
         }
+        if (options?.pushTags) {
+            opts.push('--tags');
+        }
         try {
             Logger().debug('SimpleGitBackend', 'Push with options', {
                 options: opts,
                 remote: options?.remote,
                 branch: branch,
             });
-            // this._git.outputHandler((command, stdout, stderr) => {
-            //     stdout.on('data', (chunk: Buffer) =>
-            //         options?.onProgress?.('TODO', chunk.toString())
-            //     );
-            //     stderr.on('data', (chunk: Buffer) =>
-            //         options?.onProgress?.('TODO', chunk.toString())
-            //     );
-            // });
-            // this.events.next({
-            //     event: 'progress-started',
-            //     id: id,
-            //     message: `Pushing changes to upstream`,
-            // });
             await this._git.push(options?.remote, branch, opts);
             Logger().info('SimpleGitBackend', 'Finished without exception');
         } catch (e) {
@@ -983,13 +976,6 @@ export class SimpleGitBackend implements GitBackend {
                     autoClose: false,
                 }
             );
-        } finally {
-            // this.events.next({
-            //     event: 'progress-finished',
-            //     id: id,
-            //     message: `Finished pushing to upstream`,
-            // });
-            this._git.outputHandler(undefined);
         }
     };
 
@@ -999,17 +985,13 @@ export class SimpleGitBackend implements GitBackend {
         prune: boolean;
         fetchTags: boolean;
     }): Promise<void> => {
-        try {
-            const cmd = ['fetch'];
-            options.prune && cmd.push('--prune');
-            !options.remote.found && cmd.push('--all');
-            options.fetchTags && cmd.push('--tags');
-            options.remote.found && cmd.push(options.remote.value);
-            options.branch.found && cmd.push(options.branch.value);
-            await this._git.raw(cmd);
-        } finally {
-            this._git.outputHandler(undefined);
-        }
+        const cmd = ['fetch'];
+        options.prune && cmd.push('--prune');
+        !options.remote.found && cmd.push('--all');
+        options.fetchTags && cmd.push('--tags');
+        options.remote.found && cmd.push(options.remote.value);
+        options.branch.found && cmd.push(options.branch.value);
+        await this._git.raw(cmd);
     };
 
     pull = async (remote: string, remoteBranch: string, noFF: boolean): Promise<void> => {

@@ -103,7 +103,8 @@ export const push = trackError(
         sourceBranch?: string,
         remote?: string,
         upstream?: string,
-        setUpstream?: boolean
+        setUpstream?: boolean,
+        pushTags?: boolean
     ): Promise<void> => {
         try {
             progress.getState().setProgress('Pushing changes to upstream', true);
@@ -112,6 +113,7 @@ export const push = trackError(
                 remote: remote,
                 upstream: upstream,
                 setUpstream: setUpstream,
+                pushTags
             });
             progress.getState().setProgress('Finished pushing changes', false, 5000);
             repoStore.getState().loadBranches();

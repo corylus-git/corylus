@@ -3,7 +3,7 @@ import { Modal } from '../util/Modal';
 import { StyledDialog } from '../util/StyledDialog';
 import { ButtonGroup } from '../util/ButtonGroup';
 import { StyledButton } from '../util/StyledButton';
-import { Formik } from 'formik';
+import { Field, Formik } from 'formik';
 import { StyledInput } from '../util/StyledInput';
 import { Logger } from '../../../util/logger';
 import { useDialog } from '../../../model/state/dialogs';
@@ -49,22 +49,25 @@ export const RequestUpstreamDialog: React.FC = () => {
                     initialValues={{
                         remote: toOptional(upstream.remote),
                         upstream: withDefault(upstream.ref, ''),
+                        pushTags: true
                     }}
-                    onSubmit={(values, { setSubmitting }) => {
+                    onSubmit={(values) => {
                         Logger().silly(
                             'RequestUpstreamDialog',
-                            'Submitting push command to the bus',
+                            'Pushing changes to upstream',
                             {
                                 source: dialog.forBranch.ref,
                                 remote: values.remote,
                                 upstream: values.upstream,
+                                pushTags: values.pushTags
                             }
                         );
                         push(
                             dialog.forBranch.ref,
                             values.remote,
                             values.upstream,
-                            !dialog.currentUpstream.found // don't change the existing upstream, if any
+                            !dialog.currentUpstream.found, // don't change the existing upstream, if any
+                            values.pushTags
                         );
                         dialog.close();
                     }}
@@ -114,6 +117,12 @@ export const RequestUpstreamDialog: React.FC = () => {
                                                 .filter((b) => b.remote === formik.values.remote)
                                                 .map((b) => b.ref)}
                                         />
+                                    </div>
+                                    <div>
+                                        <Field type="checkbox" name="pushTags" />
+                                        <label htmlFor="pushTags">
+                                            Push all tags to remote
+                                        </label>
                                     </div>
                                 </>
                                 <ButtonGroup>
