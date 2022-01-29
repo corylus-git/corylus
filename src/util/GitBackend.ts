@@ -815,7 +815,7 @@ export class SimpleGitBackend implements GitBackend {
             }
             let command = options.toParent
                 ? ['diff', '--histogram', '--format=', `${options.toParent}..${sourceCommit}`]
-                : ['diff', '--histogram', '--format=', `${sourceCommit}^!`];
+                : ['diff', '--histogram', '--format=', `${sourceCommit}^..${sourceCommit}`];
             if (options.path) {
                 command = command.concat(['--', options.path]);
             }
