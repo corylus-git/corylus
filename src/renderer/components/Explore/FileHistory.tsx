@@ -8,7 +8,10 @@ import { CommitDetailsView } from '../Diff/Commit';
 import { useFileHistory, explorer } from '../../../model/state/explorer';
 import { calculateGraphLayout } from '../../../util/graphLayout';
 import { GraphRenderer } from '../History/GraphRenderer';
-import { useBranches, useTags } from '../../../model/state/repo';
+import { loadCommitStats, useBranches, useTags } from '../../../model/state/repo';
+import { useAsync } from 'react-use';
+import { Commit } from '../../../model/stateObjects';
+import { just, nothing } from '../../../util/maybe';
 
 const HistoryContainer = styled.div`
     position: absolute;
@@ -40,6 +43,11 @@ export const FileHistory: React.FC = () => {
     const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
     const tags = useTags();
     const branches = useBranches();
+    const [selectedCommit, setSelectedCommit] = React.useState<Commit>();
+    const stats = useAsync(async () => {
+        console.log("Loading commit from file history", selectedCommit);
+        return selectedCommit ? loadCommitStats(selectedCommit) : undefined;
+    }, [selectedCommit])
 
     React.useLayoutEffect(resizer, [history, targetRef.current]);
 
@@ -79,10 +87,11 @@ export const FileHistory: React.FC = () => {
                             first={0}
                             tags={tags}
                             branches={branches}
+                            onCommitsSelected={(commit) => setSelectedCommit(commit[0])}
                         />
                     </NoScrollPanel>
                     <SplitterPanel>
-                        <CommitDetailsView />
+                        <CommitDetailsView stats={stats.value ? just(stats.value) : nothing} />
                     </SplitterPanel>
                 </Splitter>
                 <div className="button">

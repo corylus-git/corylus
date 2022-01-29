@@ -474,3 +474,11 @@ export const useRebaseStatus = (): Maybe<RebaseStatusInfo> =>
  */
 export const useAffected = (): { branches: string[]; tags: string[]; refs: string[] } =>
     useRepo((state: RepoState) => state.affected);
+
+/**
+ * Get the commit stats for the given commit.
+ * 
+ * @param commit The commit for which to return the stats
+ * @returns The CommitStats for the commit
+ */
+export const loadCommitStats = (commit: Commit): Promise<CommitStats> => repoStore.getState().backend.getCommitStats(commit);

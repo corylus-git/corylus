@@ -2,7 +2,7 @@ import * as React from 'react';
 import styled from 'styled-components';
 import mime from 'mime-types';
 
-import { Commit, DiffStat } from '../../../model/stateObjects';
+import { Commit, CommitStats, DiffStat } from '../../../model/stateObjects';
 import '../../../style/app.css';
 import { ArrowRight } from '../icons/ArrowRight';
 import { ArrowDown } from '../icons/ArrowDown';
@@ -11,6 +11,7 @@ import { useSelectedCommit } from '../../../model/state/repo';
 import { ImageDiff } from './ImageDiff';
 import { TextFileDiff } from './TextFileDiff';
 import { isSupportedImageType } from '../../../util/filetypes';
+import { Maybe } from '../../../util/maybe';
 
 export interface CommitProps {
     commit?: Commit;
@@ -146,8 +147,12 @@ function DiffView(props: {
     );
 }
 
-export const CommitDetailsView: React.FC = () => {
-    const stats = useSelectedCommit();
+export type CommitDetailsViewProps = {
+    stats: Maybe<CommitStats>;
+};
+
+export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
+    const { stats } = props
     if (stats.found) {
         return (
             <div

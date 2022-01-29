@@ -6,7 +6,7 @@ import { CommitDetailsView } from '../Diff/Commit';
 import { useState, useRef, useLayoutEffect } from 'react';
 import { Logger } from '../../../util/logger';
 import { NoScrollPanel } from '../util/NoScrollPanel';
-import { useHistory } from '../../../model/state/repo';
+import { useHistory, useSelectedCommit } from '../../../model/state/repo';
 
 let splitterX: string | undefined = undefined;
 let splitterY = 'minmax(0,1fr)';
@@ -18,6 +18,7 @@ export const HistoryPanel: React.FC = () => {
     const targetRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const history = useHistory();
+    const stats = useSelectedCommit();
 
     useLayoutEffect(resizer, []);
 
@@ -55,7 +56,7 @@ export const HistoryPanel: React.FC = () => {
                     />
                 </NoScrollPanel>
                 <SplitterPanel>
-                    <CommitDetailsView />
+                    <CommitDetailsView stats={stats} />
                 </SplitterPanel>
             </Splitter>
         </Splitter>
