@@ -1,11 +1,10 @@
 import { wrap, proxy } from 'comlink';
 import React from 'react';
 
-import FileWatcherWorker from 'worker-loader!./dirwatcher.worker.ts';
 import { useRepo } from '../model/state/repo';
 import { Logger } from '../util/logger';
 
-const fileWatcherWorkerEndpoint = new FileWatcherWorker();
+const fileWatcherWorkerEndpoint = new Worker(new URL('./dirwatcher.worker.ts', import.meta.url));
 Logger().info('dirwatcher', 'Starting directory watcher worker');
 
 export const fileWatcherWorker = wrap<typeof import('./dirwatcher.worker').FileWatcherWorker>(

@@ -3,7 +3,7 @@ const spawn = require('child_process').spawn;
 
 const baseConfig = require('./webpack.renderer.config');
 
-module.exports = merge.smart(baseConfig, {
+module.exports = merge.merge(baseConfig, {
     resolve: {
         alias: {
             'react-dom': '@hot-loader/react-dom',
@@ -11,20 +11,21 @@ module.exports = merge.smart(baseConfig, {
     },
     devServer: {
         port: 2003,
-        compress: true,
-        noInfo: true,
-        stats: 'errors-only',
-        inline: true,
         hot: true,
         headers: { 'Access-Control-Allow-Origin': '*' },
         historyApiFallback: {
             verbose: true,
             disableDotRule: false,
         },
-        watchOptions: {
-            ignored: ['**/node_modules'],
+        devMiddleware: {
+            stats: 'errors-only',
         },
-        before() {
+        static: {
+            watch: {
+                ignored: ['**/node_modules']
+            }
+        },
+        onBeforeSetupMiddleware() {
             if (process.env.START_HOT) {
                 console.log('Starting main process');
                 spawn('npm', ['run', 'start-main-dev'], {

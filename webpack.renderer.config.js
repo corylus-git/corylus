@@ -27,7 +27,7 @@ plugins: [
 ],
 */
 
-module.exports = merge.smart(baseConfig, {
+module.exports = merge.merge(baseConfig, {
     target: 'electron-renderer',
     entry: {
         app: ['@babel/polyfill', './src/renderer/app.tsx'],
@@ -40,39 +40,28 @@ module.exports = merge.smart(baseConfig, {
                 loader: 'ts-loader',
             },
             {
-                test: /\.scss$/,
-                loaders: ['style-loader', 'css-loader'],
-            },
-            {
                 test: /\.css$/,
                 exclude: MONACO_DIR,
                 use: [
                     { loader: 'style-loader' },
-                    {
-                        loader: 'css-loader',
-                    },
+                    { loader: 'css-loader' }
                 ],
             },
             {
                 test: /\.css$/,
                 include: MONACO_DIR,
-                loaders: ['style-loader', 'css-loader'],
-            },
-            {
-                test: /\.(gif|png|jpe?g)$/,
                 use: [
-                    'file-loader',
-                    {
-                        loader: 'image-webpack-loader',
-                        options: {
-                            disable: true,
-                        },
-                    },
+                    { loader: 'style-loader' }, 
+                    { loader: 'css-loader' }
                 ],
             },
             {
+                test: /\.(gif|png|jpe?g)$/,
+                type: 'asset/resource'
+            },
+            {
                 test: /\.(woff2?|ttf)$/,
-                loaders: ['file-loader'],
+                type: 'asset/resource'
             },
             {
                 // turn all SVGs into components to be able to theme them later
@@ -99,7 +88,6 @@ module.exports = merge.smart(baseConfig, {
         new ForkTsCheckerWebpackPlugin({
             reportFiles: ['src/renderer/**/*'],
         }),
-        new webpack.NamedModulesPlugin(),
         new HtmlWebpackPlugin({
             title: 'Corylus',
         }),
