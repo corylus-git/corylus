@@ -190,6 +190,7 @@ export const stagingArea = create(
                 Logger().debug('finishManualMerge', 'Closing Merge panel');
                 set((state) => {
                     state.manualMerge = nothing;
+                    state.selectedConflict = nothing;
                 });
             },
             reset: (): void => {
