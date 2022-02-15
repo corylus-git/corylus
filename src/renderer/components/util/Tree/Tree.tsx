@@ -6,6 +6,7 @@ import { Logger } from '../../../../util/logger';
 import { HoverableSpan } from '../../StyleBase';
 
 export interface TreeNode<T> {
+    readonly key?: string;
     readonly label: string;
     readonly meta?: T;
     readonly children: readonly TreeNode<T>[];
@@ -99,7 +100,7 @@ export function Tree<T>(props: TreeProps<T>): JSX.Element {
                 <div>
                     {props.root.children.map((child) => (
                         <Tree
-                            key={child.label}
+                            key={child.key ?? child.label}
                             root={child}
                             basePath={(props.basePath ?? []).concat([props.root.label])}
                             label={props.label}

@@ -58,6 +58,7 @@ export const Stashes: React.FC = () => {
             root={{
                 label: 'Stashes',
                 children: stashes.map<TreeNode<Stash>>((entry) => ({
+                    key: entry.oid,
                     label: entry.message,
                     children: [],
                     meta: entry,
