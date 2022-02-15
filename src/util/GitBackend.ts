@@ -3,11 +3,12 @@ import { execSync, exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
-import simpleGit, { SimpleGit } from 'simple-git';
+import simpleGit, { GitError, SimpleGit } from 'simple-git';
 import temp from 'temp';
 
 const writeAsync = util.promisify(fs.write);
-const tempOpenAsync = util.promisify(temp.open);
+// TODO: for some reason TS is no longer able to deduce the second type parameter and turns it into unknown, leading to errors later
+const tempOpenAsync = util.promisify<string | temp.AffixOptions | undefined, temp.OpenFile>(temp.open);
 const execAsync = util.promisify(exec);
 const readFileAsync = util.promisify(fs.readFile);
 const statAsync = util.promisify(fs.stat);
@@ -747,9 +748,9 @@ export class SimpleGitBackend implements GitBackend {
         try {
             await this._git.reset(['--merge']);
             return undefined;
-        } catch (e) {
+        } catch (e: any) {
             Logger().error('SimpleGitBackend', 'Could not abort merge', { error: e });
-            return e.git.result;
+            return e.git.result ?? '<unknown error>';
         }
     };
 
@@ -965,17 +966,23 @@ export class SimpleGitBackend implements GitBackend {
             await this._git.push(options?.remote, branch, opts);
             Logger().info('SimpleGitBackend', 'Finished without exception');
         } catch (e) {
-            Logger().error('SimpleGitBackend', 'Could not push changes to upstream', {
-                error: e.toString(),
-                where: e.stack || 'No stack trace available',
-                options: options,
-            });
-            toast.error(
-                structuredToast(`Could not push changes to upstream`, e.toString().split('\n')),
-                {
-                    autoClose: false,
-                }
-            );
+            if (e instanceof Error)
+            {
+                Logger().error('SimpleGitBackend', 'Could not push changes to upstream', {
+                    error: e.toString(),
+                    where: e.stack || 'No stack trace available',
+                    options: options,
+                });
+                toast.error(
+                    structuredToast(`Could not push changes to upstream`, e.toString().split('\n')),
+                    {
+                        autoClose: false,
+                    }
+                );
+            }
+            else {
+                throw e;
+            }
         }
     };
 
@@ -998,16 +1005,23 @@ export class SimpleGitBackend implements GitBackend {
         try {
             await this._git.pull(remote, remoteBranch, noFF ? ['--no-ff'] : undefined);
         } catch (e) {
-            Logger().error('SimpleGitBackend', 'Pulling from remote branch failed', {
-                error: e,
-                remote: remote,
-                remoteBranch: remoteBranch,
-                noFF: noFF,
-            });
-            toast(structuredToast('Failed to pull remote changes', e.message?.split(/\n/)), {
-                type: 'error',
-                autoClose: false,
-            });
+            if (e instanceof Error)
+            {
+                Logger().error('SimpleGitBackend', 'Pulling from remote branch failed', {
+                    error: e,
+                    remote: remote,
+                    remoteBranch: remoteBranch,
+                    noFF: noFF,
+                });
+                toast(structuredToast('Failed to pull remote changes', e.message?.split(/\n/)), {
+                    type: 'error',
+                    autoClose: false,
+                });
+            }
+            else
+            {
+                throw e;
+            }
         }
     };
 
@@ -1021,11 +1035,18 @@ export class SimpleGitBackend implements GitBackend {
             const git = simpleGit(); // clone is one of the few commands, that can actually be executed without an open local repo
             await git.clone(url, dir);
         } catch (e) {
-            toast(structuredToast(`Failed to clone ${url} to ${dir}`, e.message?.split(/\n/)), {
-                type: 'error',
-                autoClose: false,
-            });
-            Logger().error('SimpleGiteBackend', 'Clone failed', { url, dir, error: e });
+            if (e instanceof Error)
+            {
+                toast(structuredToast(`Failed to clone ${url} to ${dir}`, e.message?.split(/\n/)), {
+                    type: 'error',
+                    autoClose: false,
+                });
+                Logger().error('SimpleGiteBackend', 'Clone failed', { url, dir, error: e });
+            }
+            else
+            {
+                throw e;
+            }
         }
     };
 
@@ -1626,6 +1647,7 @@ function mapCommitStatus(output: string): DiffStatus {
 async function createCommandScript(
     commands: readonly { action: string; commit: Commit }[]
 ): Promise<string> {
+
     const commandScript = commands
         .map((command) => `${command.action} ${command.commit.short_oid}`)
         .join('\n');

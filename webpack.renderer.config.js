@@ -86,7 +86,11 @@ module.exports = merge.merge(baseConfig, {
     },
     plugins: [
         new ForkTsCheckerWebpackPlugin({
-            reportFiles: ['src/renderer/**/*'],
+            issue: {
+                exclude: {
+                    file: '!src/main/**/*'
+                }
+            } 
         }),
         new HtmlWebpackPlugin({
             title: 'Corylus',

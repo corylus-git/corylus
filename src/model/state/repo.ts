@@ -291,7 +291,7 @@ export const repoStore = create(
                             state.pendingCommit = just(pending);
                         });
                     } catch (e) {
-                        Logger().error('Could not read pending merge info', e);
+                        Logger().error('getStatus', 'Could not read pending merge info', e);
                     }
                 } else {
                     set((state) => {

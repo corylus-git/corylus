@@ -10,7 +10,7 @@ export function trackError<P extends unknown[], R>(
     return async (...args: P): Promise<R> => {
         try {
             return await func(...args);
-        } catch (e) {
+        } catch (e: any) {
             Logger().error(context, `Failed to ${action}`, { error: e });
             toast.error(structuredToast(`Failed to ${action}`, e.toString().split('\n')), {
                 autoClose: false,

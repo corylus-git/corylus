@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useHistory, useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import styled from 'styled-components';
 
 import '../../style/app.css';
@@ -54,14 +54,14 @@ function RouteAction(props: {
     route: string;
     title?: string;
 }) {
-    const history = useHistory();
+    const navigate = useNavigate();
     const location = useLocation();
     return (
         <ActionButton
             active={location.pathname === props.route}
             onClick={() => {
                 if (location.pathname !== props.route) {
-                    history.push(props.route);
+                    navigate(props.route);
                 }
             }}
             title={props.title}>

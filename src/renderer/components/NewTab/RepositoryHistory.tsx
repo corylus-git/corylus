@@ -35,19 +35,22 @@ const HistoryBlock: React.FC<HistoryBlockComponentProps> = (props) => {
                     onClick={() => {
                         try {
                             tabs.openRepoInActive(e.path);
-                        } catch (e) {
+                        } catch (e: any) {
                             Logger().error(
                                 'RepositoryHistory',
                                 'Could not open repository from history',
                                 { error: e }
                             );
-                            toast.error(
-                                structuredToast(
-                                    'Could not open repository',
-                                    e.toString().split('\n')
-                                ),
-                                { autoClose: false }
-                            );
+                            if (e instanceof Error)
+                            {
+                                toast.error(
+                                    structuredToast(
+                                        'Could not open repository',
+                                        e.toString().split('\n')
+                                    ),
+                                    { autoClose: false }
+                                );
+                            }
                         }
                     }}
                     title={e.path}>

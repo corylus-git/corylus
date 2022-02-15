@@ -7,6 +7,7 @@ import { Logger } from '../../../util/logger';
 import { Menu, getCurrentWindow } from '@electron/remote';
 import { discardChanges } from '../../../model/actions/repo';
 import { useDialog, DialogActions } from '../../../model/state/dialogs';
+import { HoverableSpan } from '../StyleBase';
 
 function openContextMenu(treeNode: IndexTreeNode, dialog: DialogActions) {
     const menu = Menu.buildFromTemplate([
@@ -74,7 +75,7 @@ export const IndexTree: React.FC<IndexTreeProps> = (props) => {
                     expanded
                     label={(file, path, _, meta) => {
                         return (
-                            <span
+                            <HoverableSpan
                                 title={`${path?.join('/') ?? ''}/${file}`}
                                 style={{
                                     whiteSpace: 'nowrap',
@@ -90,7 +91,7 @@ export const IndexTree: React.FC<IndexTreeProps> = (props) => {
                                     />
                                 )}
                                 {file}
-                            </span>
+                            </HoverableSpan>
                         );
                     }}
                     onEntryDoubleClick={(meta) =>

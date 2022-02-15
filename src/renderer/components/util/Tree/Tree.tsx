@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { ArrowDown } from '../../icons/ArrowDown';
 import { ArrowRight } from '../../icons/ArrowRight';
 import { Logger } from '../../../../util/logger';
+import { HoverableSpan } from '../../StyleBase';
 
 export interface TreeNode<T> {
     readonly label: string;
@@ -91,7 +92,7 @@ export function Tree<T>(props: TreeProps<T>): JSX.Element {
                 {props.label ? (
                     props.label(props.root.label, props.basePath ?? [], open, props.root.meta)
                 ) : (
-                    <span>{props.root.label}</span>
+                    <HoverableSpan>{props.root.label}</HoverableSpan>
                 )}
             </div>
             {open && (

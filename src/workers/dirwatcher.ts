@@ -1,15 +1,11 @@
-import { wrap, proxy } from 'comlink';
+import { proxy, wrap } from 'comlink';
 import React from 'react';
 
 import { useRepo } from '../model/state/repo';
 import { Logger } from '../util/logger';
 
-const fileWatcherWorkerEndpoint = new Worker(new URL('./dirwatcher.worker.ts', import.meta.url));
-Logger().info('dirwatcher', 'Starting directory watcher worker');
-
-export const fileWatcherWorker = wrap<typeof import('./dirwatcher.worker').FileWatcherWorker>(
-    fileWatcherWorkerEndpoint
-);
+const dirwatcherEndpoint = new Worker(new URL('./dirwatcher.worker.ts', import.meta.url));
+const dirwatcher = wrap<typeof import('./dirwatcher.worker').FileWatcherWorker>(dirwatcherEndpoint);
 
 export function useDirWatcher(repoPath: string): void {
     const repo = useRepo();
@@ -19,10 +15,10 @@ export function useDirWatcher(repoPath: string): void {
     };
     React.useEffect(() => {
         if (repoPath !== '') {
-            fileWatcherWorker.watchDir(repoPath, proxy(callback));
+            dirwatcher?.watchDir(repoPath, proxy(callback));
         }
         return () => {
-            fileWatcherWorker.unwatchDir();
+            dirwatcher?.unwatchDir();
         };
-    }, [repoPath]);
+    }, [repoPath, dirwatcher]);
 }

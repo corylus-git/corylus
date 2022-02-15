@@ -160,7 +160,7 @@ export const merge = async (from: string, noFF: boolean): Promise<void> => {
         await repoStore.getState().backend.merge(from, noFF);
         repoStore.getState().loadBranches();
         repoStore.getState().loadHistory();
-    } catch (e) {
+    } catch (e: any) {
         if (e.git && ((e.git as MergeResult)?.conflicts?.length ?? 0 !== 0)) {
             toast.error(
                 'Merge failed due to conflicted files. Please review the conflicts and continue or abort the merge',
@@ -319,7 +319,7 @@ export const addDiff = trackError(
             } else {
                 stagingArea.getState().loadDiff(source, path);
             }
-        } catch (e) {
+        } catch (e: any) {
             Logger().debug('addDiff', 'Could not add diff to index', {
                 diff: diff,
                 path: path,
@@ -345,7 +345,10 @@ export const stash = trackError(
             await repoStore.getState().loadStashes();
             repoStore.getState().getStatus();
         } catch (e) {
-            Logger().error('stash', 'Could not stash changes', { error: e.toString() });
+            if (e instanceof Error)
+            {
+                Logger().error('stash', 'Could not stash changes', { error: e.toString() });
+            }
             throw e;
         }
     }

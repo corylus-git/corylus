@@ -10,6 +10,10 @@ export const HoverableDiv = styled.div`
     ${Hoverable}
 `;
 
+export const HoverableSpan = styled.span`
+    ${Hoverable}
+`;
+
 export const DropDownList = styled.select`
     border: 1px solid (--border);
     background-color: var(--background);

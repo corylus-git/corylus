@@ -30,7 +30,7 @@ import { useCurrentBranch, useRepo, useStatus } from '../../model/state/repo';
 import { useWorkflows } from '../../model/state/workflows';
 import { Gitflow } from '../../util/workflows/gitflow';
 import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
-import { useLocation } from 'react-router';
+import { Routes, useLocation } from 'react-router';
 import { AddIgnoreListItem } from './Dialogs/AddIgnoreListItem';
 import { InteractiveRebase } from './Dialogs/InteractiveRebase';
 import { Rebase } from './Dialogs/Rebase';
@@ -130,18 +130,12 @@ export const Repository: React.FC = () => {
                     height: '100%',
                 }}>
                 <Actions />
-                <Route exact path="/">
-                    <HistoryPanel />
-                </Route>
-                <Route exact path="/index">
-                    <IndexPanel />
-                </Route>
-                <Route exact path="/config">
-                    <ConfigurationPanel />
-                </Route>
-                <Route exact path="/files">
-                    <ExplorerPanel />
-                </Route>
+                <Routes>
+                    <Route path="/" element={<HistoryPanel />} />
+                    <Route path="index" element={<IndexPanel />} />
+                    <Route path="config" element={<ConfigurationPanel />} />
+                    <Route path="files" element={<ExplorerPanel />} />
+                </Routes>
             </div>
             <MainStatusBar />
             <DialogsContainer />

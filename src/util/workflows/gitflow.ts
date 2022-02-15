@@ -224,7 +224,7 @@ export const finishBranch = async (type: GitflowBranchType, target: string): Pro
                 repoStore.getState().getStatus();
             }
         } catch (e) {
-            Logger().error('GitFlow', `Failed to finish ${type}`, { error: e.toString() });
+            Logger().error('GitFlow', `Failed to finish ${type}`, { error: e });
             toast.error(`Could not finish ${type}. ${e}`, { autoClose: false });
         }
     }

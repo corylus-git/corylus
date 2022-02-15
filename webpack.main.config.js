@@ -35,7 +35,11 @@ module.exports = merge.merge(baseConfig, {
     },
     plugins: [
         new ForkTsCheckerWebpackPlugin({
-            reportFiles: ['src/main/**/*']
+            issue: {
+                exclude: {
+                    file: '!src/main/**/*'
+                }
+            } 
         }),
         new webpack.DefinePlugin({
             'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
