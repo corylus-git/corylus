@@ -197,8 +197,9 @@ export const repoStore = create(
                 if (get().historyLoader) {
                     (window as any).cancelIdleCallback(get().historyLoader);
                 }
+                const batchSize = 20;
                 const partLoader = async () => {
-                    const historyPart = await get().backend.getHistory(undefined, index, 100);
+                    const historyPart = await get().backend.getHistory(undefined, index, batchSize);
                     if (historyPart.length > 0) {
                         Logger().debug('loadHistory', 'Received partial history from backend', {
                             items: historyPart.length,
@@ -212,10 +213,10 @@ export const repoStore = create(
                                 historySize: size,
                             };
                         });
-                        index += 100;
+                        index += batchSize;
                     }
                     graph.getState().addAdditionalEntries(historyPart);
-                    if (historyPart.length === 100) {
+                    if (historyPart.length === batchSize) {
                         const handle = (window as any).requestIdleCallback(partLoader);
                         set((state) => {
                             state.historyLoader = handle;
