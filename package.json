@@ -65,7 +65,7 @@
             "./assets/**"
         ],
         "linux": {
-            "target": "deb"
+            "target": [ "deb", "rpm", "AppImage" ]
         },
         "win": {
             "target": "nsis"
