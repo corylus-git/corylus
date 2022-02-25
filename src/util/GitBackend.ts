@@ -690,14 +690,14 @@ export class SimpleGitBackend implements GitBackend {
             Logger().debug('getHistory', `Requesting ${limit} items from the history`);
             opts.maxCount = limit;
         }
-        if (path) {
-            opts['--'] = true;
-            opts[path] = true;
-        }
         if (range) {
             opts[range] = true;
         } else {
             opts['--branches'] = true;
+        }
+        if (path) {
+            opts['--'] = true;
+            opts[path] = true;
         }
         const entries = await this._git.log<SimpleGitBackend['commitFormat']>(opts);
         Logger().debug('getHistory', `Received ${entries.all.length} from git`);
