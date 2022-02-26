@@ -87,7 +87,8 @@ export interface GitBackend {
         path?: string,
         skip?: number,
         limit?: number,
-        range?: string
+        range?: string,
+        remotes?: boolean
     ): Promise<readonly Commit[]>;
 
     /**
@@ -674,15 +675,18 @@ export class SimpleGitBackend implements GitBackend {
         path?: string,
         skip?: number,
         limit?: number,
-        range?: string
+        range?: string,
+        remotes?: boolean
     ): Promise<readonly Commit[]> => {
         const opts: Record<string, any> = {
             format: this.commitFormat,
             splitter: true,
             '--parents': true,
-            '--remotes': true,
             '--topo-order': true,
         };
+        if (remotes ?? true) {
+            opts['--remotes'] = true;
+        }
         if (skip) {
             opts['--skip'] = skip;
         }
