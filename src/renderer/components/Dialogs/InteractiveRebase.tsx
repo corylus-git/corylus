@@ -31,7 +31,7 @@ const CommitPickerLine = styled.div`
 const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) => {
     const repo = useRepo();
     const history = useAsync(
-        () => repo.backend.getHistory(undefined, undefined, undefined, `${props.target}..HEAD`),
+        () => repo.backend.getHistory(undefined, undefined, undefined, `${props.target}..HEAD`, false),
         [props.target]
     );
     const tags = useTags();
@@ -48,7 +48,9 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
 
     React.useEffect(() => {
         if (history.value) {
-            setRebaseActions(history.value.map((_) => 'pick'));
+            const ba = history.value.map((v) => v.parents.length > 1 ? 'drop' : 'pick');
+            ba.reverse();
+            setRebaseActions(ba);
         }
     }, [history.value]);
 
@@ -87,26 +89,30 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
     };
 
     const CommitPickerEntry: React.FC<SelectableListEntryProps> = (props) => {
+        const isMerge = !!graph.lines[props.index].outgoing;
         return (
             <CommitPickerLine
                 style={props.style}
                 className={`rebase-${rebaseActions[props.index]}`}>
                 <div>
-                    <DropDownList
-                        onChange={(ev) => {
-                            switch (ev.target.value) {
-                                case 'pick':
-                                case 'squash':
-                                case 'drop':
-                                    selectAction(ev.target.value, props.index);
-                                    break;
-                            }
-                        }}
-                        value={rebaseActions[props.index]}>
-                        <option>pick</option>
-                        {hasPredecessor(rebaseActions, props.index) && <option>squash</option>}
-                        <option>drop</option>
-                    </DropDownList>
+                    {
+                        !isMerge &&
+                        <DropDownList
+                            onChange={(ev) => {
+                                switch (ev.target.value) {
+                                    case 'pick':
+                                    case 'squash':
+                                    case 'drop':
+                                        selectAction(ev.target.value, props.index);
+                                        break;
+                                }
+                            }}
+                            value={rebaseActions[props.index]}>
+                            <option>pick</option>
+                            {hasPredecessor(rebaseActions, props.index) && <option>squash</option>}
+                            <option>drop</option>
+                        </DropDownList>
+                    }
                 </div>
                 <div>
                     <GraphLine
