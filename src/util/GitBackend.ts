@@ -534,15 +534,26 @@ export class SimpleGitBackend implements GitBackend {
 
     getBranches = async (): Promise<BranchInfo[]> => {
         performance.mark('startBranches');
-        const branches = await this._git.branch(['--no-abbrev', '--all']);
+        const b = await this._git.branch(['--no-abbrev', '--all']);
+        const branches = (await this._git.raw(['for-each-ref', '--format=%(HEAD)|---|%(objectname)|---|%(objecttype)|---|%(refname)|---|%(worktreepath)|---|%(symref)', 'refs/heads', 'refs/remotes'])).split('\n').filter(l => l !== '')
+            .map(b => {
+                const [head, commit, _type, ref, worktree, symref] = b.split('|---|');
+                return {
+                    name: ref.replace(/refs(\/heads)*\//, ''), // remove refs/... from the start of the name
+                    commit,
+                    current: head === '*',
+                    worktree,
+                    symref
+                }
+            }).filter(b => !b.symref); // we don't want to see symbolic references
         performance.mark('endBranches');
         performance.measure('branches', 'startBranches', 'endBranches');
         const trackedBranches = (await this.getRefsAndUpstreams())?.filter((r) => r.upstream);
         const isDetached = (await this._git.revparse(['--symbolic-full-name', 'HEAD'])) === 'HEAD';
         const stats: { ref: string; stats: UpstreamInfo }[] = await Promise.all(
             trackedBranches?.map(async (branchInfo) => {
-                const upstream = branches.all.find(
-                    (b) => b === `remotes/${branchInfo.remote}/${branchInfo.upstream}`
+                const upstream = branches.find(
+                    (b) => b.name === `remotes/${branchInfo.remote}/${branchInfo.upstream}`
                 );
                 let stats = { ahead: 0, behind: 0 };
                 if (upstream) {
@@ -564,19 +575,19 @@ export class SimpleGitBackend implements GitBackend {
         );
 
         const ret =
-            branches?.all.map((branch) => {
+            branches?.map((branch) => {
                 return {
-                    ref: branch.replace(/^(remotes\/([^/]+)\/)*/, ''),
-                    head: branches.branches[branch].commit,
-                    remote: branch.startsWith('remotes')
-                        ? branch.replace(/^remotes\/([^/]+)\/.*/, '$1')
+                    ref: branch.name.replace(/^(remotes\/([^/]+)\/)*/, ''),
+                    head: branch.commit,
+                    remote: branch.name.startsWith('remotes')
+                        ? branch.name.replace(/^remotes\/([^/]+)\/.*/, '$1')
                         : undefined,
-                    current: branches?.current === branch,
-                    upstream: stats.find((stat) => stat.ref === branch)?.stats,
+                    current: branch.current,
+                    upstream: stats.find((stat) => stat.ref === branch.name)?.stats,
                     trackedBy: trackedBranches?.find(
-                        (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch
+                        (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch.name
                     )?.ref,
-                    isDetached: branches?.current === branch && isDetached,
+                    isDetached: branch.current && isDetached,
                 } as BranchInfo;
             }) || [];
         return ret;
@@ -855,11 +866,12 @@ export class SimpleGitBackend implements GitBackend {
                     existing[existing.length - 1].newPath = p;
                     return existing;
                 }
+
                 return existing.concat([
                     {
                         index: line[0],
                         workdir: line[1],
-                        path: line.substr(3),
+                        path: line.substring(3),
                     },
                 ]);
             }, [] as { index: string; workdir: string; path: string; newPath?: string }[]);
@@ -970,8 +982,7 @@ export class SimpleGitBackend implements GitBackend {
             await this._git.push(options?.remote, branch, opts);
             Logger().info('SimpleGitBackend', 'Finished without exception');
         } catch (e) {
-            if (e instanceof Error)
-            {
+            if (e instanceof Error) {
                 Logger().error('SimpleGitBackend', 'Could not push changes to upstream', {
                     error: e.toString(),
                     where: e.stack || 'No stack trace available',
@@ -1009,8 +1020,7 @@ export class SimpleGitBackend implements GitBackend {
         try {
             await this._git.pull(remote, remoteBranch, noFF ? ['--no-ff'] : undefined);
         } catch (e) {
-            if (e instanceof Error)
-            {
+            if (e instanceof Error) {
                 Logger().error('SimpleGitBackend', 'Pulling from remote branch failed', {
                     error: e,
                     remote: remote,
@@ -1022,8 +1032,7 @@ export class SimpleGitBackend implements GitBackend {
                     autoClose: false,
                 });
             }
-            else
-            {
+            else {
                 throw e;
             }
         }
@@ -1039,16 +1048,14 @@ export class SimpleGitBackend implements GitBackend {
             const git = simpleGit(); // clone is one of the few commands, that can actually be executed without an open local repo
             await git.clone(url, dir);
         } catch (e) {
-            if (e instanceof Error)
-            {
+            if (e instanceof Error) {
                 toast(structuredToast(`Failed to clone ${url} to ${dir}`, e.message?.split(/\n/)), {
                     type: 'error',
                     autoClose: false,
                 });
                 Logger().error('SimpleGiteBackend', 'Clone failed', { url, dir, error: e });
             }
-            else
-            {
+            else {
                 throw e;
             }
         }

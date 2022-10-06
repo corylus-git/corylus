@@ -66,6 +66,10 @@ export interface BranchInfo {
      * true if the branch is a detached HEAD
      */
     isDetached?: boolean;
+    /**
+     * branch is checked out as an additional worktree
+     */
+    worktree?: boolean;
 }
 
 /**
