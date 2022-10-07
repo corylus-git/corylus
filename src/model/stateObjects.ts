@@ -67,9 +67,9 @@ export interface BranchInfo {
      */
     isDetached?: boolean;
     /**
-     * branch is checked out as an additional worktree
+     * the worktree directory this branch is checked out at
      */
-    worktree?: boolean;
+    worktree?: string;
 }
 
 /**

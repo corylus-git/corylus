@@ -588,6 +588,7 @@ export class SimpleGitBackend implements GitBackend {
                         (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch.name
                     )?.ref,
                     isDetached: branch.current && isDetached,
+                    worktree: branch.worktree
                 } as BranchInfo;
             }) || [];
         return ret;

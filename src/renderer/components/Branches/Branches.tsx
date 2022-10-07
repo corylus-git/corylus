@@ -29,15 +29,17 @@ import MergeIconSmall from '../icons/MergeIconSmall.svg';
 import { Affected } from './Affected';
 import { isInProgress } from '../../../model/state/uiState';
 import { Hoverable } from '../StyleBase';
+import { WorkTree } from './WorkTree';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
 }
 
-const Branch = styled.span<{ current: boolean } & React.HTMLProps<HTMLSpanElement>>`
+const Branch = styled.span<{ current: boolean, worktree: boolean } & React.HTMLProps<HTMLSpanElement>>`
     ${Hoverable}
     font-weight: ${(props) => (props.current ? 'bold' : 'inherit')};
-    font-style: ${(props) => (props.current ? 'italic' : 'inherit')};
+    font-style: ${(props) => (props.current || props.worktree ? 'italic' : 'inherit')};
+    background-color: ${(props) => (props.current ? 'var(--selected)' : 'inherit')};
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
@@ -158,6 +160,7 @@ const UpstreamMissing = styled.span`
     z-index: 3;
 `;
 
+
 function doChangeBranch(dialog: DialogActions, branch: BranchInfo | undefined) {
     Logger().debug('doChangeBranch', 'Requested new target branch', { branch });
     if (branch && !branch.remote) {
@@ -226,6 +229,7 @@ const BranchNodeDisplay: React.FC<{
                     : ''
             }
             current={!!toOptional(props.branch)?.current}
+            worktree={!!toOptional(props.branch)?.worktree}
             onContextMenu={() => openContextMenu(dialog, props.branch, props.currentBranch)}>
             <span
                 style={{
@@ -257,6 +261,9 @@ const BranchNodeDisplay: React.FC<{
                     x
                 </UpstreamMissing>
             )}
+            {toOptional(props.branch)?.worktree && !toOptional(props.branch)?.current &&
+                <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`}>t</WorkTree>
+            }
         </Branch>
     );
 };
