@@ -30,6 +30,8 @@ import { Affected } from './Affected';
 import { isInProgress } from '../../../model/state/uiState';
 import { Hoverable } from '../StyleBase';
 import { WorkTree } from './WorkTree';
+import { UpstreamMissing } from './UpstreamMissing';
+import { SectionHeader } from './SectionHeader';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -145,22 +147,6 @@ function openContextMenu(
     }
 }
 
-const UpstreamMissing = styled.span`
-    display: inline-block;
-    position: absolute;
-    left: 0;
-    bottom: 0.15rem;
-    background-color: var(--conflict);
-    color: var(--conflict-text);
-    border-radius: 50%;
-    text-align: center;
-    width: 0.5rem;
-    height: 0.5rem;
-    font-size: 0.5rem;
-    z-index: 3;
-`;
-
-
 function doChangeBranch(dialog: DialogActions, branch: BranchInfo | undefined) {
     Logger().debug('doChangeBranch', 'Requested new target branch', { branch });
     if (branch && !branch.remote) {
@@ -214,18 +200,17 @@ const BranchNodeDisplay: React.FC<{
     }
     const statsParts = [
         toOptional(props.branch)?.upstream?.ahead &&
-            `↑ ${toOptional(props.branch)?.upstream?.ahead}`,
+        `↑ ${toOptional(props.branch)?.upstream?.ahead}`,
         toOptional(props.branch)?.upstream?.behind &&
-            `↓ ${toOptional(props.branch)?.upstream?.behind}`,
+        `↓ ${toOptional(props.branch)?.upstream?.behind}`,
     ].filter((part) => part);
     return (
         <Branch
             className={inProgress ? 'in-progress' : undefined}
             title={
                 toOptional(props.branch)?.upstream?.upstreamMissing
-                    ? ` Warning: the upstream branch for this branch (${
-                          toOptional(props.branch)?.upstream?.remoteName
-                      }/${toOptional(props.branch)?.upstream?.ref}) no longer exists.`
+                    ? ` Warning: the upstream branch for this branch (${toOptional(props.branch)?.upstream?.remoteName
+                    }/${toOptional(props.branch)?.upstream?.ref}) no longer exists.`
                     : ''
             }
             current={!!toOptional(props.branch)?.current}
@@ -262,7 +247,7 @@ const BranchNodeDisplay: React.FC<{
                 </UpstreamMissing>
             )}
             {toOptional(props.branch)?.worktree && !toOptional(props.branch)?.current &&
-                <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`}>t</WorkTree>
+                <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`}/>
             }
         </Branch>
     );
@@ -346,33 +331,6 @@ function BranchTree(props: {
         />
     );
 }
-
-const SectionHeader = styled.div`
-    position: relative;
-    font-size: 1rem;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    background-color: var(--highlight);
-    margin-left: 5px;
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-    padding-left: 0.5rem;
-    padding-top: 0.1rem;
-
-    .add_remote {
-        border-top-width: 0;
-        border-bottom-width: 0;
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        background-color: unset;
-
-        :hover {
-            background-color: var(--background);
-        }
-    }
-`;
 
 function calculateBranchTree(branches: readonly BranchInfo[], currentBranchRef: Maybe<string>) {
     const sortedBranches = [...branches].sort((b1, b2) => b1.ref.localeCompare(b2.ref));

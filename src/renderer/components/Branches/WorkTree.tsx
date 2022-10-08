@@ -1,9 +1,11 @@
+import React from "react";
 import styled from "styled-components";
 
-export const WorkTree = styled.span`
+const WorkTreeSpan = styled.span`
     display: inline-block;
     position: relative;
     background-color: var(--notify);
+    color: var(--text-conflict);
     border-radius: 50%;
     text-align: center;
     width: 0.75rem;
@@ -15,3 +17,5 @@ export const WorkTree = styled.span`
     padding-top: 0;
     z-index: 3;
 `;
+
+export const WorkTree: React.FC<{title: string}> = props => <WorkTreeSpan title={props.title}>→</WorkTreeSpan>
