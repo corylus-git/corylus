@@ -46,6 +46,7 @@ type TabsActions = {
     closeTab: (id: string) => void;
     switchTab: (tab: TabState) => void;
     openRepoInActive: (path: string) => void;
+    openRepoInNew: (path: string) => void;
     loadTabs: (tabs: readonly TabState[]) => void;
 };
 
@@ -132,17 +133,14 @@ export const tabsStore = create(
                 });
             },
             openRepoInActive: (path: string): void => {
+                set((state) => openInActiveTab(state, path));
+            },
+            openRepoInNew: (path: string): void => {
                 set((state) => {
-                    state.active = just({
-                        id: nanoid(),
-                        path: just(path),
-                        title: basename(path),
-                    });
-                    Logger().debug('openRepoInActive', 'Re-loading repository', {
-                        path,
-                    });
-                    repoStore.getState().openRepo(path);
-                    appSettings().updateHistory(path);
+                    if (state.active.found) {
+                        state.left = [...state.left, state.active.value];
+                    }
+                    openInActiveTab(state, path);
                 });
             },
             loadTabs: (tabs: readonly TabState[]): void => {
@@ -160,5 +158,19 @@ export const tabsStore = create(
         }))
     )
 );
+
+function openInActiveTab(state: TabsState, path: string)
+{
+    state.active = just({
+        id: nanoid(),
+        path: just(path),
+        title: basename(path),
+    });
+    Logger().debug('openInActiveTab', 'Re-loading repository', {
+        path,
+    });
+    repoStore.getState().openRepo(path);
+    appSettings().updateHistory(path);
+}
 
 export const useTabs = createHook(tabsStore);

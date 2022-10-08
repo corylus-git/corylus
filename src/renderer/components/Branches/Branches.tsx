@@ -32,6 +32,7 @@ import { Hoverable } from '../StyleBase';
 import { WorkTree } from './WorkTree';
 import { UpstreamMissing } from './UpstreamMissing';
 import { SectionHeader } from './SectionHeader';
+import { tabsStore } from '../../../model/state/tabs';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -142,6 +143,18 @@ function openContextMenu(
                     },
                 })
             );
+            if (branch.value.worktree) {
+                menu.append(
+                    new MenuItem({
+                        label: `Open worktree at ${branch.value.worktree}`,
+                        click: () => {
+                            if (branch.value.worktree) {
+                                tabsStore.getState().openRepoInNew(branch.value.worktree);
+                            }
+                        },
+                    })
+                );
+            }
         }
         menu.popup({ window: getCurrentWindow() });
     }
