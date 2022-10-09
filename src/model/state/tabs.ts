@@ -10,6 +10,7 @@ import { basename } from 'path';
 import { repoStore } from './repo';
 import { appSettings } from '../settings';
 import { stagingArea } from './stagingArea';
+import { getActiveElement } from 'formik';
 
 export interface TabState {
     /**
@@ -172,5 +173,26 @@ function openInActiveTab(state: TabsState, path: string)
     repoStore.getState().openRepo(path);
     appSettings().updateHistory(path);
 }
+
+/**
+ * Get the tab containing the given path, if any
+ */
+export function getTab(path: string): TabState | undefined
+{
+    const tabs = tabsStore.getState();
+    let tab = tabs.left.find(t => t.path.found && t.path.value === path);
+    if (tab) {
+        return tab;
+    }
+    tab = tabs.right.find(t => t.path.found && t.path.value === path);
+    if (tab) {
+        return tab;
+    }
+    if (tabs.active.found && tabs.active.value.path.found &&  tabs.active.value.path.value === path) {
+        return tabs.active.value;
+    }
+    return undefined;
+}
+
 
 export const useTabs = createHook(tabsStore);

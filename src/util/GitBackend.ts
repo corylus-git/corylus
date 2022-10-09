@@ -106,6 +106,11 @@ export interface GitBackend {
     checkout(refOrPath: string, localTarget?: string): Promise<void>;
 
     /**
+     * Check out a specific git ref as a worktree
+     */
+    checkoutWorktree(refOrPath: string, worktreePath: string): Promise<void>;
+
+    /**
      * Resolve a merge conflict for a specific patch by selecting a specific version
      *
      * @param path The path for which to resolve the conflict
@@ -740,6 +745,10 @@ export class SimpleGitBackend implements GitBackend {
         }
         await this._git.checkout(params);
     };
+
+    async checkoutWorktree(refOrPath: string, worktreePath: string): Promise<void> {
+        await this._git.raw(['worktree', 'add', worktreePath, refOrPath])
+    }
 
     resolveConflict = async (path: string, source: 'ours' | 'theirs' | 'merge'): Promise<void> => {
         try {

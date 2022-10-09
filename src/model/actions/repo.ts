@@ -140,6 +140,18 @@ export const createBranch = trackError(
     }
 );
 
+export const addWorktree = trackError(
+    'add worktree',
+    'addWorktree',
+    async (ref: string, path: string): Promise<void> => {
+        Logger().info('addWorktree', 'creating worktree', {
+            path, ref
+        });
+        await repoStore.getState().backend.checkoutWorktree(ref, path);
+        Logger().info('addWorktree', 'Success');
+    }
+)
+
 export const deleteBranch = trackError(
     'delete branch',
     'deleteBranch',

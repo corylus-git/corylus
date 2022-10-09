@@ -6,13 +6,13 @@ import { TreeNode, Tree } from '../util/Tree/Tree';
 
 import '../../../style/app.css';
 import { insertPath } from '../util/Tree/utils';
-import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
+import { Menu, MenuItem, getCurrentWindow, dialog } from '@electron/remote';
 import { Stashes } from './Stashes';
 import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
 import { TypeHeader } from './TypeHeader';
 import { Maybe, map, nothing, toOptional, fromNullable, just } from '../../../util/maybe';
-import { changeBranch, fetchRemote, deleteRemote, pull, push } from '../../../model/actions/repo';
+import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree } from '../../../model/actions/repo';
 import { Logger } from '../../../util/logger';
 import { DialogActions, useDialog } from '../../../model/state/dialogs';
 import {
@@ -32,7 +32,7 @@ import { Hoverable } from '../StyleBase';
 import { WorkTree } from './WorkTree';
 import { UpstreamMissing } from './UpstreamMissing';
 import { SectionHeader } from './SectionHeader';
-import { tabsStore } from '../../../model/state/tabs';
+import { getTab, tabsStore, TabState } from '../../../model/state/tabs';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -54,7 +54,7 @@ const Branch = styled.span<{ current: boolean, worktree: boolean } & React.HTMLP
 `;
 
 function openContextMenu(
-    dialog: DialogActions,
+    dialogActions: DialogActions,
     branch: Maybe<BranchInfo>,
     currentBranch: Maybe<BranchInfo>
 ) {
@@ -64,7 +64,7 @@ function openContextMenu(
             new MenuItem({
                 label: `Create new branch from ${branch.value.ref}`,
                 click: () => {
-                    dialog.open({
+                    dialogActions.open({
                         type: 'request-new-branch',
                         subType: 'branch',
                         source: just(branch.value.ref),
@@ -115,7 +115,7 @@ function openContextMenu(
                 new MenuItem({
                     label: `Delete branch ${branch.value.ref}`,
                     click: () => {
-                        dialog.deleteBranchDialog(branch.value);
+                        dialogActions.deleteBranchDialog(branch.value);
                     },
                 })
             );
@@ -123,7 +123,7 @@ function openContextMenu(
                 new MenuItem({
                     label: `Merge ${branch.value.ref} into ${currentBranch.value.ref}`,
                     click: () => {
-                        dialog.open({ type: 'request-merge', source: just(branch.value.ref) });
+                        dialogActions.open({ type: 'request-merge', source: just(branch.value.ref) });
                     },
                 })
             );
@@ -131,7 +131,7 @@ function openContextMenu(
                 new MenuItem({
                     label: `Rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
                     click: () => {
-                        dialog.open({ type: 'rebase', target: branch.value.ref });
+                        dialogActions.open({ type: 'rebase', target: branch.value.ref });
                     },
                 })
             );
@@ -139,21 +139,48 @@ function openContextMenu(
                 new MenuItem({
                     label: `Interactive rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
                     click: () => {
-                        dialog.open({ type: 'interactive-rebase', target: branch.value.ref });
+                        dialogActions.open({ type: 'interactive-rebase', target: branch.value.ref });
                     },
                 })
             );
             if (branch.value.worktree) {
-                menu.append(
-                    new MenuItem({
-                        label: `Open worktree at ${branch.value.worktree}`,
-                        click: () => {
-                            if (branch.value.worktree) {
-                                tabsStore.getState().openRepoInNew(branch.value.worktree);
+                const openTab = getTab(branch.value.worktree);
+                if (openTab) {
+                    menu.append(
+                        new MenuItem({
+                            label: `Switch to worktree tab at ${branch.value.worktree}`,
+                            click: () => {
+                                if (branch.value.worktree && openTab) {
+                                    tabsStore.getState().switchTab(openTab);
+                                }
+                            },
+                        })
+                    );
+                } else {
+                    menu.append(
+                        new MenuItem({
+                            label: `Open worktree at ${branch.value.worktree}`,
+                            click: () => {
+                                if (branch.value.worktree) {
+                                    tabsStore.getState().openRepoInNew(branch.value.worktree);
+                                }
+                            },
+                        })
+                    );
+                }
+            } else {
+                menu.append(new MenuItem({
+                    label: `Check ${branch.value.ref} out as worktree`,
+                    click: async () => {
+                            const dir = await dialog.showOpenDialog(getCurrentWindow(), {
+                                properties: ['openDirectory'],
+                            });
+                            if (dir.filePaths && dir.filePaths.length === 1) {
+                                await addWorktree(branch.value.head, dir.filePaths[0]);
+                                tabsStore.getState().openRepoInNew(dir.filePaths[0]);
                             }
-                        },
-                    })
-                );
+                    },
+                }))
             }
         }
         menu.popup({ window: getCurrentWindow() });
