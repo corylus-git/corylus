@@ -174,9 +174,10 @@ function openContextMenu(
                     click: async () => {
                             const dir = await dialog.showOpenDialog(getCurrentWindow(), {
                                 properties: ['openDirectory'],
+                                title: 'Choose directory to create the worktree in'
                             });
                             if (dir.filePaths && dir.filePaths.length === 1) {
-                                await addWorktree(branch.value.head, dir.filePaths[0]);
+                                await addWorktree(branch.value.ref, dir.filePaths[0]);
                                 tabsStore.getState().openRepoInNew(dir.filePaths[0]);
                             }
                     },
