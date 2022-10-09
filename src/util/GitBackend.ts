@@ -53,6 +53,11 @@ export interface GitBackend {
     readonly dir: string;
 
     /**
+     * The .git directory (may be outside of dir, e.g. in the case of linked worktrees)
+     */
+    readonly gitDir: string;
+
+    /**
      * Open a working copy and initialize the internal state of the backend to work
      * with the working copy.
      *
@@ -479,6 +484,8 @@ export interface GitBackend {
 export class SimpleGitBackend implements GitBackend {
     private _git: SimpleGit;
 
+    #gitDirectory: string = "";
+
     constructor(private directory: string) {
         this._git = simpleGit(directory);
     }
@@ -487,10 +494,17 @@ export class SimpleGitBackend implements GitBackend {
         return this.directory;
     }
 
-    open = (directory: string): Promise<void> => {
+    get gitDir(): string {
+        return this.#gitDirectory;
+    }
+
+    open = async (directory: string): Promise<void> => {
         this._git = simpleGit(directory);
         this.directory = directory;
-        return Promise.resolve();
+        this.#gitDirectory = await this._git.raw(['rev-parse', '--git-dir']);
+        if (!path.isAbsolute(this.#gitDirectory)) {
+            this.#gitDirectory = path.normalize(path.join(this.directory, this.#gitDirectory));
+        }
     };
 
     private getRefsAndUpstreams = async () => {
@@ -1117,7 +1131,7 @@ export class SimpleGitBackend implements GitBackend {
     };
 
     getPendingCommitMessage = () => {
-        const msg = fs.readFileSync(path.join(this.dir, '.git', 'MERGE_MSG'));
+        const msg = fs.readFileSync(path.join(this.gitDir, 'MERGE_MSG'));
         return msg.toLocaleString();
     };
 
@@ -1451,21 +1465,23 @@ export class SimpleGitBackend implements GitBackend {
 
     getRebaseStatus = async (): Promise<Maybe<RebaseStatusInfo>> => {
         try {
-            const rebaseMergePath = (
+            let rebaseMergePath = (
                 await this._git.raw(['rev-parse', '--git-path', 'rebase-merge'])
             ).replace(/\n/, '');
-            if (!(await statAsync(`${this.dir}/${rebaseMergePath}`).catch((_) => false))) {
+            if (!path.isAbsolute(rebaseMergePath)) {
+                rebaseMergePath = path.normalize(path.join(this.dir, rebaseMergePath));
+            }
+            if (!(await statAsync(rebaseMergePath).catch((_) => false))) {
                 Logger().silly(
                     'SimpleGitBackend.getRebaseStatus',
                     'Could not access rebase-merge directory. Probably no rebase in progress.'
                 );
                 return nothing;
             }
-            const todoString = await readFileAsync(
-                `${this.dir}/${rebaseMergePath}/git-rebase-todo`,
+            const todoString = await readFileAsync(path.join(rebaseMergePath, 'git-rebase-todo'),
                 'utf8'
             );
-            const doneString = await readFileAsync(`${this.dir}/${rebaseMergePath}/done`, 'utf8');
+            const doneString = await readFileAsync(path.join(rebaseMergePath, 'done'), 'utf8');
             const patch = await this._git.raw(['rebase', '--show-current-patch']).catch((e) => {
                 Logger().debug(
                     'SimpleGitBackend.getRebaseStatus',
@@ -1477,7 +1493,7 @@ export class SimpleGitBackend implements GitBackend {
                 return '';
             });
             const message = await readFileAsync(
-                `${this.dir}/${rebaseMergePath}/message`,
+                path.join(rebaseMergePath, 'message'),
                 'utf8'
             ).catch((e) => {
                 Logger().debug(
