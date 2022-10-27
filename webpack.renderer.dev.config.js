@@ -10,8 +10,8 @@ module.exports = merge.merge(baseConfig, {
         },
     },
     devServer: {
-        port: 2003,
-        hot: true,
+        port: 3000,
+        hot: false,
         headers: { 'Access-Control-Allow-Origin': '*' },
         historyApiFallback: {
             verbose: true,
@@ -25,17 +25,17 @@ module.exports = merge.merge(baseConfig, {
                 ignored: ['**/node_modules']
             }
         },
-        onBeforeSetupMiddleware() {
-            if (process.env.START_HOT) {
-                console.log('Starting main process');
-                spawn('npm', ['run', 'start-main-dev'], {
-                    shell: true,
-                    env: process.env,
-                    stdio: 'inherit',
-                })
-                    .on('close', (code) => process.exit(code))
-                    .on('error', (spawnError) => console.error(spawnError));
-            }
-        },
+        // onBeforeSetupMiddleware() {
+        //     if (process.env.START_HOT) {
+        //         console.log('Starting main process');
+        //         spawn('npm', ['run', 'start-main-dev'], {
+        //             shell: true,
+        //             env: process.env,
+        //             stdio: 'inherit',
+        //         })
+        //             .on('close', (code) => process.exit(code))
+        //             .on('error', (spawnError) => console.error(spawnError));
+        //     }
+        // },
     },
 });
