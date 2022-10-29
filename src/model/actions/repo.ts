@@ -1,13 +1,13 @@
-import { SimpleGitBackend } from '../../util/GitBackend';
 import { Logger } from '../../util/logger';
-import { Tag, BranchInfo, Stash, IndexStatus, Commit } from '../stateObjects';
-import { Maybe } from '../../util/maybe';
+import { Tag, BranchInfo, Stash, IndexStatus, Commit, CommitStats } from '../stateObjects';
+import { just, Maybe } from '../../util/maybe';
 import { toast } from 'react-toastify';
 import { structuredToast } from '../../util/structuredToast';
-import { MergeResult } from 'simple-git/promise';
-import { IndexTreeNode } from '../../renderer/components/Index/IndexTree';
-import fs from 'fs';
-import path from 'path';
+// import { MergeResult } from 'simple-git/promise';
+import { IndexTreeNode } from '../../components/Index/IndexTree';
+import { exists } from '@tauri-apps/api/fs';
+// import fs from 'fs';
+import { join } from '@tauri-apps/api/path';
 import { repoStore } from '../state/repo';
 import { progress } from '../state/progress';
 import { stagingArea } from '../state/stagingArea';
@@ -16,6 +16,7 @@ import { dialogStore } from '../state/dialogs';
 import { uiStore } from '../state/uiState';
 import { IGitConfig } from '../IGitConfig';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from '../../util/configVariables';
+import { invoke } from '@tauri-apps/api/tauri';
 
 export const commit = trackError(
     'commit',
@@ -25,7 +26,7 @@ export const commit = trackError(
         await repoStore.getState().backend.commit(message, amend);
         Logger().debug('commit', 'Success');
         repoStore.getState().loadHistory();
-        repoStore.getState().loadBranches();
+        // repoStore.getState().loadBranches();
         repoStore.getState().getStatus();
     }
 );
@@ -49,7 +50,7 @@ export const changeBranch = trackError(
                     await repoStore.getState().backend.checkout(ref);
                     const stashes = await repoStore.getState().backend.listStashes();
                     await repoStore.getState().backend.applyStash(stashes[0], true);
-                    repoStore.getState().loadBranches();
+                    // repoStore.getState().loadBranches();
                 } finally {
                     uiStore.getState().stopProgress(ref);
                 }
@@ -59,7 +60,7 @@ export const changeBranch = trackError(
             try {
                 Logger().debug('changeBranch', 'Changing branch');
                 await repoStore.getState().backend.checkout(ref);
-                repoStore.getState().loadBranches();
+                // repoStore.getState().loadBranches();
             } finally {
                 uiStore.getState().stopProgress(ref);
             }
@@ -86,7 +87,7 @@ export const fetchRemote = trackError(
             });
             progress.getState().setProgress('Finished fetching changes', false, 5000);
             repoStore.getState().loadHistory();
-            repoStore.getState().loadBranches();
+            // repoStore.getState().loadBranches();
             repoStore.getState().loadRemotes();
             repoStore.getState().loadTags();
         } catch (e) {
@@ -116,7 +117,7 @@ export const push = trackError(
                 pushTags
             });
             progress.getState().setProgress('Finished pushing changes', false, 5000);
-            repoStore.getState().loadBranches();
+            // // repoStore.getState().loadBranches();
             repoStore.getState().loadRemotes();
         } catch (e) {
             progress.getState().setProgress('Failed pushing changes', false, 5000);
@@ -136,7 +137,7 @@ export const createBranch = trackError(
         });
         await repoStore.getState().backend.branch(name, source, !checkout);
         Logger().info('createBranch', 'Success');
-        repoStore.getState().loadBranches();
+        // // repoStore.getState().loadBranches();
     }
 );
 
@@ -163,30 +164,31 @@ export const deleteBranch = trackError(
         });
         await repoStore.getState().backend.deleteBranch(branch, force, removeRemote);
         Logger().info('deleteBranch', 'Success');
-        repoStore.getState().loadBranches();
+        // // repoStore.getState().loadBranches();
     }
 );
 
 export const merge = async (from: string, noFF: boolean): Promise<void> => {
     try {
         await repoStore.getState().backend.merge(from, noFF);
-        repoStore.getState().loadBranches();
+        // // repoStore.getState().loadBranches();
         repoStore.getState().loadHistory();
     } catch (e: any) {
-        if (e.git && ((e.git as MergeResult)?.conflicts?.length ?? 0 !== 0)) {
-            toast.error(
-                'Merge failed due to conflicted files. Please review the conflicts and continue or abort the merge',
-                { autoClose: false }
-            );
-        } else if (e.task) {
-            toast.error(structuredToast('Merge aborted.', e.message.split(/\n/)), {
-                autoClose: false,
-            });
-        } else {
-            toast.error(`Merge failed with an unknown error: ${e.result}`, {
-                autoClose: false,
-            });
-        }
+        // TODO
+        // if (e.git && ((e.git as MergeResult)?.conflicts?.length ?? 0 !== 0)) {
+        //     toast.error(
+        //         'Merge failed due to conflicted files. Please review the conflicts and continue or abort the merge',
+        //         { autoClose: false }
+        //     );
+        // } else if (e.task) {
+        //     toast.error(structuredToast('Merge aborted.', e.message.split(/\n/)), {
+        //         autoClose: false,
+        //     });
+        // } else {
+        //     toast.error(`Merge failed with an unknown error: ${e.result}`, {
+        //         autoClose: false,
+        //     });
+        // }
         throw e;
     } finally {
         repoStore.getState().getStatus();
@@ -215,7 +217,7 @@ export const resetBranch = trackError(
             mode: mode,
         });
         await repoStore.getState().backend.reset(branch, toRef, mode);
-        repoStore.getState().loadBranches();
+        // repoStore.getState().loadBranches();
         repoStore.getState().getStatus();
         Logger().debug('resetBranch', 'Reset finished');
     }
@@ -234,7 +236,7 @@ export const pull = trackError(
             progress.getState().setProgress('Pulling changes from upstream', true);
             await repoStore.getState().backend.pull(remote, remoteBranch, noFF);
             progress.getState().setProgress('Finished pulling changes', false, 5000);
-            repoStore.getState().loadBranches();
+            // repoStore.getState().loadBranches();
             repoStore.getState().loadHistory();
         } catch (e) {
             progress.getState().setProgress('Failed pulling changes', false, 5000);
@@ -250,12 +252,13 @@ export const clone = trackError(
         try {
             Logger().debug('clone', 'Cloning remote URL', { url: url, localDir: localDir });
             progress.getState().setProgress(`Cloning ${url} into ${localDir}.`, true, 5000);
-            if (!fs.existsSync(localDir)) {
-                Logger().debug('clone', 'Target directory does not exist. Creating.');
-                fs.mkdirSync(localDir, { recursive: true });
-            }
-            const backend = new SimpleGitBackend(localDir);
-            await backend.clone(url, localDir);
+            // TODO
+            // if (!await exists(localDir)) {
+            //     Logger().debug('clone', 'Target directory does not exist. Creating.');
+            //     fs.mkdirSync(localDir, { recursive: true });
+            // }
+            // const backend = new SimpleGitBackend(localDir);
+            // await backend.clone(url, localDir);
             Logger().debug('clone', 'Success');
             progress.getState().setProgress(`Finished cloning ${url}.`, false, 5000);
         } catch (e) {
@@ -270,8 +273,9 @@ export const init = trackError(
     'init',
     async (dir: string): Promise<void> => {
         Logger().debug('init', 'Initializing new git repository', { dir: dir });
-        const backend = new SimpleGitBackend(dir);
-        await backend.init(dir);
+        // TODO 
+        // const backend = new SimpleGitBackend(dir);
+        // await backend.init(dir);
         Logger().debug('init', 'Success');
         repoStore.getState().openRepo(dir);
     }
@@ -443,7 +447,8 @@ export const saveManualMerge = trackError(
             path: filePath,
             code: code,
         });
-        fs.writeFileSync(path.join(repoStore.getState().backend.dir, filePath), code);
+        // TODO
+        // fs.writeFileSync(await join(repoStore.getState().backend.dir, filePath), code);
         await repoStore.getState().backend.addPath(filePath);
         repoStore.getState().getStatus();
         Logger().debug('saveManualMerge', 'Success');
@@ -461,7 +466,8 @@ export const discardChanges = trackError(
                 await repoStore.getState().backend.restore(node.path);
                 break;
             case 'untracked':
-                fs.unlinkSync(path.join(repoStore.getState().backend.dir, node.path));
+                // TODO
+                // fs.unlinkSync(await join(repoStore.getState().backend.dir, node.path));
                 break;
         }
         repoStore.getState().getStatus();
@@ -477,8 +483,8 @@ export const remoteCheckout = trackError(
             remote,
             local,
         });
-        await repoStore.getState().backend.checkout(`${remote.remote}/${remote.ref}`, local);
-        repoStore.getState().loadBranches();
+        await repoStore.getState().backend.checkout(`${remote.remote}/${remote.refName}`, local);
+        // repoStore.getState().loadBranches();
     }
 );
 
@@ -522,7 +528,7 @@ export const deleteRemote = trackError(
         await repoStore.getState().backend.deleteRemote(name);
         await repoStore.getState().loadRemotes();
         await repoStore.getState().loadHistory();
-        await repoStore.getState().loadBranches();
+        // await repoStore.getState().loadBranches();
     }
 );
 
@@ -531,8 +537,9 @@ export const addToGitIgnore = trackError(
     'addToGitIgnore',
     async (pattern: string): Promise<void> => {
         Logger().debug('addToGitIgnore', 'Adding pattern to .gitignore', { pattern });
-        const p = path.join(repoStore.getState().backend.dir, '.gitignore');
-        await fs.promises.appendFile(p, `${pattern}\n`);
+        const p = await join(repoStore.getState().backend.dir, '.gitignore');
+        // TODO
+        // await fs.promises.appendFile(p, `${pattern}\n`);
         repoStore.getState().getStatus();
     }
 );
@@ -548,7 +555,7 @@ export const rebase = trackError(
         await repoStore.getState().backend.rebase(target, commands);
         const promises = [
             repoStore.getState().loadHistory(),
-            repoStore.getState().loadBranches(),
+            // repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
             repoStore.getState().getStatus(),
         ];
@@ -564,7 +571,7 @@ export const abortRebase = trackError(
         await repoStore.getState().backend.abortRebase();
         const promises = [
             repoStore.getState().loadHistory(),
-            repoStore.getState().loadBranches(),
+            // repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
             repoStore.getState().getStatus(),
         ];
@@ -580,7 +587,7 @@ export const continueRebase = trackError(
         await repoStore.getState().backend.continueRebase();
         const promises = [
             repoStore.getState().loadHistory(),
-            repoStore.getState().loadBranches(),
+            // repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
             repoStore.getState().getStatus(),
         ];
@@ -607,3 +614,23 @@ export const syncConfig = trackError(
         toast.success('Sucessfully stored config values');
     }
 );
+
+export function selectCommit(ref: CommitStats | string | Commit) {
+    if (!(ref as CommitStats).direct) {
+        const oid =
+            typeof ref === 'string'
+                ? ref
+                : (ref as Commit).oid;
+        Logger().debug('selectCommit', 'Requesting commit details', { oid });
+        invoke('get_commit_stats', { oid });
+        requestAffectedCommits(oid, true, true);
+    } else {
+        requestAffectedCommits((ref as CommitStats).commit.oid, true, true);
+        repoStore.getState().setSelectedCommit(just(ref as CommitStats));
+    }
+}
+
+function requestAffectedCommits(oid: string, branches: boolean, tags: boolean) {
+    Logger().debug('requestAffectedCommits', 'Requesting affected commits', {oid, branches, tags});
+    invoke('get_affected_commits', { oid, branches, tags });
+}

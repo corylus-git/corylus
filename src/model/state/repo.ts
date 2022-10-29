@@ -1,4 +1,4 @@
-import { GitBackend, SimpleGitBackend } from '../../util/GitBackend';
+import { GitBackend } from '../../util/GitBackend';
 import {
     Commit,
     BranchInfo,
@@ -15,13 +15,17 @@ import { IGitConfig } from '../IGitConfig';
 import { Middleware } from './types';
 import create from 'zustand/vanilla';
 import createHook from 'zustand';
-import produce from 'immer';
+// import produce from 'immer';
+import { immer } from 'zustand/middleware/immer';
 import { log } from './log';
 import { Logger } from '../../util/logger';
-import fs from 'fs';
-import path from 'path';
+// import fs from 'fs';
+import * as path from '@tauri-apps/api/path';
 import { graph } from './graph';
 import AsyncLock from 'async-lock';
+import { invoke } from '@tauri-apps/api/tauri';
+import { listen } from '@tauri-apps/api/event';
+import { castDraft } from 'immer';
 
 /**
  * Information about the git history
@@ -30,7 +34,7 @@ export interface HistoryInfo {
     /**
      * the total number of history entries
      */
-    historySize: number;
+    total: number;
     /**
      * The currently loaded entries
      */
@@ -104,14 +108,14 @@ export type RepoActions = {
     openRepo(path: string): Promise<void>;
     loadRepo(): Promise<void>;
     loadHistory(skip?: number, limit?: number): Promise<void>;
-    loadBranches(): Promise<void>;
+    setBranches(branches: BranchInfo[]): void;
+    setHistory(history: HistoryInfo): void;
     loadTags(): Promise<void>;
     loadStashes(): Promise<void>;
     loadRemotes(): Promise<void>;
     getStatus(): Promise<void>;
     getConfig(): Promise<void>;
-    selectCommit(ref: Commit | string | CommitStats): Promise<void>;
-    deselectCommit(): void;
+    setSelectedCommit(commit: Maybe<CommitStats>): void;
     selectStash(stash: Stash): Promise<void>;
     /**
      * The asynchronous lock used to synchronize critical operations on this repo
@@ -120,19 +124,17 @@ export type RepoActions = {
     historyLoader: any;
 };
 
-// Turn the set method into an immer proxy
-const immer: Middleware<RepoState & RepoActions> = (config) => (set, get, api) =>
-    config((fn: any) => set(produce(fn)), get, api);
+// // Turn the set method into an immer proxy
+// const immer: Middleware<RepoState & RepoActions> = (config) => (set, get, api) =>
+//     config((fn: any) => set(produce(fn)), get, api);
 
-export const repoStore = create(
-    log(
+export const repoStore = create<RepoState & RepoActions>()(
         immer((set, get) => ({
             active: false,
             backend: (undefined as unknown) as GitBackend, // TODO: I hate this
             branches: [],
             config: {},
-            history: { entries: [], historySize: 0, first: 0 },
-            historySize: 0,
+            history: { entries: [], total: 0, first: 0 },
             path: '',
             pendingCommit: nothing,
             remotes: [],
@@ -147,14 +149,16 @@ export const repoStore = create(
             affected: { branches: [], tags: [], refs: [] },
             openRepo: (path: string): Promise<void> => {
                 Logger().debug('openRepo', 'Opening repo', { path });
+                invoke('git_open', { path });
                 set(
                     (state) => ({
                         ...state,
                         active: true,
-                        backend: new SimpleGitBackend(path),
+                        // TODO
+                        // backend: new SimpleGitBackend(path),
                         branches: [],
                         config: {},
-                        history: { entries: [], historySize: 0, first: 0 },
+                        history: { entries: [], total: 0, first: 0 },
                         historySize: 0,
                         path: path,
                         pendingCommit: nothing,
@@ -177,7 +181,6 @@ export const repoStore = create(
                 performance.mark('loadersStart');
                 const loaders = [
                     get().loadHistory(),
-                    get().loadBranches(),
                     get().loadTags(),
                     get().loadStashes(),
                     get().loadRemotes(),
@@ -208,30 +211,37 @@ export const repoStore = create(
                         set((state) => {
                             Logger().silly('loadHistory', 'Setting history state');
                             state.history = {
-                                entries: history,
+                                entries: castDraft(history),
                                 first: 0,
-                                historySize: size,
+                                total: size,
                             };
+                            return state;
                         });
                         index += batchSize;
                     }
-                    graph.getState().addAdditionalEntries(historyPart);
                     if (historyPart.length === batchSize) {
                         const handle = (window as any).requestIdleCallback(partLoader);
                         set((state) => {
                             state.historyLoader = handle;
+                            return state;
                         });
                     }
                 };
                 graph.getState().reset();
                 partLoader();
             },
-            loadBranches: async (): Promise<void> => {
-                Logger().debug('loadBranches', 'Loading branches');
-                const repoBranches = await get().backend.getBranches();
-                Logger().debug('loadBranches', 'Success.', { branches: repoBranches });
+            setBranches: (branches: BranchInfo[]): void => {
+                Logger().debug('setBranches', 'Setting branches');
+                Logger().debug('loadBranches', 'Success.', { branches });
                 set((state) => {
-                    state.branches = repoBranches;
+                    state.branches = branches;
+                    return state;
+                });
+            },
+            setHistory: (history: HistoryInfo) => {
+                set(state => {
+                    state.history = castDraft(history);
+                    return state;
                 });
             },
             loadTags: async (): Promise<void> => {
@@ -239,7 +249,7 @@ export const repoStore = create(
                 const tags = await get().backend.getTags();
                 Logger().debug('loadTags', 'Received tags', { tags: tags });
                 set((state) => {
-                    state.tags = tags;
+                    state.tags = castDraft(tags);
                 });
             },
             loadStashes: async (): Promise<void> => {
@@ -249,7 +259,7 @@ export const repoStore = create(
                     stashes: stashes,
                 });
                 set((state) => {
-                    state.stashes = stashes;
+                    state.stashes = castDraft(stashes);
                 });
             },
             loadRemotes: async (): Promise<void> => {
@@ -261,44 +271,44 @@ export const repoStore = create(
                 });
             },
             getStatus: async (): Promise<void> => {
-                const status = await get().backend.getStatus();
-                const rebaseStatus = await get().backend.getRebaseStatus();
-                set((state) => {
-                    state.status = status;
-                    state.rebaseStatus = rebaseStatus;
-                });
-                // check whether there's a merge currently going on
-                if (fs.existsSync(path.join(get().backend.dir, '.git', 'MERGE_MODE'))) {
-                    Logger().debug('getStatus', 'Merge pending. Reading merge info');
-                    try {
-                        const pending = {
-                            message: fs.readFileSync(
-                                path.join(get().backend.dir, '.git', 'MERGE_MSG'),
-                                'utf8'
-                            ),
-                            parents: [
-                                fs.readFileSync(
-                                    path.join(get().backend.dir, '.git', 'ORIG_HEAD'),
-                                    'utf8'
-                                ),
-                                fs.readFileSync(
-                                    path.join(get().backend.dir, '.git', 'MERGE_HEAD'),
-                                    'utf8'
-                                ),
-                            ],
-                        };
-                        Logger().debug('getStatus', 'Read pending merge info', pending);
-                        set((state) => {
-                            state.pendingCommit = just(pending);
-                        });
-                    } catch (e) {
-                        Logger().error('getStatus', 'Could not read pending merge info', e);
-                    }
-                } else {
-                    set((state) => {
-                        state.pendingCommit = nothing;
-                    });
-                }
+                // const status = await get().backend.getStatus();
+                // const rebaseStatus = await get().backend.getRebaseStatus();
+                // set((state) => {
+                //     state.status = status;
+                //     state.rebaseStatus = rebaseStatus;
+                // });
+                // // check whether there's a merge currently going on
+                // if (fs.existsSync(path.join(get().backend.dir, '.git', 'MERGE_MODE'))) {
+                //     Logger().debug('getStatus', 'Merge pending. Reading merge info');
+                //     try {
+                //         const pending = {
+                //             message: fs.readFileSync(
+                //                 path.join(get().backend.dir, '.git', 'MERGE_MSG'),
+                //                 'utf8'
+                //             ),
+                //             parents: [
+                //                 fs.readFileSync(
+                //                     path.join(get().backend.dir, '.git', 'ORIG_HEAD'),
+                //                     'utf8'
+                //                 ),
+                //                 fs.readFileSync(
+                //                     path.join(get().backend.dir, '.git', 'MERGE_HEAD'),
+                //                     'utf8'
+                //                 ),
+                //             ],
+                //         };
+                //         Logger().debug('getStatus', 'Read pending merge info', pending);
+                //         set((state) => {
+                //             state.pendingCommit = just(pending);
+                //         });
+                //     } catch (e) {
+                //         Logger().error('getStatus', 'Could not read pending merge info', e);
+                //     }
+                // } else {
+                //     set((state) => {
+                //         state.pendingCommit = nothing;
+                //     });
+                // }
             },
             getConfig: async (): Promise<void> => {
                 Logger().debug('getConfig', 'Loading repository config');
@@ -310,58 +320,10 @@ export const repoStore = create(
                     state.config = config;
                 });
             },
-            selectCommit: async (ref: Commit | string | CommitStats): Promise<void> => {
-                if (!(ref as CommitStats).direct) {
-                    const commit =
-                        typeof ref === 'string'
-                            ? await get().backend.getCommit(ref)
-                            : await get().backend.getCommit((ref as Commit).oid);
-                    Logger().debug('selectCommit', 'Requesting commit details', { commit: commit });
-                    const commitStats = await get().backend.getCommitStats(commit as Commit);
-                    Logger().debug('selectCommit', 'Retrieved commit details', {
-                        commit: commit,
-                        stats: commitStats,
-                    });
-                    Logger().debug('selectCommit', 'Requesting affected commits', {
-                        commit: commit,
-                    });
-                    const affected = await get().backend.getAffectedRefs(
-                        commit.oid,
-                        true,
-                        true,
-                        false
-                    );
-                    Logger().debug('selectCommit', 'Retrieved affected refs', {
-                        affected: affected,
-                    });
-                    set((state) => {
-                        state.selectedCommit = just(commitStats);
-                        Logger().debug('selectCommit', 'Setting affected commits', {
-                            affected: affected,
-                        });
-                        state.affected = affected;
-                    });
-                } else {
-                    Logger().debug('selectCommit', 'Requesting affected commits', {
-                        commit: (ref as CommitStats).commit.oid,
-                    });
-                    const affected = await get().backend.getAffectedRefs(
-                        (ref as CommitStats).commit.oid,
-                        true,
-                        true,
-                        false
-                    );
-                    Logger().debug('selectCommit', 'Retrieved affected refs', {
-                        affected: affected,
-                    });
-                    set((state) => {
-                        state.selectedCommit = just(ref as CommitStats);
-                        Logger().debug('selectCommit', 'Setting affected commits', {
-                            affected: affected,
-                        });
-                        state.affected = affected;
-                    });
-                }
+            setSelectedCommit: (commit: Maybe<CommitStats>): void => {
+                set((state) => {
+                    state.selectedCommit = castDraft(commit);
+                });
             },
             deselectCommit: (): void => {
                 set((state) => {
@@ -374,18 +336,17 @@ export const repoStore = create(
                 });
                 const stats = await get().backend.getStashDetails(stash);
                 Logger().debug('selectStash', 'Received stash details', { stats: stats });
-                await get().selectCommit(stats);
+                // await get().selectCommit(stats);
             },
             getRebaseStatus: async (): Promise<void> => {
                 Logger().debug('getRebaseStatus', 'Checking for rebase in progress');
                 const status = await get().backend.getRebaseStatus();
                 Logger().debug('getRebaseStatus', 'Received status', { status });
                 set((state) => {
-                    state.rebaseStatus = status;
+                    // state.rebaseStatus = status;
                 });
             },
         }))
-    )
 );
 
 export const useRepo = createHook(repoStore);
@@ -393,11 +354,11 @@ export const useRepo = createHook(repoStore);
 /**
  * Access the history of the repo
  */
-export const useHistory = (): { entries: readonly Commit[]; first: number; historySize: number } =>
+export const useHistory = (): { entries: readonly Commit[]; first: number; total: number } =>
     useRepo(
         (
             state: RepoState & RepoActions
-        ): { entries: readonly Commit[]; first: number; historySize: number } => state.history
+        ): { entries: readonly Commit[]; first: number; total: number } => state.history
     );
 
 /**
@@ -483,3 +444,22 @@ export const useAffected = (): { branches: string[]; tags: string[]; refs: strin
  * @returns The CommitStats for the commit
  */
 export const loadCommitStats = (commit: Commit): Promise<CommitStats> => repoStore.getState().backend.getCommitStats(commit);
+
+
+/**
+ * =================================================
+ * handlers for events from the backend
+ * =================================================
+ */
+listen<BranchInfo[]>('branchesChanged', ev => {
+    repoStore.getState().setBranches(ev.payload);
+});
+
+listen<HistoryInfo>('historyChanged', ev => {
+    repoStore.getState().setHistory(ev.payload);
+})
+
+listen<CommitStats>('commitStatsChanged', ev => {
+    console.log('Commit stats changed', ev.payload);
+    repoStore.getState().setSelectedCommit(just(ev.payload));
+});

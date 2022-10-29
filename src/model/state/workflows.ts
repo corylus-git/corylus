@@ -3,7 +3,7 @@ import create from 'zustand';
 export interface IGitWorkflow {
     readonly isConfigured: boolean;
     readonly name: string;
-    currentMenu(): Electron.MenuItemConstructorOptions[];
+    currentMenu(): any[]; // TODO needs to be ported to Tauri menus
 }
 
 export type Workflows = {

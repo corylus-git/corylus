@@ -1,6 +1,5 @@
 import { Logger } from '../logger';
-import fs from 'fs';
-import path from 'path';
+import { join } from '@tauri-apps/api/path';
 import { toast } from 'react-toastify';
 import { IGitFlowConfigValues } from '../../model/IGitConfig';
 import { just, Maybe, nothing, fromNullable } from '../maybe';
@@ -65,44 +64,45 @@ export class Gitflow implements IGitWorkflow {
         return [];
     }
 
-    currentMenu(): Electron.MenuItemConstructorOptions[] {
-        if (!this.isConfigured) {
-            return [
-                {
-                    label: 'Initialize Gitflow',
-                    click: (): void => {
-                        this.dialog.open({ type: 'request-initialize-gitflow' });
-                    },
-                },
-            ];
-        }
-        const gitflowMenu: Electron.MenuItemConstructorOptions[] = this.possibleSources.map(
-            ({ type, base, prefix }) => {
-                return {
-                    label: `Start new ${type}`,
-                    click: () => startBranch(this.dialog, type, base, prefix),
-                };
-            }
-        );
-        return gitflowMenu.concat(this.getAdditionalEntries());
+    currentMenu() {
+        return [];
+        // if (!this.isConfigured) {
+        //     return [
+        //         {
+        //             label: 'Initialize Gitflow',
+        //             click: (): void => {
+        //                 this.dialog.open({ type: 'request-initialize-gitflow' });
+        //             },
+        //         },
+        //     ];
+        // }
+        // const gitflowMenu = this.possibleSources.map(
+        //     ({ type, base, prefix }) => {
+        //         return {
+        //             label: `Start new ${type}`,
+        //             click: () => startBranch(this.dialog, type, base, prefix),
+        //         };
+        //     }
+        // );
+        // return gitflowMenu.concat(this.getAdditionalEntries());
     }
 
-    private getAdditionalEntries(): Electron.MenuItemConstructorOptions[] {
-        const repo = repoStore.getState();
-        const entries = this.possibleSources.flatMap(({ type, base, prefix }) => {
-            if (repo.branches.find((b) => b.current)?.ref.startsWith(prefix)) {
-                return [
-                    {
-                        label: `Finish ${type}`,
-                        click: () => finishBranch(type, base),
-                    },
-                ];
-            }
-            return [];
-        });
-        const sep: Electron.MenuItemConstructorOptions = { type: 'separator' };
-        return entries.length > 0 ? [sep].concat(entries) : [];
-    }
+    // private getAdditionalEntries() {
+    //     const repo = repoStore.getState();
+    //     const entries = this.possibleSources.flatMap(({ type, base, prefix }) => {
+    //         if (repo.branches.find((b) => b.current)?.ref.startsWith(prefix)) {
+    //             return [
+    //                 {
+    //                     label: `Finish ${type}`,
+    //                     click: () => finishBranch(type, base),
+    //                 },
+    //             ];
+    //         }
+    //         return [];
+    //     });
+    //     const sep = { type: 'separator' };
+    //     return entries.length > 0 ? [sep].concat(entries) : [];
+    // }
 
     private get config(): Maybe<IGitFlowConfigValues> {
         const local = repoStore.getState().config.local;
@@ -128,7 +128,8 @@ export const configure = async (config: IGitFlowConfigValues): Promise<void> => 
     if (history.length === 0) {
         Logger().info('Gitflow', 'Creating initial commit to attach branches to.');
         // create an empty .gitignore to be able to initialize things
-        fs.writeFileSync(path.join(backend.dir, '.gitignore'), '');
+        // TODO
+        // fs.writeFileSync(await join(backend.dir, '.gitignore'), '');
         backend.addPath('.gitignore');
         backend.commit('Initial commit');
         // this will have created an initial commit on 'master' -> if the configuration wants to have a different

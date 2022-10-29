@@ -1,0 +1,196 @@
+:root {
+  --hue: 120;
+  --lightness: 12%;
+
+  /* the different interface colors */
+  --background: hsl(var(--hue), 0%, var(--lightness));
+  --foreground-value: var(--hue), 100%, calc(100% - var(--lightness)); /* need the value for calculations down below */
+  --foreground: hsl(var(--foreground-value));
+  --highlight: hsla(var(--foreground-value), 20%);
+  --selected: hsla(var(--foreground-value), 40%);
+  --border: var(--selected);
+  --input: hsl(var(--hue), 0%, calc(var(--lightness) - 5%));
+  --conflict: #ffcc00;
+  --contains-commit: #0074ad;
+  --conflict-text: #101010;
+  --code: hsl(var(--hue), 0%, calc(100% - var(--lightness)));
+  --notify: hsl(calc(var(--hue) - 90), 100%, calc(50% - (var(--lightness) - 50%) / 1.7));
+
+  /* colors used in the conflict display */
+  --diff-conflict-ours-value: 48, 48, 144;
+  --diff-conflict-theirs-value: 144, 144, 48;
+  --diff-conflict-value: 255, 0, 0;
+}
+
+#root {
+  min-block-size: 100vh;
+}
+
+/* The diff classes */
+.diff-insert {
+  background-color: hsl(120, 30%, calc(50% + (var(--lightness) - 50%) / 1.2));
+}
+
+.diff-insert > .line-number::after {
+  content: ' + ';
+}
+
+.diff-delete {
+  background-color: hsl(0, 30%, calc(50% + (var(--lightness) - 50%) / 1.1));
+}
+
+.diff-delete > .line-number::after {
+  content: ' - ';
+}
+
+.diff-context {
+  background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) * 1.2));
+}
+
+.diff-context > .line-number::after {
+  content: '   ';
+}
+
+.diff-insert-highlight {
+  background-color: hsl(120, 75%, calc(50% + (var(--lightness) - 50%) / 1.8));
+}
+
+.diff-delete-highlight {
+  background-color: hsl(0, 75%, calc(50% + (var(--lightness) - 50%) / 1.8));
+}
+
+.pseudo-context {
+  color: var(--border);
+}
+
+.timeout {
+  background-color: var(--conflict);
+  color: var(--conflict-text);
+  font-weight: bold;
+}
+
+.diff-inserted.selected {
+  background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.7));
+}
+
+.diff-deleted.selected {
+  background-color: hsl(0, 68%, calc(50% + (var(--lightness) - 50%) / 1.6));
+}
+
+.diff-context.selected {
+  background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) / 1.2));
+}
+
+.diff-conflict-ours {
+  border: 0.5px solid rgb(var(--diff-conflict-ours-value));
+  background-color: rgba(var(--diff-conflict-ours-value), 64);
+}
+
+.diff-conflict-theirs {
+  border: 0.5px solid rgb(var(--diff-conflict-theirs-value));
+  background-color: rgba(var(--diff-conflict-theirs-value), 64);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  user-select: none;
+}
+
+.main {
+  width: 100vw;
+  height: 100vh;
+}
+
+.remote {
+  font-size: 1rem;
+  margin-left: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+::-webkit-scrollbar {
+  background-color: rgba(255, 255, 255, 0.1);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: grey;
+  border-radius: 0.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.diff-list {
+  display: grid;
+  grid-template-columns: 1rem 1.5rem fit-content(30rem) 1fr;
+  gap: 0.5rem;
+}
+
+.in-progress {
+  animation-name: in-progress-active;
+  animation-duration: 2000ms;
+  animation-iteration-count: infinite;
+}
+
+.rebase-drop {
+  opacity: 50%;
+}
+.rebase-drop .node {
+  visibility: hidden;
+}
+
+.rebase-squash .rails {
+  margin-right: 1em;
+}
+.rebase-squash .node {
+  visibility: hidden;
+}
+
+@keyframes in-progress-active {
+  0% {
+      background: linear-gradient(
+          90deg,
+          hsla(var(--foreground-value), 0) 0%,
+          var(--highlight) 2%,
+          hsla(var(--foreground-value), 0) 30%
+      );
+      background-size: 200% 20%;
+      background-position: -75% 80%;
+  }
+
+  50% {
+      background: linear-gradient(
+          90deg,
+          hsla(var(--foreground-value), 0) 0%,
+          var(--highlight) 2%,
+          hsla(var(--foreground-value), 0) 30%
+      );
+      background-size: 200% 20%;
+      background-position: 75% 80%;
+  }
+
+  51% {
+      background: linear-gradient(
+          90deg,
+          hsla(var(--foreground-value), 0) 0%,
+          var(--highlight) 28%,
+          hsla(var(--foreground-value), 0) 30%
+      );
+      background-size: 200% 20%;
+      background-position: 75% 80%;
+  }
+  100% {
+      background: linear-gradient(
+          90deg,
+          hsla(var(--foreground-value), 0) 0%,
+          var(--highlight) 28%,
+          hsla(var(--foreground-value), 0) 30%
+      );
+      background-size: 200% 20%;
+      background-position: -75% 80%;
+  }
+}

@@ -1,13 +1,13 @@
 {
   "build": {
-    "beforeBuildCommand": "pnpm run build",
-    "beforeDevCommand": "pnpm run start-renderer-dev",
-    "devPath": "http://localhost:3000",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devPath": "http://localhost:1420",
     "distDir": "../dist"
   },
   "package": {
-    "productName": "corylus",
-    "version": "0.1.0"
+    "productName": "tauri-app",
+    "version": "0.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -57,7 +57,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "Corylus",
+        "title": "tauri-app",
         "width": 800
       }
     ]

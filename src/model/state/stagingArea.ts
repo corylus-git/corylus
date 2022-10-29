@@ -1,5 +1,5 @@
 import { IndexStatus, Commit, Stash } from '../stateObjects';
-import { IConflictBlock, calculateBlocks } from '../../renderer/components/Merging/util/blocks';
+import { IConflictBlock, calculateBlocks } from '../../components/Merging/util/blocks';
 import { Maybe, nothing, just } from '../../util/maybe';
 import create from 'zustand/vanilla';
 import createHook from 'zustand';
@@ -9,8 +9,8 @@ import { log } from './log';
 import { repoStore } from './repo';
 import { Logger } from '../../util/logger';
 import { IConflictedFile, parseConflictFile } from '../../util/conflict-parser';
-import fs from 'fs';
-import path from 'path';
+// import fs from 'fs';
+import * as path from '@tauri-apps/api/path';
 import { splice } from '../../util/ImmutableArrayUtils';
 
 export interface SelectedFile {
@@ -207,18 +207,19 @@ export const stagingArea = create(
 
 async function loadConflict(path: string): Promise<IConflictedFile> {
     return await new Promise((resolve) => {
-        fs.readFile(path, (err, buffer) => {
-            const fileContents = buffer.toString();
-            Logger().silly('loadConflict', 'Loaded merged file contents', {
-                content: fileContents,
-            });
-            const parsedLines = parseConflictFile(fileContents);
-            Logger().silly('loadConflict', 'Parsed conflict', { lines: parsedLines });
-            resolve({
-                path: path,
-                lines: parsedLines,
-            });
-        });
+        // TODO
+        // fs.readFile(path, (err, buffer) => {
+        //     const fileContents = buffer.toString();
+        //     Logger().silly('loadConflict', 'Loaded merged file contents', {
+        //         content: fileContents,
+        //     });
+        //     const parsedLines = parseConflictFile(fileContents);
+        //     Logger().silly('loadConflict', 'Parsed conflict', { lines: parsedLines });
+        //     resolve({
+        //         path: path,
+        //         lines: parsedLines,
+        //     });
+        // });
     });
 }
 

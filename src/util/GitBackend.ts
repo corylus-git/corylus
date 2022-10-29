@@ -1,17 +1,15 @@
-import util from 'util';
-import { execSync, exec } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { homedir } from 'os';
-import simpleGit, { GitError, SimpleGit } from 'simple-git';
-import temp from 'temp';
+// import util from 'util';
+// import path from '@tauri-apps/api/path';
+// import { homedir } from 'os';
+// import simpleGit, { GitError, SimpleGit } from 'simple-git';
+// import temp from 'temp';
 
-const writeAsync = util.promisify(fs.write);
+// const writeAsync = util.promisify(fs.write);
 // TODO: for some reason TS is no longer able to deduce the second type parameter and turns it into unknown, leading to errors later
-const tempOpenAsync = util.promisify<string | temp.AffixOptions | undefined, temp.OpenFile>(temp.open);
-const execAsync = util.promisify(exec);
-const readFileAsync = util.promisify(fs.readFile);
-const statAsync = util.promisify(fs.stat);
+// const tempOpenAsync = util.promisify<string | temp.AffixOptions | undefined, temp.OpenFile>(temp.open);
+// const execAsync = util.promisify(exec);
+// const readFileAsync = util.promisify(fs.readFile);
+// const statAsync = util.promisify(fs.stat);
 
 import {
     BranchInfo,
@@ -29,7 +27,7 @@ import {
     RebaseStatusInfo,
     RebaseAction,
 } from '../model/stateObjects';
-import { ConfigValues } from 'simple-git/typings/response';
+// import { ConfigValues } from 'simple-git/typings/response';
 import { Logger } from './logger';
 import { chunks } from './ImmutableArrayUtils';
 import { toast } from 'react-toastify';
@@ -481,1224 +479,1224 @@ export interface GitBackend {
     getFileContents(ref: 'workdir' | string, path: string): Promise<Maybe<Buffer>>;
 }
 
-export class SimpleGitBackend implements GitBackend {
-    private _git: SimpleGit;
-
-    #gitDirectory: string = "";
-
-    constructor(private directory: string) {
-        this._git = simpleGit(directory);
-    }
-
-    get dir(): string {
-        return this.directory;
-    }
-
-    get gitDir(): string {
-        return this.#gitDirectory;
-    }
-
-    open = async (directory: string): Promise<void> => {
-        this._git = simpleGit(directory);
-        this.directory = directory;
-        this.#gitDirectory = await this._git.raw(['rev-parse', '--git-dir']);
-        if (!path.isAbsolute(this.#gitDirectory)) {
-            this.#gitDirectory = path.normalize(path.join(this.directory, this.#gitDirectory));
-        }
-    };
-
-    private getRefsAndUpstreams = async () => {
-        return (
-            await this._git.raw([
-                'for-each-ref',
-                'refs/heads',
-                '--format=%(refname)|--/%(objectname)|--/%(upstream)',
-            ])
-        )
-            ?.split('\n')
-            .filter((line) => line.length > 0)
-            .map((line) => {
-                const parts = line.split('|--/');
-                return {
-                    ref: parts[0].replace('refs/heads/', ''),
-                    oid: parts[1],
-                    upstream: parts[2].replace(/^refs\/remotes\/[^/]+\//, ''),
-                    remote: parts[2].replace(/^refs\/remotes\/([^/]+)\/.*/, '$1'),
-                };
-            });
-    };
-
-    private getTrackingDifference = async (
-        local: string,
-        upstream: string
-    ): Promise<{ ahead: number; behind: number }> => {
-        Logger().debug('SimpleGitBacken', 'Trying to get tracking difference', {
-            local: local,
-            upstream: upstream,
-        });
-        const result = (await this._git.raw(['rev-list', '--left-right', `${local}...${upstream}`]))
-            ?.split('\n')
-            .filter((line) => line.length > 0)
-            .reduce(
-                (stats, entry) => {
-                    if (entry.startsWith('<')) {
-                        return { ahead: stats.ahead + 1, behind: stats.behind };
-                    }
-                    return { ahead: stats.ahead, behind: stats.behind + 1 };
-                },
-                { ahead: 0, behind: 0 }
-            );
-        return result ?? { ahead: 0, behind: 0 };
-    };
-
-    getBranches = async (): Promise<BranchInfo[]> => {
-        performance.mark('startBranches');
-        const b = await this._git.branch(['--no-abbrev', '--all']);
-        const branches = (await this._git.raw(['for-each-ref', '--format=%(HEAD)|---|%(objectname)|---|%(objecttype)|---|%(refname)|---|%(worktreepath)|---|%(symref)', 'refs/heads', 'refs/remotes'])).split('\n').filter(l => l !== '')
-            .map(b => {
-                const [head, commit, _type, ref, worktree, symref] = b.split('|---|');
-                return {
-                    name: ref.replace(/refs(\/heads)*\//, ''), // remove refs/... from the start of the name
-                    commit,
-                    current: head === '*',
-                    worktree,
-                    symref
-                }
-            }).filter(b => !b.symref); // we don't want to see symbolic references
-        performance.mark('endBranches');
-        performance.measure('branches', 'startBranches', 'endBranches');
-        const trackedBranches = (await this.getRefsAndUpstreams())?.filter((r) => r.upstream);
-        const isDetached = (await this._git.revparse(['--symbolic-full-name', 'HEAD'])) === 'HEAD';
-        const stats: { ref: string; stats: UpstreamInfo }[] = await Promise.all(
-            trackedBranches?.map(async (branchInfo) => {
-                const upstream = branches.find(
-                    (b) => b.name === `remotes/${branchInfo.remote}/${branchInfo.upstream}`
-                );
-                let stats = { ahead: 0, behind: 0 };
-                if (upstream) {
-                    stats = await this.getTrackingDifference(
-                        branchInfo.ref,
-                        `${branchInfo.remote}/${branchInfo.upstream}`
-                    );
-                }
-                return {
-                    ref: branchInfo.ref,
-                    stats: {
-                        ...stats,
-                        upstreamMissing: !upstream,
-                        ref: branchInfo.upstream,
-                        remoteName: branchInfo.remote,
-                    },
-                };
-            }) || []
-        );
-
-        const ret =
-            branches?.map((branch) => {
-                return {
-                    ref: branch.name.replace(/^(remotes\/([^/]+)\/)*/, ''),
-                    head: branch.commit,
-                    remote: branch.name.startsWith('remotes')
-                        ? branch.name.replace(/^remotes\/([^/]+)\/.*/, '$1')
-                        : undefined,
-                    current: branch.current,
-                    upstream: stats.find((stat) => stat.ref === branch.name)?.stats,
-                    trackedBy: trackedBranches?.find(
-                        (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch.name
-                    )?.ref,
-                    isDetached: branch.current && isDetached,
-                    worktree: branch.worktree
-                } as BranchInfo;
-            }) || [];
-        return ret;
-    };
-
-    getTags = async (): Promise<readonly Tag[]> => {
-        const result = await this._git.raw(['show-ref', '--tags', '-d']);
-        const lines = result?.split('\n');
-        const regex = /^(?<oid>[a-f0-9]+)\s+refs\/tags\/(?<tagName>[^\s^]+)(?<commitMarker>\^\{\}){0,1}$/;
-        return (
-            lines
-                ?.filter((l) => l && l.length > 0)
-                .reduce((existing, l) => {
-                    const parts = l.match(regex);
-                    if (parts?.groups?.commitMarker) {
-                        const i = existing.findIndex((e) => e.name === parts?.groups?.tagName);
-                        if (i !== -1) {
-                            existing[i].oid = existing[i].taggedOid;
-                            existing[i].taggedOid = parts.groups.oid;
-                        }
-                        return existing;
-                    }
-                    return existing.concat({
-                        name: parts!.groups!.tagName,
-                        taggedOid: parts!.groups!.oid,
-                    });
-                }, [] as readonly Tag[]) ?? []
-        );
-    };
-
-    getRemotes = async () => {
-        try {
-            const remotes = await this._git.getRemotes(true);
-            Logger().silly('SimpleGitBackend', 'Got reply for getRemotes from git backend', {
-                result: remotes,
-                git: this._git,
-                fn: this._git.getRemotes,
-            });
-            return (
-                remotes?.map(
-                    (remote) =>
-                    ({
-                        remote: remote.name,
-                        url: remote.refs.fetch, // our model currently supports only one URL
-                    } as RemoteMeta)
-                ) || []
-            );
-        } catch (e) {
-            Logger().error('SimpleGitBackend', 'Could not get remotes', { error: e });
-            throw e;
-        }
-    };
-
-    private commitFormat = {
-        hash: '%H',
-        shortHash: '%h',
-        message: '%B',
-        author_name: '%aN',
-        author_email: '%aE',
-        author_date: '%ai',
-        committer_name: '%cN',
-        committer_email: '%cE',
-        committer_date: '%ci',
-        parents: '%P',
-        short_parents: '%p',
-    };
-
-    private mapSummary = (summary: SimpleGitBackend['commitFormat']): FullCommit => {
-        const p = summary.parents.split(' ').filter((p) => p != '');
-        const sp = summary.short_parents.split(' ').filter((p) => p != '');
-        return {
-            type: 'commit',
-            oid: summary.hash,
-            short_oid: summary.shortHash,
-            message: summary.message,
-            author: {
-                name: summary.author_name,
-                email: summary.author_email,
-                timestamp: new Date(summary.author_date),
-            },
-            committer: {
-                name: summary.committer_name,
-                email: summary.committer_email,
-                timestamp: new Date(summary.committer_date),
-            },
-            parents: p.map((p, index) => ({ oid: p, short_oid: sp[index] })),
-        };
-    };
-
-    getHistorySize = async (): Promise<number> => {
-        const number = await this._git.raw(['rev-list', '--all', '--count']);
-        return parseInt(number);
-    };
-
-    getHistory = async (
-        path?: string,
-        skip?: number,
-        limit?: number,
-        range?: string,
-        remotes?: boolean
-    ): Promise<readonly Commit[]> => {
-        const opts: Record<string, any> = {
-            format: this.commitFormat,
-            splitter: true,
-            '--parents': true,
-            '--topo-order': true,
-        };
-        if (remotes ?? true) {
-            opts['--remotes'] = true;
-        }
-        if (skip) {
-            opts['--skip'] = skip;
-        }
-        if (limit) {
-            Logger().debug('getHistory', `Requesting ${limit} items from the history`);
-            opts.maxCount = limit;
-        }
-        if (range) {
-            opts[range] = true;
-        } else {
-            opts['--branches'] = true;
-        }
-        if (path) {
-            opts['--'] = true;
-            opts[path] = true;
-        }
-        const entries = await this._git.log<SimpleGitBackend['commitFormat']>(opts);
-        Logger().debug('getHistory', `Received ${entries.all.length} from git`);
-        return entries?.all.map((entry) => this.mapSummary(entry)) || [];
-    };
-
-    getCommit = async (ref: string): Promise<Commit> => {
-        Logger().debug('SimpleGitBackend', 'Trying to get commit', { ref });
-        const options: Record<string, any> = {
-            format: { ...this.commitFormat, message: '%B' },
-            splitter: '|--/',
-            maxCount: 1,
-        };
-        options[ref] = true;
-        const entries = await this._git.log<SimpleGitBackend['commitFormat']>(options);
-        Logger().debug('SimpleGitBackend', 'Result', { entries: entries });
-        return this.mapSummary(entries!.all[0]);
-    };
-
-    checkout = async (refOrPath: string, local?: string): Promise<void> => {
-        let params = [refOrPath];
-        if (local) {
-            params = params.concat(['-t', '-b', local]);
-        }
-        await this._git.checkout(params);
-    };
-
-    async checkoutWorktree(refOrPath: string, worktreePath: string): Promise<void> {
-        await this._git.raw(['worktree', 'add', worktreePath, refOrPath])
-    }
-
-    resolveConflict = async (path: string, source: 'ours' | 'theirs' | 'merge'): Promise<void> => {
-        try {
-            Logger().debug('SimpleGitBackend', 'Attempting to resolve merge conflict', {
-                path: path,
-                source: source,
-            });
-            if (source !== 'merge') {
-                await this._git.checkout([`--${source}`, path]);
-            }
-            await this._git.add(path);
-        } catch (e) {
-            Logger().error('SimpleGitBackend', 'Failed to resolve merge conflict', {
-                path: path,
-                source: source,
-                error: e,
-            });
-        }
-    };
-
-    abortMerge = async (): Promise<string | undefined> => {
-        try {
-            await this._git.reset(['--merge']);
-            return undefined;
-        } catch (e: any) {
-            Logger().error('SimpleGitBackend', 'Could not abort merge', { error: e });
-            return e.git.result ?? '<unknown error>';
-        }
-    };
-
-    getCommitStats = async (commit: Commit): Promise<CommitStats> => {
-        Logger().debug('SimpleGitBackend', 'Retrieving stats for commit', { oid: commit.oid });
-        const directResult = await this._git.raw([
-            'show',
-            '--format=',
-            '-z',
-            '--name-status',
-            commit.oid,
-        ]);
-        const fileStatus = parseFileStatus(directResult);
-        const directNumStat = await this._git.raw([
-            'show',
-            '--numstat',
-            '--format=',
-            '-z',
-            commit.oid,
-        ]);
-        Logger().debug('SimpleGitBackend', 'Received raw log', { log: directNumStat });
-        mergeNumStats(directNumStat, fileStatus);
-        let incoming: Maybe<readonly DiffStat[]> = nothing;
-        if (commit.parents.length > 1 && commit.type === 'commit') {
-            // this is a merge commit -> get the incoming changes
-            Logger().debug('SimpleGitBackend', 'Retrieving incoming changes stats for commit', {
-                oid: commit.oid,
-            });
-            const incomingResult = await this._git.raw([
-                'diff',
-                '--format=',
-                '-z',
-                '--name-status',
-                `${commit.oid}^..${commit.oid}`,
-            ]);
-            incoming = just(parseFileStatus(incomingResult, `${commit.oid}^`));
-            const incomingNumStat = await this._git.raw([
-                'diff',
-                '--numstat',
-                '--format=',
-                '-z',
-                `${commit.oid}^..${commit.oid}`,
-            ]);
-            Logger().debug('SimpleGitBackend', 'Received raw log', { log: incomingNumStat });
-            mergeNumStats(incomingNumStat, incoming.value);
-        }
-        return {
-            commit: commit,
-            direct: fileStatus,
-            incoming: incoming,
-        } as CommitStats;
-    };
-
-    getDiff = (options: {
-        source: 'workdir' | 'index' | 'commit' | 'stash';
-        commitId?: string;
-        path?: string;
-        toParent?: string;
-        untracked?: boolean;
-    }): Promise<string> => {
-        if (options.source === 'commit' || options.source === 'stash') {
-            let sourceCommit = options.commitId || '';
-            if (options.untracked) {
-                sourceCommit = `${sourceCommit}^3`;
-            }
-            let command = options.toParent
-                ? ['diff', '--histogram', '--format=', `${options.toParent}..${sourceCommit}`]
-                : ['diff', '--histogram', '--format=', `${sourceCommit}^..${sourceCommit}`];
-            if (options.path) {
-                command = command.concat(['--', options.path]);
-            }
-            return this._git.raw(command) ?? Promise.resolve('');
-        }
-        let diffoptions = ['--histogram'] as string[];
-        if (options.source === 'index') {
-            diffoptions = diffoptions.concat('--staged');
-        }
-        if (options.path) {
-            diffoptions = diffoptions.concat(['--', options.path]);
-        }
-        return this._git.diff(diffoptions) ?? Promise.resolve('');
-    };
-
-    getStatus = async (): Promise<readonly IndexStatus[]> => {
-        const parsed = await this._git.raw(['status', '--porcelain', '-u', '-z']);
-        const entries = parsed
-            ?.split(/\0/)
-            .filter((l) => !!l)
-            .reduce((existing, line) => {
-                if (
-                    existing.length > 0 &&
-                    (existing[existing.length - 1].index === 'R' ||
-                        existing[existing.length - 1].workdir === 'R') &&
-                    !existing[existing.length - 1].newPath
-                ) {
-                    const p = existing[existing.length - 1].path;
-                    existing[existing.length - 1].path = line;
-                    existing[existing.length - 1].newPath = p;
-                    return existing;
-                }
-
-                return existing.concat([
-                    {
-                        index: line[0],
-                        workdir: line[1],
-                        path: line.substring(3),
-                    },
-                ]);
-            }, [] as { index: string; workdir: string; path: string; newPath?: string }[]);
-
-        const result =
-            entries?.map((file) => {
-                const indexStatus = mapCommitStatus(file.index);
-                return {
-                    path: file.path,
-                    indexStatus: indexStatus,
-                    workdirStatus: mapCommitStatus(file.workdir),
-                    isStaged: file.index !== ' ',
-                    isConflicted:
-                        file.index === 'U' ||
-                        file.workdir === 'U' ||
-                        (file.index === 'A' && file.workdir === 'A') ||
-                        (file.index === 'D' && file.workdir === 'D'),
-                };
-            }) || [];
-        Logger().silly('SimpleGitBackend', 'Received git status', { status: result });
-        return result;
-    };
-
-    addPath = async (path: string, intentToAdd?: boolean): Promise<void> => {
-        if (intentToAdd) {
-            await this._git.raw(['add', '-N', path]);
-        } else {
-            await this._git.add(path);
-        }
-    };
-
-    applyDiff = (diff: string, revert: boolean, onWorkinCopy: boolean): Promise<void> => {
-        try {
-            const result = execSync(
-                `git apply${onWorkinCopy ? '' : ' --cached'}${revert ? ' --reverse' : ''}`,
-                {
-                    input: diff,
-                    cwd: this.directory,
-                }
-            );
-            Logger().debug('SimpleGitBackend', 'Executed git apply', { result: result });
-            return Promise.resolve();
-        } catch (e) {
-            Logger().error('SimpleGitBackend', 'Failed git apply', { error: e });
-            throw e;
-        }
-    };
-
-    removePath = async (path: string, alreadyGone: boolean): Promise<void> => {
-        const opts = alreadyGone ? ['--cached', '--'] : [];
-        try {
-            await this._git.raw(['rm'].concat(opts).concat(path));
-        } catch (e) {
-            Logger().error('SimpleGitBackend', 'Attempting to stage file deletion failed', {
-                error: e,
-            });
-            throw e;
-        }
-    };
-
-    resetPath = async (path: string): Promise<void> => {
-        Logger().silly('SimpleGitBackend', 'Resetting path', { path: path });
-        await this._git.reset(['--', path]);
-        Logger().silly('SimpleGitBackend', 'Reset path done', { path: path });
-    };
-
-    commit = async (message: string, amend?: boolean) => {
-        Logger().silly('SimpleGitBackend', 'Attemping commit', {
-            commitMessage: message,
-            amend: amend,
-        });
-        let options = [] as string[];
-        if (amend) {
-            options = options.concat('--amend');
-        }
-        const result = await this._git.raw(['commit', '-m', message].concat(options));
-        Logger().debug('SimpleGitBackend', 'Commit done.', { result: result });
-    };
-
-    push = async (options?: {
-        remote?: string;
-        branch?: string;
-        upstream?: string;
-        setUpstream?: boolean;
-        force?: boolean;
-        pushTags?: boolean;
-    }): Promise<void> => {
-        let branch = options?.branch;
-        const opts = ['--verbose', '--progress'];
-        if (options?.force) {
-            opts.push('--force');
-        }
-        if (options?.remote && options?.upstream) {
-            if (options.setUpstream) {
-                opts.push('--set-upstream');
-            }
-            branch = `${branch}:${options.upstream}`;
-        }
-        if (options?.pushTags) {
-            opts.push('--tags');
-        }
-        try {
-            Logger().debug('SimpleGitBackend', 'Push with options', {
-                options: opts,
-                remote: options?.remote,
-                branch: branch,
-            });
-            await this._git.push(options?.remote, branch, opts);
-            Logger().info('SimpleGitBackend', 'Finished without exception');
-        } catch (e) {
-            if (e instanceof Error) {
-                Logger().error('SimpleGitBackend', 'Could not push changes to upstream', {
-                    error: e.toString(),
-                    where: e.stack || 'No stack trace available',
-                    options: options,
-                });
-                toast.error(
-                    structuredToast(`Could not push changes to upstream`, e.toString().split('\n')),
-                    {
-                        autoClose: false,
-                    }
-                );
-            }
-            else {
-                throw e;
-            }
-        }
-    };
-
-    fetch = async (options: {
-        remote: Maybe<string>;
-        branch: Maybe<string>;
-        prune: boolean;
-        fetchTags: boolean;
-    }): Promise<void> => {
-        const cmd = ['fetch'];
-        options.prune && cmd.push('--prune');
-        !options.remote.found && cmd.push('--all');
-        options.fetchTags && cmd.push('--tags');
-        options.remote.found && cmd.push(options.remote.value);
-        options.branch.found && cmd.push(options.branch.value);
-        await this._git.raw(cmd);
-    };
-
-    pull = async (remote: string, remoteBranch: string, noFF: boolean): Promise<void> => {
-        try {
-            await this._git.pull(remote, remoteBranch, noFF ? ['--no-ff'] : undefined);
-        } catch (e) {
-            if (e instanceof Error) {
-                Logger().error('SimpleGitBackend', 'Pulling from remote branch failed', {
-                    error: e,
-                    remote: remote,
-                    remoteBranch: remoteBranch,
-                    noFF: noFF,
-                });
-                toast(structuredToast('Failed to pull remote changes', e.message?.split(/\n/)), {
-                    type: 'error',
-                    autoClose: false,
-                });
-            }
-            else {
-                throw e;
-            }
-        }
-    };
-
-    init = async (path: string): Promise<void> => {
-        await this.open(path);
-        await this._git.init();
-    };
-
-    clone = async (url: string, dir: string): Promise<void> => {
-        try {
-            const git = simpleGit(); // clone is one of the few commands, that can actually be executed without an open local repo
-            await git.clone(url, dir);
-        } catch (e) {
-            if (e instanceof Error) {
-                toast(structuredToast(`Failed to clone ${url} to ${dir}`, e.message?.split(/\n/)), {
-                    type: 'error',
-                    autoClose: false,
-                });
-                Logger().error('SimpleGiteBackend', 'Clone failed', { url, dir, error: e });
-            }
-            else {
-                throw e;
-            }
-        }
-    };
-
-    branch = async (name: string, source: string, noCheckout: boolean): Promise<void> => {
-        if (noCheckout) {
-            await this._git.raw(['branch', name, source]);
-        } else {
-            await this._git.checkoutBranch(name, source);
-        }
-    };
-
-    renameBranch = async (oldName: string, newName: string): Promise<void> => {
-        await this._git.raw(['branch', '-m', oldName, newName]);
-    };
-
-    deleteBranch = async (
-        branch: BranchInfo,
-        force: boolean,
-        removeRemote: boolean
-    ): Promise<void> => {
-        try {
-            if (!branch.remote) {
-                await this._git.raw(['branch', force ? '-D' : '-d', branch.ref]);
-                if (removeRemote) {
-                    await this._git.push(branch.upstream?.remoteName, branch.upstream?.ref, [
-                        '--delete',
-                    ]);
-                }
-            } else {
-                await this._git.push(branch.remote, branch.ref, ['--delete']);
-            }
-        } catch (e) {
-            Logger().error('SimpleGitBackend', 'Deleting branch failed', { error: e });
-        }
-    };
-
-    getUnmergedBranches = async (name: Maybe<string>): Promise<Maybe<string[]>> => {
-        const source = name.found ? [name.value] : [];
-        return fromNullable(await (await this._git.branch(['--no-merged'].concat(source)))?.all);
-    };
-
-    merge = async (from: string, noFF: boolean) => {
-        const options = noFF ? ['--no-ff'] : [];
-        const mergeResult = await this._git.merge(options.concat(from));
-        Logger().debug('SimpleGitBackend', 'Finished merge', { result: mergeResult });
-        return mergeResult?.failed ? mergeResult.result : undefined;
-    };
-
-    getPendingCommitMessage = () => {
-        const msg = fs.readFileSync(path.join(this.gitDir, 'MERGE_MSG'));
-        return msg.toLocaleString();
-    };
-
-    stash = async (message: string, untracked: boolean) => {
-        const msgOpts = message.length !== 0 ? ['push', '-m', message] : [];
-        const untrackedOpts = untracked ? ['-u'] : [];
-        Logger().debug('SimpleGitBackend', 'Stashing options', {
-            options: msgOpts.concat(untrackedOpts),
-        });
-        const result = await this._git.stash(msgOpts.concat(untrackedOpts));
-        Logger().info('SimpleGitBackend', 'Stashed changes with result', { result: result });
-    };
-
-    listStashes = async (): Promise<readonly Stash[]> => {
-        Logger().silly('SimpleGitBackend', 'Trying to list stashes');
-        const stashOutput = await this._git.raw([
-            'stash',
-            'list',
-            '-z',
-            '--pretty=format:%H|--/%h|--/%s|--/%aN|--/%aE|--/%ai|--/%P|--/%p|--/%gd',
-        ]);
-        const stashList = stashOutput
-            ?.split('\0')
-            .map((entry) => entry.split('|--/'))
-            .filter((e) => e.length === 9);
-        Logger().debug('SimpleGitBackend', 'Received stash list', {
-            stashes: stashList,
-        });
-        return (
-            stashList?.map((entry) => {
-                const longParents = entry[6].split(/\s+/);
-                const shortParents = entry[7].split(/\s+/);
-                return {
-                    type: 'stash',
-                    ref: entry[8],
-                    oid: entry[0],
-                    short_oid: entry[1],
-                    message: entry[2],
-                    parents: longParents.map((p, index) => ({
-                        oid: p,
-                        short_oid: shortParents[index],
-                    })),
-                    author: {
-                        name: entry[3],
-                        email: entry[4],
-                        timestamp: new Date(entry[5]),
-                    },
-                };
-            }) || []
-        );
-    };
-
-    getStashDetails = async (stash: Stash): Promise<CommitStats> => {
-        Logger().debug('SimpleGitBackend', 'Requested details for stash', { stash: stash });
-        const wcStats = await this._stashGetWCChanges(stash);
-        const untrackedStats = await this._stashGetUntracked(stash);
-        return {
-            commit: stash,
-            direct: wcStats.concat(untrackedStats),
-            incoming: nothing,
-        };
-    };
-
-    private _stashGetWCChanges = async (stash: Stash): Promise<readonly DiffStat[]> => {
-        Logger().debug('SimpleGitBackend', 'Getting stashed working-copy changes');
-        const workingCopyStatusResult = await this._git.raw([
-            'stash',
-            'show',
-            '--name-status',
-            '-z',
-            stash.oid,
-        ]);
-        const wcStatusFields = workingCopyStatusResult?.split('\0').slice(0, -1);
-        const workingCopyChangesResult = await this._git.raw([
-            'stash',
-            'show',
-            '--numstat',
-            '-z',
-            stash.oid,
-        ]);
-        const wcChangesFields = workingCopyChangesResult
-            ?.split('\0')
-            .slice(0, -1)
-            .map((entry) => entry.split(/\s+/));
-        Logger().debug('SimpleGitBackend', 'Received working copy stats and changes', {
-            status: wcStatusFields,
-            changes: wcChangesFields,
-        });
-        if (wcStatusFields && wcChangesFields) {
-            const chunkedStatus = chunks(wcStatusFields, 2);
-            const matched = chunkedStatus.map((s) => {
-                const change = wcChangesFields?.find((c) => c[2] === s[1]); //filenames come last in the split fields
-                const stat: DiffStat = {
-                    path: change?.[2] ?? '<invalid path>',
-                    status: mapCommitStatus(s[0]),
-                    additions: parseInt(change?.[0] ?? '0'),
-                    deletions: parseInt(change?.[1] ?? '0'),
-                };
-                return stat;
-            });
-            Logger().debug('SimpleGitBackend', `Working copy changes for stash ${stash.oid}`, {
-                stats: matched,
-            });
-            return matched;
-        }
-        Logger().error(
-            'SimpleGitBackend',
-            `Could not get stats for stash ${stash.oid}. At least one stats command failed.`,
-            { status: wcStatusFields, changes: wcChangesFields }
-        );
-        return [];
-    };
-
-    private _stashGetUntracked = async (stash: Stash): Promise<readonly DiffStat[]> => {
-        if (stash.parents.length === 3) {
-            const untrackedCommit: Commit = {
-                ...stash,
-                type: 'commit',
-                oid: stash.parents[2].oid,
-                parents: [],
-                committer: stash.author,
-            };
-            const stats = await this.getCommitStats(untrackedCommit);
-            return stats.direct.map((entry) => ({
-                ...entry,
-                source: 'untracked',
-                status: 'untracked',
-            }));
-        }
-        return [];
-    };
-
-    applyStash = async (stash: Stash, deleteAfterApply: boolean): Promise<void> => {
-        await this._git.raw(['stash', deleteAfterApply ? 'pop' : 'apply', stash.ref]);
-    };
-
-    dropStash = async (stash: Stash): Promise<void> => {
-        await this._git.raw(['stash', 'drop', stash.ref]);
-    };
-
-    reset = async (branch: string, toRef: string, mode: string): Promise<void> => {
-        await this._git.reset([`--${mode}`, toRef]);
-    };
-
-    createTag = async (tag: string, ref: string, message: Maybe<string>): Promise<void> => {
-        if (message.found) {
-            Logger().debug('SimpleGitBackend', 'Creating annotated tag', {
-                tag,
-                ref,
-                message: message.value,
-            });
-            await this._git.raw(['tag', '-a', '-m', message.value, tag, ref]);
-        } else {
-            Logger().debug('SimpleGitBackend', 'Creating lightweight tag', { tag, ref });
-            await this._git.raw(['tag', tag, ref]);
-        }
-    };
-
-    deleteTag = (tag: Tag): Promise<string> => this._git.raw(['tag', '-d', tag.name]);
-
-    getFiles = async (): Promise<string[]> => {
-        const fileResult = await this._git.raw(['ls-files', '-z']);
-        return fileResult.split(/\0/);
-    };
-
-    blame = async (path: string): Promise<readonly BlameInfo[]> => {
-        const blameString = await this._git.raw(['blame', '--line-porcelain', path]);
-        const lines = blameString.split(/\n/);
-        let result = [] as readonly BlameInfo[];
-        Logger().silly('GitBackend', 'Received raw blame info', { output: lines });
-        for (let i = 0; i < lines.length - 1; i++) {
-            // don't parse the last line. It's an artifact of .split() anyway
-            const meta: any = {};
-            const commit = lines[i].match(
-                /(?<oid>[0-9a-z]+)\s+[0-9]+\s+[0-9]+\s*(?<numlines>[0-9]+)*/
-            );
-            meta.commit = commit?.groups?.oid;
-            i++;
-            do {
-                const match = lines[i]?.match(/(?<name>[^\s]+)\s(?<value>.*)/);
-                meta[match?.groups?.name ?? '<unknown>'] = match?.groups?.value;
-                i++;
-            } while (lines[i] && !lines[i].startsWith('\t'));
-            if (result.length > 0 && result[result.length - 1].oid === meta.commit) {
-                result[result.length - 1].content = result[result.length - 1].content.concat([
-                    lines[i].substr(1),
-                ]);
-            } else {
-                result = result.concat([
-                    {
-                        oid: meta.commit,
-                        author: meta['author'],
-                        mail: meta['author-mail'],
-                        timestamp: new Date(parseInt(meta['author-time']) * 1000),
-                        summary: meta['summary'],
-                        content: [lines[i].substr(1)],
-                    },
-                ]);
-            }
-        }
-        return result;
-    };
-
-    getConfig = async (): Promise<IGitConfig> => {
-        const config = await this._git.listConfig();
-        Logger().debug('SimpleGitBackend', 'Got config', { config: config });
-        const localFile = config.files.find((f) => f.startsWith('.git'));
-        const userFile = config.files.find((f) => f.startsWith(homedir()));
-        const local = localFile ? config.values[localFile] : undefined;
-        const user = userFile ? config.values[userFile] : undefined;
-        return {
-            local: local && this.transformGitFlowConfig(local, this.transformConfig(local)),
-            global: user && this.transformConfig(user),
-        };
-    };
-
-    private transformConfig = (input: ConfigValues): IEffectiveConfig => {
-        const ret: IEffectiveConfig = {};
-        console.log(input);
-        if (input['user.name'] || input['user.email']) {
-            ret.user = {
-                name: input['user.name'] as string,
-                email: input['user.email'] as string,
-            };
-            Logger().silly('GitBackend', 'Found user information', { user: ret.user });
-        }
-        if (input[AUTOFETCHENABLED]) {
-            ret.corylus = {
-                autoFetchEnabled: input[AUTOFETCHENABLED] === 'true',
-            };
-            ret.corylus.autoFetchInterval = parseInt((input[AUTOFETCHINTERVAL] as string) ?? '5');
-        } else {
-            ret.corylus = {
-                autoFetchEnabled: false,
-            };
-        }
-        return ret;
-    };
-
-    private transformGitFlowConfig(
-        input: ConfigValues,
-        existing: IGitConfigValues
-    ): IGitConfigValues & IGitFlowConfig {
-        if (input['gitflow.branch.master']) {
-            return {
-                ...existing,
-                gitFlow: {
-                    branch: {
-                        master: input['gitflow.branch.master']?.toString(),
-                        develop: input['gitflow.branch.develop']?.toString(),
-                    },
-                    prefix: {
-                        feature: input['gitflow.prefix.feature']?.toString(),
-                        bugfix: input['gitflow.prefix.bugfix']?.toString(),
-                        release: input['gitflow.prefix.release']?.toString(),
-                        hotfix: input['gitflow.prefix.hotfix']?.toString(),
-                        support: input['gitflow.prefix.support']?.toString(),
-                        versiontag: input['gitflow.prefix.versiontag']?.toString(),
-                    },
-                },
-            };
-        }
-        return existing;
-    }
-
-    setConfigValue = async (
-        variable: string,
-        value: string,
-        target: 'local' | 'global'
-    ): Promise<void> => {
-        if (target === 'local') {
-            await this._git.raw(['config', variable, value]);
-        } else {
-            await this._git.raw(['config', '--global', variable, value]);
-        }
-    };
-
-    restore = async (path: string): Promise<void> => {
-        Logger().silly('SimpleGitBackend', 'Restoring path', { path: path });
-        await this._git.raw(['restore', '--', path]);
-        Logger().silly('SimpleGitBackend', 'Restored path', { path: path });
-    };
-
-    addRemote = async (name: string, url: string): Promise<void> => {
-        Logger().debug('SimpleGitBackend', 'Adding new remote', { name, url });
-        await this._git.addRemote(name, url);
-        Logger().debug('SimpleGitBackend', 'Success');
-    };
-
-    updateRemote = async (name: string, url: string): Promise<void> => {
-        Logger().debug('SimpleGitBackend', 'Updating remote', { name, url });
-        await this._git.raw(['remote', 'set-url', name, url]);
-        Logger().debug('SimpleGitBackend', 'Success');
-    };
-
-    deleteRemote = async (name: string): Promise<void> => {
-        Logger().debug('SimpleGitBackend', 'Delete remote', { name });
-        await this._git.removeRemote(name);
-        Logger().debug('SimpleGitBackend', 'Success');
-    };
-
-    rebase = async (
-        target: string,
-        commands?: readonly { action: string; commit: Commit }[]
-    ): Promise<void> => {
-        Logger().debug('SimpleGitBackend.rebase', 'Rebasing current branch', { target });
-        if (commands) {
-            try {
-                const script = await createCommandScript(commands);
-                Logger().silly('SimpleGitBackend.rebase', 'Interactively rebasing commits', {
-                    commands,
-                });
-                // spawn git with the custom editor by hand
-                const result = await execAsync(`git rebase -i ${target}`, {
-                    cwd: this.dir,
-                    env: {
-                        ...process.env,
-                        GIT_SEQUENCE_EDITOR: script,
-                        GIT_EDITOR: 'true',
-                    },
-                });
-                Logger().debug('SimpleGitBackend.rebase', 'Successfully rebased commits', result);
-            } finally {
-                temp.cleanup();
-            }
-        } else {
-            await this._git.rebase([target]);
-        }
-        Logger().debug('SimpleGitBackend.rebase', 'Success');
-    };
-
-    getRebaseStatus = async (): Promise<Maybe<RebaseStatusInfo>> => {
-        try {
-            let rebaseMergePath = (
-                await this._git.raw(['rev-parse', '--git-path', 'rebase-merge'])
-            ).replace(/\n/, '');
-            if (!path.isAbsolute(rebaseMergePath)) {
-                rebaseMergePath = path.normalize(path.join(this.dir, rebaseMergePath));
-            }
-            if (!(await statAsync(rebaseMergePath).catch((_) => false))) {
-                Logger().silly(
-                    'SimpleGitBackend.getRebaseStatus',
-                    'Could not access rebase-merge directory. Probably no rebase in progress.'
-                );
-                return nothing;
-            }
-            const todoString = await readFileAsync(path.join(rebaseMergePath, 'git-rebase-todo'),
-                'utf8'
-            );
-            const doneString = await readFileAsync(path.join(rebaseMergePath, 'done'), 'utf8');
-            const patch = await this._git.raw(['rebase', '--show-current-patch']).catch((e) => {
-                Logger().debug(
-                    'SimpleGitBackend.getRebaseStatus',
-                    'Could not read current patch. Assuming empty.',
-                    {
-                        error: e,
-                    }
-                );
-                return '';
-            });
-            const message = await readFileAsync(
-                path.join(rebaseMergePath, 'message'),
-                'utf8'
-            ).catch((e) => {
-                Logger().debug(
-                    'SimpleGitBackend.getRebaseStatus',
-                    'Could not open rebase commit message.',
-                    {
-                        error: e,
-                    }
-                );
-                return '';
-            });
-            const todo = await Promise.all(
-                todoString
-                    .split('\n')
-                    .filter((l) => l.length > 0)
-                    .map(this.parseRebaseAction)
-            );
-            const done = await Promise.all(
-                doneString
-                    .split('\n')
-                    .filter((l) => l.length > 0)
-                    .map(this.parseRebaseAction)
-            );
-            return just({
-                todo,
-                patch,
-                done,
-                message,
-            });
-        } catch (e) {
-            Logger().error('SimpleGitBackend.getRebaseStatus', 'Could not load rebase status', {
-                error: e,
-            });
-            return nothing;
-        }
-    };
-
-    private parseRebaseAction = async (line: string): Promise<RebaseAction> => {
-        const [action, id] = line.split(/\s+/);
-        return {
-            action,
-            commit: await this.getCommit(id),
-        };
-    };
-
-    abortRebase = async (): Promise<void> => {
-        await this._git.rebase(['--abort']);
-    };
-
-    continueRebase = async (): Promise<void> => {
-        // TODO the custom editor is a workaround to ensure GIT using the existing commit message under all circumstances. Is there a better way?
-        await this._git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
-    };
-
-    getAffectedRefs = async (
-        ref: string,
-        branches: boolean,
-        tags: boolean,
-        commits: boolean
-    ): Promise<{ branches: string[]; tags: string[]; refs: string[] }> => {
-        const refs: { branches: string[]; tags: string[]; refs: string[] } = {
-            branches: [],
-            tags: [],
-            refs: [],
-        };
-        if (branches) {
-            const br = await this._git.raw(['branch', '--contains', ref, '--format=%(refname)']);
-            Logger().silly('getAffectedRefs', 'Raw branches string', { output: br });
-            refs.branches = br.split('\n').map((b) => b.replace('refs/heads/', '')); // we only care about the actual branch name
-        }
-        if (tags) {
-            const tgs = await this._git.raw(['tag', '--contains', ref]);
-            Logger().silly('getAffectedRefs', 'Raw tags string', { output: tgs });
-            refs.tags = tgs.split('\n');
-        }
-        if (commits) {
-            throw new Error('Not implemented yet');
-        }
-        Logger().debug('getAffectedRefs', 'Returning affected refs', { affected: refs });
-        return refs;
-    };
-
-    getFileContents = async (ref: 'workdir' | string, p: string): Promise<Maybe<Buffer>> => {
-        if (ref === 'workdir') {
-            Logger().debug('SimpleGitBackend', 'Loading file from working directory', {
-                path: path.join(this.dir, p),
-            });
-            return just(await fs.promises.readFile(path.join(this.dir, p)));
-        }
-        const tree = await this._git.raw(['ls-tree', ref, p]);
-        const [_flags, _type, id, ..._rest] = tree.split(/\s+/g);
-        if (id === undefined) {
-            return nothing;
-        }
-        return just(await this._git.binaryCatFile(['blob', id]));
-    };
-}
-
-function parseFileStatus(
-    status: string,
-    source: string | undefined = undefined
-): readonly DiffStat[] {
-    const fileStatusFields = status?.split('\0').filter((field) => field !== '');
-    Logger().debug('parseFileStatus', 'Split result', { status: status, split: fileStatusFields });
-    const fileStatus: DiffStat[] = [];
-    if (fileStatusFields) {
-        const length = fileStatusFields.length;
-        for (let i = 0; i < length; i += 2) {
-            let oldPath: string | undefined = undefined;
-            let path = fileStatusFields[i + 1];
-            const status = mapCommitStatus(fileStatusFields[i]);
-            if (status === 'renamed') {
-                oldPath = fileStatusFields[i + 1];
-                path = fileStatusFields[i + 2];
-                i++;
-            }
-            fileStatus.push({
-                source: source,
-                path: path,
-                oldPath: oldPath,
-                status: status,
-                additions: 0,
-                deletions: 0,
-            });
-        }
-    }
-    return fileStatus;
-}
-
-function mergeNumStats(result: string, fileStatus: readonly DiffStat[]): void {
-    const diffFields = result?.split('\0');
-    if (diffFields) {
-        const length = diffFields.length;
-        for (let i = 0; i < length; i++) {
-            const entryFields = diffFields[i].split(/\s+/);
-            let path = entryFields[entryFields.length - 1];
-            if (path.length === 0) {
-                // if the entry is a move, the filename is NOT contained in the field itself, but rather follows
-                // in the next field and the field after that
-                path = diffFields[i + 2];
-                i += 2;
-            }
-            const fileStat = fileStatus.find((fs) => fs.path === path);
-            if (fileStat) {
-                fileStat.additions = parseInt(entryFields[0]);
-                fileStat.deletions = parseInt(entryFields[1]);
-            }
-        }
-    }
-}
-
-/**
- * Map the status string of a file to our internal status type
- *
- * @param output The output of the git status command
- */
-function mapCommitStatus(output: string): DiffStatus {
-    if (output.length === 0) {
-        return 'unmodified';
-    }
-    switch (output[0]) {
-        case 'A':
-            return 'added';
-        case 'R':
-            return 'renamed';
-        case 'D':
-            return 'deleted';
-        case 'M':
-            return 'modified';
-        case 'U':
-            return 'conflict';
-        case '?':
-            return 'untracked';
-        case ' ':
-            return 'unmodified';
-        default:
-            Logger().error('SimpleGitBackend', `Don't know how to map "${output}"`);
-            return 'unknown';
-    }
-}
-
-/**
- * Create a temporary script to modify the interactive rebase command file based on
- * user UI input.
- *
- * @param commands The commands to serialize in the interactive rebase command script
- */
-async function createCommandScript(
-    commands: readonly { action: string; commit: Commit }[]
-): Promise<string> {
-
-    const commandScript = commands
-        .map((command) => `${command.action} ${command.commit.short_oid}`)
-        .join('\n');
-    const commandFile = await tempOpenAsync({ prefix: 'rebase', suffix: '.sh' });
-    await writeAsync(
-        commandFile.fd,
-        `#!/bin/sh
-
-cat <<COMMANDS > $1
-${commandScript}
-COMMANDS
-`
-    );
-    fs.chmodSync(commandFile.path, 0o500);
-    fs.closeSync(commandFile.fd);
-    return commandFile.path;
-}
+// export class SimpleGitBackend implements GitBackend {
+//     private _git: SimpleGit;
+
+//     #gitDirectory: string = "";
+
+//     constructor(private directory: string) {
+//         this._git = simpleGit(directory);
+//     }
+
+//     get dir(): string {
+//         return this.directory;
+//     }
+
+//     get gitDir(): string {
+//         return this.#gitDirectory;
+//     }
+
+//     open = async (directory: string): Promise<void> => {
+//         this._git = simpleGit(directory);
+//         this.directory = directory;
+//         this.#gitDirectory = await this._git.raw(['rev-parse', '--git-dir']);
+//         if (!path.isAbsolute(this.#gitDirectory)) {
+//             this.#gitDirectory = path.normalize(path.join(this.directory, this.#gitDirectory));
+//         }
+//     };
+
+//     private getRefsAndUpstreams = async () => {
+//         return (
+//             await this._git.raw([
+//                 'for-each-ref',
+//                 'refs/heads',
+//                 '--format=%(refname)|--/%(objectname)|--/%(upstream)',
+//             ])
+//         )
+//             ?.split('\n')
+//             .filter((line) => line.length > 0)
+//             .map((line) => {
+//                 const parts = line.split('|--/');
+//                 return {
+//                     ref: parts[0].replace('refs/heads/', ''),
+//                     oid: parts[1],
+//                     upstream: parts[2].replace(/^refs\/remotes\/[^/]+\//, ''),
+//                     remote: parts[2].replace(/^refs\/remotes\/([^/]+)\/.*/, '$1'),
+//                 };
+//             });
+//     };
+
+//     private getTrackingDifference = async (
+//         local: string,
+//         upstream: string
+//     ): Promise<{ ahead: number; behind: number }> => {
+//         Logger().debug('SimpleGitBacken', 'Trying to get tracking difference', {
+//             local: local,
+//             upstream: upstream,
+//         });
+//         const result = (await this._git.raw(['rev-list', '--left-right', `${local}...${upstream}`]))
+//             ?.split('\n')
+//             .filter((line) => line.length > 0)
+//             .reduce(
+//                 (stats, entry) => {
+//                     if (entry.startsWith('<')) {
+//                         return { ahead: stats.ahead + 1, behind: stats.behind };
+//                     }
+//                     return { ahead: stats.ahead, behind: stats.behind + 1 };
+//                 },
+//                 { ahead: 0, behind: 0 }
+//             );
+//         return result ?? { ahead: 0, behind: 0 };
+//     };
+
+//     getBranches = async (): Promise<BranchInfo[]> => {
+//         performance.mark('startBranches');
+//         const b = await this._git.branch(['--no-abbrev', '--all']);
+//         const branches = (await this._git.raw(['for-each-ref', '--format=%(HEAD)|---|%(objectname)|---|%(objecttype)|---|%(refname)|---|%(worktreepath)|---|%(symref)', 'refs/heads', 'refs/remotes'])).split('\n').filter(l => l !== '')
+//             .map(b => {
+//                 const [head, commit, _type, ref, worktree, symref] = b.split('|---|');
+//                 return {
+//                     name: ref.replace(/refs(\/heads)*\//, ''), // remove refs/... from the start of the name
+//                     commit,
+//                     current: head === '*',
+//                     worktree,
+//                     symref
+//                 }
+//             }).filter(b => !b.symref); // we don't want to see symbolic references
+//         performance.mark('endBranches');
+//         performance.measure('branches', 'startBranches', 'endBranches');
+//         const trackedBranches = (await this.getRefsAndUpstreams())?.filter((r) => r.upstream);
+//         const isDetached = (await this._git.revparse(['--symbolic-full-name', 'HEAD'])) === 'HEAD';
+//         const stats: { ref: string; stats: UpstreamInfo }[] = await Promise.all(
+//             trackedBranches?.map(async (branchInfo) => {
+//                 const upstream = branches.find(
+//                     (b) => b.name === `remotes/${branchInfo.remote}/${branchInfo.upstream}`
+//                 );
+//                 let stats = { ahead: 0, behind: 0 };
+//                 if (upstream) {
+//                     stats = await this.getTrackingDifference(
+//                         branchInfo.ref,
+//                         `${branchInfo.remote}/${branchInfo.upstream}`
+//                     );
+//                 }
+//                 return {
+//                     ref: branchInfo.ref,
+//                     stats: {
+//                         ...stats,
+//                         upstreamMissing: !upstream,
+//                         ref: branchInfo.upstream,
+//                         remoteName: branchInfo.remote,
+//                     },
+//                 };
+//             }) || []
+//         );
+
+//         const ret =
+//             branches?.map((branch) => {
+//                 return {
+//                     ref: branch.name.replace(/^(remotes\/([^/]+)\/)*/, ''),
+//                     head: branch.commit,
+//                     remote: branch.name.startsWith('remotes')
+//                         ? branch.name.replace(/^remotes\/([^/]+)\/.*/, '$1')
+//                         : undefined,
+//                     current: branch.current,
+//                     upstream: stats.find((stat) => stat.ref === branch.name)?.stats,
+//                     trackedBy: trackedBranches?.find(
+//                         (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch.name
+//                     )?.ref,
+//                     isDetached: branch.current && isDetached,
+//                     worktree: branch.worktree
+//                 } as BranchInfo;
+//             }) || [];
+//         return ret;
+//     };
+
+//     getTags = async (): Promise<readonly Tag[]> => {
+//         const result = await this._git.raw(['show-ref', '--tags', '-d']);
+//         const lines = result?.split('\n');
+//         const regex = /^(?<oid>[a-f0-9]+)\s+refs\/tags\/(?<tagName>[^\s^]+)(?<commitMarker>\^\{\}){0,1}$/;
+//         return (
+//             lines
+//                 ?.filter((l) => l && l.length > 0)
+//                 .reduce((existing, l) => {
+//                     const parts = l.match(regex);
+//                     if (parts?.groups?.commitMarker) {
+//                         const i = existing.findIndex((e) => e.name === parts?.groups?.tagName);
+//                         if (i !== -1) {
+//                             existing[i].oid = existing[i].taggedOid;
+//                             existing[i].taggedOid = parts.groups.oid;
+//                         }
+//                         return existing;
+//                     }
+//                     return existing.concat({
+//                         name: parts!.groups!.tagName,
+//                         taggedOid: parts!.groups!.oid,
+//                     });
+//                 }, [] as readonly Tag[]) ?? []
+//         );
+//     };
+
+//     getRemotes = async () => {
+//         try {
+//             const remotes = await this._git.getRemotes(true);
+//             Logger().silly('SimpleGitBackend', 'Got reply for getRemotes from git backend', {
+//                 result: remotes,
+//                 git: this._git,
+//                 fn: this._git.getRemotes,
+//             });
+//             return (
+//                 remotes?.map(
+//                     (remote) =>
+//                     ({
+//                         remote: remote.name,
+//                         url: remote.refs.fetch, // our model currently supports only one URL
+//                     } as RemoteMeta)
+//                 ) || []
+//             );
+//         } catch (e) {
+//             Logger().error('SimpleGitBackend', 'Could not get remotes', { error: e });
+//             throw e;
+//         }
+//     };
+
+//     private commitFormat = {
+//         hash: '%H',
+//         shortHash: '%h',
+//         message: '%B',
+//         author_name: '%aN',
+//         author_email: '%aE',
+//         author_date: '%ai',
+//         committer_name: '%cN',
+//         committer_email: '%cE',
+//         committer_date: '%ci',
+//         parents: '%P',
+//         short_parents: '%p',
+//     };
+
+//     private mapSummary = (summary: SimpleGitBackend['commitFormat']): FullCommit => {
+//         const p = summary.parents.split(' ').filter((p) => p != '');
+//         const sp = summary.short_parents.split(' ').filter((p) => p != '');
+//         return {
+//             type: 'commit',
+//             oid: summary.hash,
+//             short_oid: summary.shortHash,
+//             message: summary.message,
+//             author: {
+//                 name: summary.author_name,
+//                 email: summary.author_email,
+//                 timestamp: new Date(summary.author_date),
+//             },
+//             committer: {
+//                 name: summary.committer_name,
+//                 email: summary.committer_email,
+//                 timestamp: new Date(summary.committer_date),
+//             },
+//             parents: p.map((p, index) => ({ oid: p, short_oid: sp[index] })),
+//         };
+//     };
+
+//     getHistorySize = async (): Promise<number> => {
+//         const number = await this._git.raw(['rev-list', '--all', '--count']);
+//         return parseInt(number);
+//     };
+
+//     getHistory = async (
+//         path?: string,
+//         skip?: number,
+//         limit?: number,
+//         range?: string,
+//         remotes?: boolean
+//     ): Promise<readonly Commit[]> => {
+//         const opts: Record<string, any> = {
+//             format: this.commitFormat,
+//             splitter: true,
+//             '--parents': true,
+//             '--topo-order': true,
+//         };
+//         if (remotes ?? true) {
+//             opts['--remotes'] = true;
+//         }
+//         if (skip) {
+//             opts['--skip'] = skip;
+//         }
+//         if (limit) {
+//             Logger().debug('getHistory', `Requesting ${limit} items from the history`);
+//             opts.maxCount = limit;
+//         }
+//         if (range) {
+//             opts[range] = true;
+//         } else {
+//             opts['--branches'] = true;
+//         }
+//         if (path) {
+//             opts['--'] = true;
+//             opts[path] = true;
+//         }
+//         const entries = await this._git.log<SimpleGitBackend['commitFormat']>(opts);
+//         Logger().debug('getHistory', `Received ${entries.all.length} from git`);
+//         return entries?.all.map((entry) => this.mapSummary(entry)) || [];
+//     };
+
+//     getCommit = async (ref: string): Promise<Commit> => {
+//         Logger().debug('SimpleGitBackend', 'Trying to get commit', { ref });
+//         const options: Record<string, any> = {
+//             format: { ...this.commitFormat, message: '%B' },
+//             splitter: '|--/',
+//             maxCount: 1,
+//         };
+//         options[ref] = true;
+//         const entries = await this._git.log<SimpleGitBackend['commitFormat']>(options);
+//         Logger().debug('SimpleGitBackend', 'Result', { entries: entries });
+//         return this.mapSummary(entries!.all[0]);
+//     };
+
+//     checkout = async (refOrPath: string, local?: string): Promise<void> => {
+//         let params = [refOrPath];
+//         if (local) {
+//             params = params.concat(['-t', '-b', local]);
+//         }
+//         await this._git.checkout(params);
+//     };
+
+//     async checkoutWorktree(refOrPath: string, worktreePath: string): Promise<void> {
+//         await this._git.raw(['worktree', 'add', worktreePath, refOrPath])
+//     }
+
+//     resolveConflict = async (path: string, source: 'ours' | 'theirs' | 'merge'): Promise<void> => {
+//         try {
+//             Logger().debug('SimpleGitBackend', 'Attempting to resolve merge conflict', {
+//                 path: path,
+//                 source: source,
+//             });
+//             if (source !== 'merge') {
+//                 await this._git.checkout([`--${source}`, path]);
+//             }
+//             await this._git.add(path);
+//         } catch (e) {
+//             Logger().error('SimpleGitBackend', 'Failed to resolve merge conflict', {
+//                 path: path,
+//                 source: source,
+//                 error: e,
+//             });
+//         }
+//     };
+
+//     abortMerge = async (): Promise<string | undefined> => {
+//         try {
+//             await this._git.reset(['--merge']);
+//             return undefined;
+//         } catch (e: any) {
+//             Logger().error('SimpleGitBackend', 'Could not abort merge', { error: e });
+//             return e.git.result ?? '<unknown error>';
+//         }
+//     };
+
+//     getCommitStats = async (commit: Commit): Promise<CommitStats> => {
+//         Logger().debug('SimpleGitBackend', 'Retrieving stats for commit', { oid: commit.oid });
+//         const directResult = await this._git.raw([
+//             'show',
+//             '--format=',
+//             '-z',
+//             '--name-status',
+//             commit.oid,
+//         ]);
+//         const fileStatus = parseFileStatus(directResult);
+//         const directNumStat = await this._git.raw([
+//             'show',
+//             '--numstat',
+//             '--format=',
+//             '-z',
+//             commit.oid,
+//         ]);
+//         Logger().debug('SimpleGitBackend', 'Received raw log', { log: directNumStat });
+//         mergeNumStats(directNumStat, fileStatus);
+//         let incoming: Maybe<readonly DiffStat[]> = nothing;
+//         if (commit.parents.length > 1 && commit.type === 'commit') {
+//             // this is a merge commit -> get the incoming changes
+//             Logger().debug('SimpleGitBackend', 'Retrieving incoming changes stats for commit', {
+//                 oid: commit.oid,
+//             });
+//             const incomingResult = await this._git.raw([
+//                 'diff',
+//                 '--format=',
+//                 '-z',
+//                 '--name-status',
+//                 `${commit.oid}^..${commit.oid}`,
+//             ]);
+//             incoming = just(parseFileStatus(incomingResult, `${commit.oid}^`));
+//             const incomingNumStat = await this._git.raw([
+//                 'diff',
+//                 '--numstat',
+//                 '--format=',
+//                 '-z',
+//                 `${commit.oid}^..${commit.oid}`,
+//             ]);
+//             Logger().debug('SimpleGitBackend', 'Received raw log', { log: incomingNumStat });
+//             mergeNumStats(incomingNumStat, incoming.value);
+//         }
+//         return {
+//             commit: commit,
+//             direct: fileStatus,
+//             incoming: incoming,
+//         } as CommitStats;
+//     };
+
+//     getDiff = (options: {
+//         source: 'workdir' | 'index' | 'commit' | 'stash';
+//         commitId?: string;
+//         path?: string;
+//         toParent?: string;
+//         untracked?: boolean;
+//     }): Promise<string> => {
+//         if (options.source === 'commit' || options.source === 'stash') {
+//             let sourceCommit = options.commitId || '';
+//             if (options.untracked) {
+//                 sourceCommit = `${sourceCommit}^3`;
+//             }
+//             let command = options.toParent
+//                 ? ['diff', '--histogram', '--format=', `${options.toParent}..${sourceCommit}`]
+//                 : ['diff', '--histogram', '--format=', `${sourceCommit}^..${sourceCommit}`];
+//             if (options.path) {
+//                 command = command.concat(['--', options.path]);
+//             }
+//             return this._git.raw(command) ?? Promise.resolve('');
+//         }
+//         let diffoptions = ['--histogram'] as string[];
+//         if (options.source === 'index') {
+//             diffoptions = diffoptions.concat('--staged');
+//         }
+//         if (options.path) {
+//             diffoptions = diffoptions.concat(['--', options.path]);
+//         }
+//         return this._git.diff(diffoptions) ?? Promise.resolve('');
+//     };
+
+//     getStatus = async (): Promise<readonly IndexStatus[]> => {
+//         const parsed = await this._git.raw(['status', '--porcelain', '-u', '-z']);
+//         const entries = parsed
+//             ?.split(/\0/)
+//             .filter((l) => !!l)
+//             .reduce((existing, line) => {
+//                 if (
+//                     existing.length > 0 &&
+//                     (existing[existing.length - 1].index === 'R' ||
+//                         existing[existing.length - 1].workdir === 'R') &&
+//                     !existing[existing.length - 1].newPath
+//                 ) {
+//                     const p = existing[existing.length - 1].path;
+//                     existing[existing.length - 1].path = line;
+//                     existing[existing.length - 1].newPath = p;
+//                     return existing;
+//                 }
+
+//                 return existing.concat([
+//                     {
+//                         index: line[0],
+//                         workdir: line[1],
+//                         path: line.substring(3),
+//                     },
+//                 ]);
+//             }, [] as { index: string; workdir: string; path: string; newPath?: string }[]);
+
+//         const result =
+//             entries?.map((file) => {
+//                 const indexStatus = mapCommitStatus(file.index);
+//                 return {
+//                     path: file.path,
+//                     indexStatus: indexStatus,
+//                     workdirStatus: mapCommitStatus(file.workdir),
+//                     isStaged: file.index !== ' ',
+//                     isConflicted:
+//                         file.index === 'U' ||
+//                         file.workdir === 'U' ||
+//                         (file.index === 'A' && file.workdir === 'A') ||
+//                         (file.index === 'D' && file.workdir === 'D'),
+//                 };
+//             }) || [];
+//         Logger().silly('SimpleGitBackend', 'Received git status', { status: result });
+//         return result;
+//     };
+
+//     addPath = async (path: string, intentToAdd?: boolean): Promise<void> => {
+//         if (intentToAdd) {
+//             await this._git.raw(['add', '-N', path]);
+//         } else {
+//             await this._git.add(path);
+//         }
+//     };
+
+//     applyDiff = (diff: string, revert: boolean, onWorkinCopy: boolean): Promise<void> => {
+//         try {
+//             const result = execSync(
+//                 `git apply${onWorkinCopy ? '' : ' --cached'}${revert ? ' --reverse' : ''}`,
+//                 {
+//                     input: diff,
+//                     cwd: this.directory,
+//                 }
+//             );
+//             Logger().debug('SimpleGitBackend', 'Executed git apply', { result: result });
+//             return Promise.resolve();
+//         } catch (e) {
+//             Logger().error('SimpleGitBackend', 'Failed git apply', { error: e });
+//             throw e;
+//         }
+//     };
+
+//     removePath = async (path: string, alreadyGone: boolean): Promise<void> => {
+//         const opts = alreadyGone ? ['--cached', '--'] : [];
+//         try {
+//             await this._git.raw(['rm'].concat(opts).concat(path));
+//         } catch (e) {
+//             Logger().error('SimpleGitBackend', 'Attempting to stage file deletion failed', {
+//                 error: e,
+//             });
+//             throw e;
+//         }
+//     };
+
+//     resetPath = async (path: string): Promise<void> => {
+//         Logger().silly('SimpleGitBackend', 'Resetting path', { path: path });
+//         await this._git.reset(['--', path]);
+//         Logger().silly('SimpleGitBackend', 'Reset path done', { path: path });
+//     };
+
+//     commit = async (message: string, amend?: boolean) => {
+//         Logger().silly('SimpleGitBackend', 'Attemping commit', {
+//             commitMessage: message,
+//             amend: amend,
+//         });
+//         let options = [] as string[];
+//         if (amend) {
+//             options = options.concat('--amend');
+//         }
+//         const result = await this._git.raw(['commit', '-m', message].concat(options));
+//         Logger().debug('SimpleGitBackend', 'Commit done.', { result: result });
+//     };
+
+//     push = async (options?: {
+//         remote?: string;
+//         branch?: string;
+//         upstream?: string;
+//         setUpstream?: boolean;
+//         force?: boolean;
+//         pushTags?: boolean;
+//     }): Promise<void> => {
+//         let branch = options?.branch;
+//         const opts = ['--verbose', '--progress'];
+//         if (options?.force) {
+//             opts.push('--force');
+//         }
+//         if (options?.remote && options?.upstream) {
+//             if (options.setUpstream) {
+//                 opts.push('--set-upstream');
+//             }
+//             branch = `${branch}:${options.upstream}`;
+//         }
+//         if (options?.pushTags) {
+//             opts.push('--tags');
+//         }
+//         try {
+//             Logger().debug('SimpleGitBackend', 'Push with options', {
+//                 options: opts,
+//                 remote: options?.remote,
+//                 branch: branch,
+//             });
+//             await this._git.push(options?.remote, branch, opts);
+//             Logger().info('SimpleGitBackend', 'Finished without exception');
+//         } catch (e) {
+//             if (e instanceof Error) {
+//                 Logger().error('SimpleGitBackend', 'Could not push changes to upstream', {
+//                     error: e.toString(),
+//                     where: e.stack || 'No stack trace available',
+//                     options: options,
+//                 });
+//                 toast.error(
+//                     structuredToast(`Could not push changes to upstream`, e.toString().split('\n')),
+//                     {
+//                         autoClose: false,
+//                     }
+//                 );
+//             }
+//             else {
+//                 throw e;
+//             }
+//         }
+//     };
+
+//     fetch = async (options: {
+//         remote: Maybe<string>;
+//         branch: Maybe<string>;
+//         prune: boolean;
+//         fetchTags: boolean;
+//     }): Promise<void> => {
+//         const cmd = ['fetch'];
+//         options.prune && cmd.push('--prune');
+//         !options.remote.found && cmd.push('--all');
+//         options.fetchTags && cmd.push('--tags');
+//         options.remote.found && cmd.push(options.remote.value);
+//         options.branch.found && cmd.push(options.branch.value);
+//         await this._git.raw(cmd);
+//     };
+
+//     pull = async (remote: string, remoteBranch: string, noFF: boolean): Promise<void> => {
+//         try {
+//             await this._git.pull(remote, remoteBranch, noFF ? ['--no-ff'] : undefined);
+//         } catch (e) {
+//             if (e instanceof Error) {
+//                 Logger().error('SimpleGitBackend', 'Pulling from remote branch failed', {
+//                     error: e,
+//                     remote: remote,
+//                     remoteBranch: remoteBranch,
+//                     noFF: noFF,
+//                 });
+//                 toast(structuredToast('Failed to pull remote changes', e.message?.split(/\n/)), {
+//                     type: 'error',
+//                     autoClose: false,
+//                 });
+//             }
+//             else {
+//                 throw e;
+//             }
+//         }
+//     };
+
+//     init = async (path: string): Promise<void> => {
+//         await this.open(path);
+//         await this._git.init();
+//     };
+
+//     clone = async (url: string, dir: string): Promise<void> => {
+//         try {
+//             const git = simpleGit(); // clone is one of the few commands, that can actually be executed without an open local repo
+//             await git.clone(url, dir);
+//         } catch (e) {
+//             if (e instanceof Error) {
+//                 toast(structuredToast(`Failed to clone ${url} to ${dir}`, e.message?.split(/\n/)), {
+//                     type: 'error',
+//                     autoClose: false,
+//                 });
+//                 Logger().error('SimpleGiteBackend', 'Clone failed', { url, dir, error: e });
+//             }
+//             else {
+//                 throw e;
+//             }
+//         }
+//     };
+
+//     branch = async (name: string, source: string, noCheckout: boolean): Promise<void> => {
+//         if (noCheckout) {
+//             await this._git.raw(['branch', name, source]);
+//         } else {
+//             await this._git.checkoutBranch(name, source);
+//         }
+//     };
+
+//     renameBranch = async (oldName: string, newName: string): Promise<void> => {
+//         await this._git.raw(['branch', '-m', oldName, newName]);
+//     };
+
+//     deleteBranch = async (
+//         branch: BranchInfo,
+//         force: boolean,
+//         removeRemote: boolean
+//     ): Promise<void> => {
+//         try {
+//             if (!branch.remote) {
+//                 await this._git.raw(['branch', force ? '-D' : '-d', branch.ref]);
+//                 if (removeRemote) {
+//                     await this._git.push(branch.upstream?.remoteName, branch.upstream?.ref, [
+//                         '--delete',
+//                     ]);
+//                 }
+//             } else {
+//                 await this._git.push(branch.remote, branch.ref, ['--delete']);
+//             }
+//         } catch (e) {
+//             Logger().error('SimpleGitBackend', 'Deleting branch failed', { error: e });
+//         }
+//     };
+
+//     getUnmergedBranches = async (name: Maybe<string>): Promise<Maybe<string[]>> => {
+//         const source = name.found ? [name.value] : [];
+//         return fromNullable(await (await this._git.branch(['--no-merged'].concat(source)))?.all);
+//     };
+
+//     merge = async (from: string, noFF: boolean) => {
+//         const options = noFF ? ['--no-ff'] : [];
+//         const mergeResult = await this._git.merge(options.concat(from));
+//         Logger().debug('SimpleGitBackend', 'Finished merge', { result: mergeResult });
+//         return mergeResult?.failed ? mergeResult.result : undefined;
+//     };
+
+//     getPendingCommitMessage = () => {
+//         const msg = fs.readFileSync(path.join(this.gitDir, 'MERGE_MSG'));
+//         return msg.toLocaleString();
+//     };
+
+//     stash = async (message: string, untracked: boolean) => {
+//         const msgOpts = message.length !== 0 ? ['push', '-m', message] : [];
+//         const untrackedOpts = untracked ? ['-u'] : [];
+//         Logger().debug('SimpleGitBackend', 'Stashing options', {
+//             options: msgOpts.concat(untrackedOpts),
+//         });
+//         const result = await this._git.stash(msgOpts.concat(untrackedOpts));
+//         Logger().info('SimpleGitBackend', 'Stashed changes with result', { result: result });
+//     };
+
+//     listStashes = async (): Promise<readonly Stash[]> => {
+//         Logger().silly('SimpleGitBackend', 'Trying to list stashes');
+//         const stashOutput = await this._git.raw([
+//             'stash',
+//             'list',
+//             '-z',
+//             '--pretty=format:%H|--/%h|--/%s|--/%aN|--/%aE|--/%ai|--/%P|--/%p|--/%gd',
+//         ]);
+//         const stashList = stashOutput
+//             ?.split('\0')
+//             .map((entry) => entry.split('|--/'))
+//             .filter((e) => e.length === 9);
+//         Logger().debug('SimpleGitBackend', 'Received stash list', {
+//             stashes: stashList,
+//         });
+//         return (
+//             stashList?.map((entry) => {
+//                 const longParents = entry[6].split(/\s+/);
+//                 const shortParents = entry[7].split(/\s+/);
+//                 return {
+//                     type: 'stash',
+//                     ref: entry[8],
+//                     oid: entry[0],
+//                     short_oid: entry[1],
+//                     message: entry[2],
+//                     parents: longParents.map((p, index) => ({
+//                         oid: p,
+//                         short_oid: shortParents[index],
+//                     })),
+//                     author: {
+//                         name: entry[3],
+//                         email: entry[4],
+//                         timestamp: new Date(entry[5]),
+//                     },
+//                 };
+//             }) || []
+//         );
+//     };
+
+//     getStashDetails = async (stash: Stash): Promise<CommitStats> => {
+//         Logger().debug('SimpleGitBackend', 'Requested details for stash', { stash: stash });
+//         const wcStats = await this._stashGetWCChanges(stash);
+//         const untrackedStats = await this._stashGetUntracked(stash);
+//         return {
+//             commit: stash,
+//             direct: wcStats.concat(untrackedStats),
+//             incoming: nothing,
+//         };
+//     };
+
+//     private _stashGetWCChanges = async (stash: Stash): Promise<readonly DiffStat[]> => {
+//         Logger().debug('SimpleGitBackend', 'Getting stashed working-copy changes');
+//         const workingCopyStatusResult = await this._git.raw([
+//             'stash',
+//             'show',
+//             '--name-status',
+//             '-z',
+//             stash.oid,
+//         ]);
+//         const wcStatusFields = workingCopyStatusResult?.split('\0').slice(0, -1);
+//         const workingCopyChangesResult = await this._git.raw([
+//             'stash',
+//             'show',
+//             '--numstat',
+//             '-z',
+//             stash.oid,
+//         ]);
+//         const wcChangesFields = workingCopyChangesResult
+//             ?.split('\0')
+//             .slice(0, -1)
+//             .map((entry) => entry.split(/\s+/));
+//         Logger().debug('SimpleGitBackend', 'Received working copy stats and changes', {
+//             status: wcStatusFields,
+//             changes: wcChangesFields,
+//         });
+//         if (wcStatusFields && wcChangesFields) {
+//             const chunkedStatus = chunks(wcStatusFields, 2);
+//             const matched = chunkedStatus.map((s) => {
+//                 const change = wcChangesFields?.find((c) => c[2] === s[1]); //filenames come last in the split fields
+//                 const stat: DiffStat = {
+//                     path: change?.[2] ?? '<invalid path>',
+//                     status: mapCommitStatus(s[0]),
+//                     additions: parseInt(change?.[0] ?? '0'),
+//                     deletions: parseInt(change?.[1] ?? '0'),
+//                 };
+//                 return stat;
+//             });
+//             Logger().debug('SimpleGitBackend', `Working copy changes for stash ${stash.oid}`, {
+//                 stats: matched,
+//             });
+//             return matched;
+//         }
+//         Logger().error(
+//             'SimpleGitBackend',
+//             `Could not get stats for stash ${stash.oid}. At least one stats command failed.`,
+//             { status: wcStatusFields, changes: wcChangesFields }
+//         );
+//         return [];
+//     };
+
+//     private _stashGetUntracked = async (stash: Stash): Promise<readonly DiffStat[]> => {
+//         if (stash.parents.length === 3) {
+//             const untrackedCommit: Commit = {
+//                 ...stash,
+//                 type: 'commit',
+//                 oid: stash.parents[2].oid,
+//                 parents: [],
+//                 committer: stash.author,
+//             };
+//             const stats = await this.getCommitStats(untrackedCommit);
+//             return stats.direct.map((entry) => ({
+//                 ...entry,
+//                 source: 'untracked',
+//                 status: 'untracked',
+//             }));
+//         }
+//         return [];
+//     };
+
+//     applyStash = async (stash: Stash, deleteAfterApply: boolean): Promise<void> => {
+//         await this._git.raw(['stash', deleteAfterApply ? 'pop' : 'apply', stash.ref]);
+//     };
+
+//     dropStash = async (stash: Stash): Promise<void> => {
+//         await this._git.raw(['stash', 'drop', stash.ref]);
+//     };
+
+//     reset = async (branch: string, toRef: string, mode: string): Promise<void> => {
+//         await this._git.reset([`--${mode}`, toRef]);
+//     };
+
+//     createTag = async (tag: string, ref: string, message: Maybe<string>): Promise<void> => {
+//         if (message.found) {
+//             Logger().debug('SimpleGitBackend', 'Creating annotated tag', {
+//                 tag,
+//                 ref,
+//                 message: message.value,
+//             });
+//             await this._git.raw(['tag', '-a', '-m', message.value, tag, ref]);
+//         } else {
+//             Logger().debug('SimpleGitBackend', 'Creating lightweight tag', { tag, ref });
+//             await this._git.raw(['tag', tag, ref]);
+//         }
+//     };
+
+//     deleteTag = (tag: Tag): Promise<string> => this._git.raw(['tag', '-d', tag.name]);
+
+//     getFiles = async (): Promise<string[]> => {
+//         const fileResult = await this._git.raw(['ls-files', '-z']);
+//         return fileResult.split(/\0/);
+//     };
+
+//     blame = async (path: string): Promise<readonly BlameInfo[]> => {
+//         const blameString = await this._git.raw(['blame', '--line-porcelain', path]);
+//         const lines = blameString.split(/\n/);
+//         let result = [] as readonly BlameInfo[];
+//         Logger().silly('GitBackend', 'Received raw blame info', { output: lines });
+//         for (let i = 0; i < lines.length - 1; i++) {
+//             // don't parse the last line. It's an artifact of .split() anyway
+//             const meta: any = {};
+//             const commit = lines[i].match(
+//                 /(?<oid>[0-9a-z]+)\s+[0-9]+\s+[0-9]+\s*(?<numlines>[0-9]+)*/
+//             );
+//             meta.commit = commit?.groups?.oid;
+//             i++;
+//             do {
+//                 const match = lines[i]?.match(/(?<name>[^\s]+)\s(?<value>.*)/);
+//                 meta[match?.groups?.name ?? '<unknown>'] = match?.groups?.value;
+//                 i++;
+//             } while (lines[i] && !lines[i].startsWith('\t'));
+//             if (result.length > 0 && result[result.length - 1].oid === meta.commit) {
+//                 result[result.length - 1].content = result[result.length - 1].content.concat([
+//                     lines[i].substr(1),
+//                 ]);
+//             } else {
+//                 result = result.concat([
+//                     {
+//                         oid: meta.commit,
+//                         author: meta['author'],
+//                         mail: meta['author-mail'],
+//                         timestamp: new Date(parseInt(meta['author-time']) * 1000),
+//                         summary: meta['summary'],
+//                         content: [lines[i].substr(1)],
+//                     },
+//                 ]);
+//             }
+//         }
+//         return result;
+//     };
+
+//     getConfig = async (): Promise<IGitConfig> => {
+//         const config = await this._git.listConfig();
+//         Logger().debug('SimpleGitBackend', 'Got config', { config: config });
+//         const localFile = config.files.find((f) => f.startsWith('.git'));
+//         const userFile = config.files.find((f) => f.startsWith(homedir()));
+//         const local = localFile ? config.values[localFile] : undefined;
+//         const user = userFile ? config.values[userFile] : undefined;
+//         return {
+//             local: local && this.transformGitFlowConfig(local, this.transformConfig(local)),
+//             global: user && this.transformConfig(user),
+//         };
+//     };
+
+//     private transformConfig = (input: ConfigValues): IEffectiveConfig => {
+//         const ret: IEffectiveConfig = {};
+//         console.log(input);
+//         if (input['user.name'] || input['user.email']) {
+//             ret.user = {
+//                 name: input['user.name'] as string,
+//                 email: input['user.email'] as string,
+//             };
+//             Logger().silly('GitBackend', 'Found user information', { user: ret.user });
+//         }
+//         if (input[AUTOFETCHENABLED]) {
+//             ret.corylus = {
+//                 autoFetchEnabled: input[AUTOFETCHENABLED] === 'true',
+//             };
+//             ret.corylus.autoFetchInterval = parseInt((input[AUTOFETCHINTERVAL] as string) ?? '5');
+//         } else {
+//             ret.corylus = {
+//                 autoFetchEnabled: false,
+//             };
+//         }
+//         return ret;
+//     };
+
+//     private transformGitFlowConfig(
+//         input: ConfigValues,
+//         existing: IGitConfigValues
+//     ): IGitConfigValues & IGitFlowConfig {
+//         if (input['gitflow.branch.master']) {
+//             return {
+//                 ...existing,
+//                 gitFlow: {
+//                     branch: {
+//                         master: input['gitflow.branch.master']?.toString(),
+//                         develop: input['gitflow.branch.develop']?.toString(),
+//                     },
+//                     prefix: {
+//                         feature: input['gitflow.prefix.feature']?.toString(),
+//                         bugfix: input['gitflow.prefix.bugfix']?.toString(),
+//                         release: input['gitflow.prefix.release']?.toString(),
+//                         hotfix: input['gitflow.prefix.hotfix']?.toString(),
+//                         support: input['gitflow.prefix.support']?.toString(),
+//                         versiontag: input['gitflow.prefix.versiontag']?.toString(),
+//                     },
+//                 },
+//             };
+//         }
+//         return existing;
+//     }
+
+//     setConfigValue = async (
+//         variable: string,
+//         value: string,
+//         target: 'local' | 'global'
+//     ): Promise<void> => {
+//         if (target === 'local') {
+//             await this._git.raw(['config', variable, value]);
+//         } else {
+//             await this._git.raw(['config', '--global', variable, value]);
+//         }
+//     };
+
+//     restore = async (path: string): Promise<void> => {
+//         Logger().silly('SimpleGitBackend', 'Restoring path', { path: path });
+//         await this._git.raw(['restore', '--', path]);
+//         Logger().silly('SimpleGitBackend', 'Restored path', { path: path });
+//     };
+
+//     addRemote = async (name: string, url: string): Promise<void> => {
+//         Logger().debug('SimpleGitBackend', 'Adding new remote', { name, url });
+//         await this._git.addRemote(name, url);
+//         Logger().debug('SimpleGitBackend', 'Success');
+//     };
+
+//     updateRemote = async (name: string, url: string): Promise<void> => {
+//         Logger().debug('SimpleGitBackend', 'Updating remote', { name, url });
+//         await this._git.raw(['remote', 'set-url', name, url]);
+//         Logger().debug('SimpleGitBackend', 'Success');
+//     };
+
+//     deleteRemote = async (name: string): Promise<void> => {
+//         Logger().debug('SimpleGitBackend', 'Delete remote', { name });
+//         await this._git.removeRemote(name);
+//         Logger().debug('SimpleGitBackend', 'Success');
+//     };
+
+//     rebase = async (
+//         target: string,
+//         commands?: readonly { action: string; commit: Commit }[]
+//     ): Promise<void> => {
+//         Logger().debug('SimpleGitBackend.rebase', 'Rebasing current branch', { target });
+//         if (commands) {
+//             try {
+//                 const script = await createCommandScript(commands);
+//                 Logger().silly('SimpleGitBackend.rebase', 'Interactively rebasing commits', {
+//                     commands,
+//                 });
+//                 // spawn git with the custom editor by hand
+//                 const result = await execAsync(`git rebase -i ${target}`, {
+//                     cwd: this.dir,
+//                     env: {
+//                         ...process.env,
+//                         GIT_SEQUENCE_EDITOR: script,
+//                         GIT_EDITOR: 'true',
+//                     },
+//                 });
+//                 Logger().debug('SimpleGitBackend.rebase', 'Successfully rebased commits', result);
+//             } finally {
+//                 temp.cleanup();
+//             }
+//         } else {
+//             await this._git.rebase([target]);
+//         }
+//         Logger().debug('SimpleGitBackend.rebase', 'Success');
+//     };
+
+//     getRebaseStatus = async (): Promise<Maybe<RebaseStatusInfo>> => {
+//         try {
+//             let rebaseMergePath = (
+//                 await this._git.raw(['rev-parse', '--git-path', 'rebase-merge'])
+//             ).replace(/\n/, '');
+//             if (!path.isAbsolute(rebaseMergePath)) {
+//                 rebaseMergePath = path.normalize(path.join(this.dir, rebaseMergePath));
+//             }
+//             if (!(await statAsync(rebaseMergePath).catch((_) => false))) {
+//                 Logger().silly(
+//                     'SimpleGitBackend.getRebaseStatus',
+//                     'Could not access rebase-merge directory. Probably no rebase in progress.'
+//                 );
+//                 return nothing;
+//             }
+//             const todoString = await readFileAsync(path.join(rebaseMergePath, 'git-rebase-todo'),
+//                 'utf8'
+//             );
+//             const doneString = await readFileAsync(path.join(rebaseMergePath, 'done'), 'utf8');
+//             const patch = await this._git.raw(['rebase', '--show-current-patch']).catch((e) => {
+//                 Logger().debug(
+//                     'SimpleGitBackend.getRebaseStatus',
+//                     'Could not read current patch. Assuming empty.',
+//                     {
+//                         error: e,
+//                     }
+//                 );
+//                 return '';
+//             });
+//             const message = await readFileAsync(
+//                 path.join(rebaseMergePath, 'message'),
+//                 'utf8'
+//             ).catch((e) => {
+//                 Logger().debug(
+//                     'SimpleGitBackend.getRebaseStatus',
+//                     'Could not open rebase commit message.',
+//                     {
+//                         error: e,
+//                     }
+//                 );
+//                 return '';
+//             });
+//             const todo = await Promise.all(
+//                 todoString
+//                     .split('\n')
+//                     .filter((l) => l.length > 0)
+//                     .map(this.parseRebaseAction)
+//             );
+//             const done = await Promise.all(
+//                 doneString
+//                     .split('\n')
+//                     .filter((l) => l.length > 0)
+//                     .map(this.parseRebaseAction)
+//             );
+//             return just({
+//                 todo,
+//                 patch,
+//                 done,
+//                 message,
+//             });
+//         } catch (e) {
+//             Logger().error('SimpleGitBackend.getRebaseStatus', 'Could not load rebase status', {
+//                 error: e,
+//             });
+//             return nothing;
+//         }
+//     };
+
+//     private parseRebaseAction = async (line: string): Promise<RebaseAction> => {
+//         const [action, id] = line.split(/\s+/);
+//         return {
+//             action,
+//             commit: await this.getCommit(id),
+//         };
+//     };
+
+//     abortRebase = async (): Promise<void> => {
+//         await this._git.rebase(['--abort']);
+//     };
+
+//     continueRebase = async (): Promise<void> => {
+//         // TODO the custom editor is a workaround to ensure GIT using the existing commit message under all circumstances. Is there a better way?
+//         await this._git.raw(['-c', 'core.editor=true', 'rebase', '--continue']);
+//     };
+
+//     getAffectedRefs = async (
+//         ref: string,
+//         branches: boolean,
+//         tags: boolean,
+//         commits: boolean
+//     ): Promise<{ branches: string[]; tags: string[]; refs: string[] }> => {
+//         const refs: { branches: string[]; tags: string[]; refs: string[] } = {
+//             branches: [],
+//             tags: [],
+//             refs: [],
+//         };
+//         if (branches) {
+//             const br = await this._git.raw(['branch', '--contains', ref, '--format=%(refname)']);
+//             Logger().silly('getAffectedRefs', 'Raw branches string', { output: br });
+//             refs.branches = br.split('\n').map((b) => b.replace('refs/heads/', '')); // we only care about the actual branch name
+//         }
+//         if (tags) {
+//             const tgs = await this._git.raw(['tag', '--contains', ref]);
+//             Logger().silly('getAffectedRefs', 'Raw tags string', { output: tgs });
+//             refs.tags = tgs.split('\n');
+//         }
+//         if (commits) {
+//             throw new Error('Not implemented yet');
+//         }
+//         Logger().debug('getAffectedRefs', 'Returning affected refs', { affected: refs });
+//         return refs;
+//     };
+
+//     getFileContents = async (ref: 'workdir' | string, p: string): Promise<Maybe<Buffer>> => {
+//         if (ref === 'workdir') {
+//             Logger().debug('SimpleGitBackend', 'Loading file from working directory', {
+//                 path: path.join(this.dir, p),
+//             });
+//             return just(await fs.promises.readFile(path.join(this.dir, p)));
+//         }
+//         const tree = await this._git.raw(['ls-tree', ref, p]);
+//         const [_flags, _type, id, ..._rest] = tree.split(/\s+/g);
+//         if (id === undefined) {
+//             return nothing;
+//         }
+//         return just(await this._git.binaryCatFile(['blob', id]));
+//     };
+// }
+
+// function parseFileStatus(
+//     status: string,
+//     source: string | undefined = undefined
+// ): readonly DiffStat[] {
+//     const fileStatusFields = status?.split('\0').filter((field) => field !== '');
+//     Logger().debug('parseFileStatus', 'Split result', { status: status, split: fileStatusFields });
+//     const fileStatus: DiffStat[] = [];
+//     if (fileStatusFields) {
+//         const length = fileStatusFields.length;
+//         for (let i = 0; i < length; i += 2) {
+//             let oldPath: string | undefined = undefined;
+//             let path = fileStatusFields[i + 1];
+//             const status = mapCommitStatus(fileStatusFields[i]);
+//             if (status === 'renamed') {
+//                 oldPath = fileStatusFields[i + 1];
+//                 path = fileStatusFields[i + 2];
+//                 i++;
+//             }
+//             fileStatus.push({
+//                 source: source,
+//                 path: path,
+//                 oldPath: oldPath,
+//                 status: status,
+//                 additions: 0,
+//                 deletions: 0,
+//             });
+//         }
+//     }
+//     return fileStatus;
+// }
+
+// function mergeNumStats(result: string, fileStatus: readonly DiffStat[]): void {
+//     const diffFields = result?.split('\0');
+//     if (diffFields) {
+//         const length = diffFields.length;
+//         for (let i = 0; i < length; i++) {
+//             const entryFields = diffFields[i].split(/\s+/);
+//             let path = entryFields[entryFields.length - 1];
+//             if (path.length === 0) {
+//                 // if the entry is a move, the filename is NOT contained in the field itself, but rather follows
+//                 // in the next field and the field after that
+//                 path = diffFields[i + 2];
+//                 i += 2;
+//             }
+//             const fileStat = fileStatus.find((fs) => fs.path === path);
+//             if (fileStat) {
+//                 fileStat.additions = parseInt(entryFields[0]);
+//                 fileStat.deletions = parseInt(entryFields[1]);
+//             }
+//         }
+//     }
+// }
+
+// /**
+//  * Map the status string of a file to our internal status type
+//  *
+//  * @param output The output of the git status command
+//  */
+// function mapCommitStatus(output: string): DiffStatus {
+//     if (output.length === 0) {
+//         return 'unmodified';
+//     }
+//     switch (output[0]) {
+//         case 'A':
+//             return 'added';
+//         case 'R':
+//             return 'renamed';
+//         case 'D':
+//             return 'deleted';
+//         case 'M':
+//             return 'modified';
+//         case 'U':
+//             return 'conflict';
+//         case '?':
+//             return 'untracked';
+//         case ' ':
+//             return 'unmodified';
+//         default:
+//             Logger().error('SimpleGitBackend', `Don't know how to map "${output}"`);
+//             return 'unknown';
+//     }
+// }
+
+// /**
+//  * Create a temporary script to modify the interactive rebase command file based on
+//  * user UI input.
+//  *
+//  * @param commands The commands to serialize in the interactive rebase command script
+//  */
+// async function createCommandScript(
+//     commands: readonly { action: string; commit: Commit }[]
+// ): Promise<string> {
+
+//     const commandScript = commands
+//         .map((command) => `${command.action} ${command.commit.short_oid}`)
+//         .join('\n');
+//     const commandFile = await tempOpenAsync({ prefix: 'rebase', suffix: '.sh' });
+//     await writeAsync(
+//         commandFile.fd,
+//         `#!/bin/sh
+
+// cat <<COMMANDS > $1
+// ${commandScript}
+// COMMANDS
+// `
+//     );
+//     fs.chmodSync(commandFile.path, 0o500);
+//     fs.closeSync(commandFile.fd);
+//     return commandFile.path;
+// }

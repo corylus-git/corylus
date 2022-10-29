@@ -6,7 +6,8 @@ import { Middleware } from './types';
 import { nanoid } from 'nanoid';
 import { Logger } from '../../util/logger';
 import { log } from './log';
-import { basename } from 'path';
+import { basename } from '@tauri-apps/api/path';
+import { appWindow } from '@tauri-apps/api/window';
 import { repoStore } from './repo';
 import { appSettings } from '../settings';
 import { stagingArea } from './stagingArea';
@@ -42,7 +43,7 @@ export type TabsState = {
     right: readonly TabState[];
 };
 
-type TabsActions = {
+export type TabsActions = {
     addTab: () => void;
     closeTab: (id: string) => void;
     switchTab: (tab: TabState) => void;
@@ -133,8 +134,12 @@ export const tabsStore = create(
                     };
                 });
             },
-            openRepoInActive: (path: string): void => {
-                set((state) => openInActiveTab(state, path));
+            openRepoInActive: async (path: string): Promise<void> => {
+                const tab = await openInActiveTab(path);
+                set((state) => {
+                    state.active = tab;
+                    return state;
+                });
             },
             openRepoInNew: (path: string): void => {
                 set((state) => {
@@ -160,18 +165,28 @@ export const tabsStore = create(
     )
 );
 
-function openInActiveTab(state: TabsState, path: string)
+appWindow.listen('branchesChanged', ev => {
+    console.log("Branches changed", ev.payload);
+});
+
+appWindow.listen('historyChanged', ev => {
+    console.log("History changed", ev.payload);
+});
+
+
+async function openInActiveTab(path: string): Promise<Maybe<TabState>>
 {
-    state.active = just({
-        id: nanoid(),
-        path: just(path),
-        title: basename(path),
-    });
     Logger().debug('openInActiveTab', 'Re-loading repository', {
         path,
     });
+
     repoStore.getState().openRepo(path);
     appSettings().updateHistory(path);
+    return just({
+        id: nanoid(),
+        path: just(path),
+        title: await basename(path),
+    });
 }
 
 /**

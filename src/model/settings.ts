@@ -1,11 +1,8 @@
-import settings from 'electron-settings';
 import { tabsStore } from './state/tabs';
 import { allActivePaths } from './state/util';
 import { themeStore } from './state/theme';
 import { darkTheme } from '../style/dark-theme';
 import { Logger } from '../util/logger';
-import { app } from '@electron/remote';
-import path from 'path';
 import { Theme } from '../style/theme';
 
 /**
@@ -43,34 +40,36 @@ export interface ISettings {
 class SettingsImpl implements ISettings {
     constructor() {
         // TODO temporary workaround because electron-settings is not compatible with enableRemoteModule: false
-        settings.configure({ dir: app.getPath('userData') });
+        // settings.configure({ dir: app.getPath('userData') });
     }
 
     get openTabs() {
-        return (settings.getSync('openTabs') as string[]) ?? [];
+        return [];
+        // return (settings.getSync('openTabs') as string[]) ?? [];
     }
     set openTabs(tabs: string[]) {
-        settings.setSync('openTabs', tabs);
+        // settings.setSync('openTabs', tabs);
     }
     private _repositoryHistory: Map<string, Date> | undefined = undefined;
 
     get repositoryHistory() {
-        if (!this._repositoryHistory) {
-            const s = settings.getSync('repositoryHistory') as { path: string; date: number }[];
-            const map = new Map<string, Date>();
-            s?.forEach((e) => map.set(e.path, new Date(e.date)));
-            this._repositoryHistory = map;
-        }
-        return this._repositoryHistory;
+        return new Map<string, Date>();
+        // if (!this._repositoryHistory) {
+        //     const s = settings.getSync('repositoryHistory') as { path: string; date: number }[];
+        //     const map = new Map<string, Date>();
+        //     s?.forEach((e) => map.set(e.path, new Date(e.date)));
+        //     this._repositoryHistory = map;
+        // }
+        // return this._repositoryHistory;
     }
     set repositoryHistory(history: Map<string, Date>) {
-        settings.setSync(
-            'repositoryHistory',
-            Array.from(history.entries()).map(([path, date]) => ({
-                path,
-                date: date.getTime(),
-            }))
-        );
+        // settings.setSync(
+        //     'repositoryHistory',
+        //     Array.from(history.entries()).map(([path, date]) => ({
+        //         path,
+        //         date: date.getTime(),
+        //     }))
+        // );
     }
 
     updateHistory(path: string) {
@@ -86,11 +85,12 @@ class SettingsImpl implements ISettings {
     }
 
     get theme(): string {
-        return (settings.getSync('theme') as string) ?? darkTheme.name;
+        return darkTheme.name;
+        // return (settings.getSync('theme') as string) ?? darkTheme.name;
     }
 
     set theme(theme: string) {
-        settings.setSync('theme', theme);
+        // settings.setSync('theme', theme);
     }
 }
 
@@ -104,15 +104,16 @@ export function appSettings(): ISettings {
 let _appSettings: ISettings | undefined = undefined;
 
 export function startAppSettingsStorage(): void {
-    tabsStore.subscribe(
-        (tabs: string[] | null) => (appSettings().openTabs = tabs ?? []),
-        (s) => allActivePaths(s)
-    );
-    themeStore.subscribe(
-        (theme: string | null) => {
-            Logger().debug('appSettingsStorage', 'Syncing new theme to settings', { theme });
-            appSettings().theme = theme ?? darkTheme.name;
-        },
-        (s) => s.current.name
-    );
+    // TODO
+    // tabsStore.subscribe(
+    //     (tabs: string[] | null) => (appSettings().openTabs = tabs ?? []),
+    //     (s) => allActivePaths(s)
+    // );
+    // themeStore.subscribe(
+    //     (theme: string | null) => {
+    //         Logger().debug('appSettingsStorage', 'Syncing new theme to settings', { theme });
+    //         appSettings().theme = theme ?? darkTheme.name;
+    //     },
+    //     (s) => s.current.name
+    // );
 }

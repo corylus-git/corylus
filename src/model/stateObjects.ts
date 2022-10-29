@@ -1,10 +1,3 @@
-import * as rxjs from 'rxjs';
-import { SimpleGitBackend, GitBackend } from '../util/GitBackend';
-import { createContext, useContext } from 'react';
-import { pluck, switchMap } from 'rxjs/operators';
-import { useObservableState, useObservable } from 'observable-hooks';
-import { Observable, ObservedValueOf } from 'rxjs';
-import { IGitConfig } from './IGitConfig';
 import { Maybe } from '../util/maybe';
 
 /**
@@ -41,7 +34,7 @@ export interface BranchInfo {
     /**
      * The ref name of the branch
      */
-    ref: string;
+    refName: string;
     /**
      * The OID of the current HEAD of that branch
      */
@@ -122,7 +115,7 @@ export interface Person {
 }
 
 export interface GitPerson extends Person {
-    readonly timestamp: Date;
+    readonly timestamp: { utc_seconds: number, offset_seconds: number };
 }
 
 /**
@@ -148,7 +141,7 @@ export interface Stash {
     type: 'stash';
     readonly ref: string;
     readonly oid: string;
-    readonly short_oid: string;
+    readonly shortOid: string;
     readonly message: string;
     readonly parents: ParentReference[];
     readonly author: GitPerson;
@@ -160,7 +153,7 @@ export interface Stash {
 export interface FullCommit {
     type: 'commit';
     readonly oid: string;
-    readonly short_oid: string;
+    readonly shortOid: string;
     readonly message: string;
     readonly parents: ParentReference[];
     readonly author: GitPerson;
@@ -223,7 +216,11 @@ export interface FileStats {
 /**
  * Statistics of a specific entry in a diff (as output by git show --stat)
  */
-export interface DiffStat extends FileStats {
+export interface DiffStat {
+    /**
+     * Details about the file this refers to
+     */
+    file: FileStats;
     /**
      * The source of the difference (i.e. named source like index or untracked for stashes or specific parent for merge commits)
      */
