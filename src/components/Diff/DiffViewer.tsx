@@ -25,7 +25,7 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
         case 'delete':
             className = `diff-${props.line.type}`;
             break;
-        case 'pseudo-context':
+        case 'pseudoContext':
             className = 'pseudo-context';
             break;
         case 'timeout':

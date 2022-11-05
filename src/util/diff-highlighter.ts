@@ -12,7 +12,7 @@ export function calculateHighlightAreas(chunk: DiffChunk): Highlights[] {
     for (const line of chunk.lines) {
         switch (line.type) {
             case 'context':
-            case 'pseudo-context':
+            case 'pseudoContext':
             case 'timeout':
                 if (currentInserts.length !== 0 || currentDeletes.length !== 0) {
                     ret = [...ret, ...getHighlights(currentInserts, currentDeletes)];

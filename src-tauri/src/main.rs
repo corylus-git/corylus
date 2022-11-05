@@ -14,7 +14,7 @@ use std::sync::Arc;
 use git::{git_open, is_git_dir, AppState};
 use tauri::async_runtime::Mutex;
 
-use crate::git::get_commit_stats;
+use crate::git::{get_commit_stats, get_diff};
 
 // #[cfg(not(test))]
 fn main() {
@@ -22,7 +22,7 @@ fn main() {
         .manage(AppState {
             backend: Arc::new(Mutex::new(None))
         })
-        .invoke_handler(tauri::generate_handler![is_git_dir, git_open, get_commit_stats])
+        .invoke_handler(tauri::generate_handler![is_git_dir, git_open, get_commit_stats, get_diff])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

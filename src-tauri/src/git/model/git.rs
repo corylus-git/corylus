@@ -154,6 +154,178 @@ pub struct GitCommitStats {
      * The incoming changes, i.e. the changes between a merge commit and its first parent
      * Only valid filled for merge commits
      */
-    pub incoming: Vec<DiffStat>
+    pub incoming: Vec<DiffStat>,
+}
 
+/**
+ * struct representing the diff of a single file
+ */
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct FileDiff {
+    /**
+     * The diff header for this file
+     */
+    pub header: Vec<String>,
+
+    /**
+     * The old name of the file
+     */
+    pub old_name: String,
+    /**
+     * The new name of the file. Might be identical to the old name
+     */
+    pub new_name: String,
+
+    /**
+     * The chunks contained in this file
+     */
+    pub chunks: Vec<DiffChunk>,
+}
+
+/**
+ * struct representing a chunk in a diff
+ */
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffChunk {
+    /**
+     * The chunk header as present in the input
+     */
+    pub header: String,
+
+    /**
+     * The lines, as present in the input
+     */
+    pub lines: Vec<DiffLine>,
+}
+
+impl TryFrom<git2::DiffHunk<'_>> for DiffChunk {
+    type Error = String;
+    fn try_from(hunk: git2::DiffHunk) -> Result<Self, Self::Error> {
+        Ok(Self {
+            header: String::from_utf8_lossy(hunk.header()).to_string().split("\n").collect(),
+            lines: vec![],
+        })
+    }
+}
+/**
+ * An individual line in the diff
+ */
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DiffLineData {
+    /**
+     * The content of the line _including_ the type marker at the start
+     */
+    pub content: String,
+
+    /**
+     * The number of this line in the old version of the file
+     */
+    pub old_number: Option<u32>,
+
+    /**
+     * The number of this line in the new version of the file
+     */
+    pub new_number: Option<u32>,
+}
+
+impl TryFrom<git2::DiffLine<'_>> for DiffLineData {
+    type Error = String;
+    fn try_from(diff_line: git2::DiffLine) -> Result<Self, Self::Error> {
+        Ok(DiffLineData {
+            content: String::from_utf8_lossy(diff_line.content()).into_owned(),
+            old_number: diff_line.old_lineno(),
+            new_number: diff_line.new_lineno(),
+        })
+    }
+}
+
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum DiffLine {
+    Insert(DiffLineData),
+    Delete(DiffLineData),
+    Context(DiffLineData),
+    PseudoContext(DiffLineData),
+    Timeout(DiffLineData),
+}
+
+impl TryFrom<git2::DiffLine<'_>> for DiffLine {
+    type Error = String;
+    fn try_from(diff_line: git2::DiffLine) -> Result<Self, Self::Error> {
+        Ok(match diff_line.origin_value() {
+            git2::DiffLineType::Context => Self::Context(diff_line.try_into()?),
+            git2::DiffLineType::Addition => Self::Insert(diff_line.try_into()?),
+            git2::DiffLineType::Deletion => Self::Delete(diff_line.try_into()?),
+            git2::DiffLineType::ContextEOFNL => Self::PseudoContext(diff_line.try_into()?),
+            git2::DiffLineType::AddEOFNL => Self::PseudoContext(diff_line.try_into()?),
+            git2::DiffLineType::DeleteEOFNL => Self::PseudoContext(diff_line.try_into()?),
+            _ => Self::PseudoContext(diff_line.try_into()?), // TODO not really correct, but then again the remaining values should not occur anyway
+        })
+    }
+}
+
+/**
+ * Wrapper type used in the From implementation
+ */
+pub struct Diff(pub Vec<FileDiff>);
+
+impl TryFrom<git2::Diff<'_>> for Diff {
+    type Error = String; // TODO more structured error?
+
+    fn try_from(diff: git2::Diff) -> Result<Self, Self::Error> {
+        let mut diffs = vec![];
+        diff.print(git2::DiffFormat::Patch, |delta, hunk, line| {
+            handle_line(delta, hunk, line, &mut diffs)
+        })
+        .and_then(|_| Ok(Diff(diffs)))
+        .or_else(|e| Err(e.message().to_owned()))
+    }
+}
+
+fn handle_line(
+    _: git2::DiffDelta<'_>,
+    _: Option<git2::DiffHunk>,
+    line: git2::DiffLine<'_>,
+    diffs: &mut Vec<FileDiff>,
+) -> bool {
+    match line.origin_value() {
+        git2::DiffLineType::FileHeader => {
+            diffs.push(FileDiff {
+                header: String::from_utf8_lossy(line.content())
+                    .split("\n")
+                    .map(|s| s.to_owned())
+                    .collect(),
+                old_name: "old".to_owned(), // TODO extract the value from the header
+                new_name: "new".to_owned(), // TODO extract the value from the header
+                chunks: vec![],
+            });
+            true
+        }
+        git2::DiffLineType::HunkHeader => diffs
+            .last_mut()
+            .and_then(|diff| {
+                diff.chunks.push(DiffChunk {
+                    header: String::from_utf8_lossy(line.content())
+                        .split("\n")
+                        .map(|s| s.to_owned())
+                        .collect(),
+                    lines: vec![],
+                });
+                Some(true)
+            })
+            .unwrap_or(false),
+        git2::DiffLineType::Binary => false,
+        _ => push_line(line, diffs)
+    }
+}
+
+fn push_line(line: git2::DiffLine<'_>, diffs: &mut Vec<FileDiff>) -> bool {
+    diffs.last_mut().and_then(|diff| diff.chunks.last_mut()).and_then(|chunk| {
+        chunk.lines.push(line.try_into().ok()?);
+        Some(true)
+    })
+    .unwrap_or(false)
 }

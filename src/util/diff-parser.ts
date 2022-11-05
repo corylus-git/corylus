@@ -47,7 +47,7 @@ export interface DiffLine {
      * The type of line this represents: an inserted line, a deleted one, an unmodified context line or a piece of pseudo-context,
      * i.e. a line that's just in the diff line "\ No newline at end of file"
      */
-    type: 'insert' | 'delete' | 'context' | 'pseudo-context' | 'timeout';
+    type: 'insert' | 'delete' | 'context' | 'pseudoContext' | 'timeout';
 
     /**
      * The content of the line _including_ the type marker at the start
@@ -208,6 +208,6 @@ function getLineType(marker: string): DiffLine['type'] {
         case ' ':
             return 'context';
         default:
-            return 'pseudo-context';
+            return 'pseudoContext';
     }
 }

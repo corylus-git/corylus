@@ -183,6 +183,84 @@ impl GitBackend {
             // TODO log
         };
     }
+
+    fn load_diff(
+        &self,
+        commit_id: Option<&str>,
+        to_parent: Option<&str>,
+        pathspec: &[Option<&str>],
+    ) -> Result<git2::Diff, String> {
+        let oid = commit_id
+            .map(|id| Oid::from_str(id).or_else(|e| Err(e.message().to_owned())))
+            .transpose()?;
+        let commit_tree = oid
+            .map(|coid| {
+                self.repo
+                    .find_commit(coid)
+                    .and_then(|c| c.tree())
+                    .or_else(|e| Err(e.message().to_owned()))
+            })
+            .transpose()?;
+        let parent_commit_oid = to_parent
+            .map(|id| Oid::from_str(id).or_else(|e| Err(e.message().to_owned())))
+            .transpose()?;
+        let parent_commit_tree = parent_commit_oid
+            .map(|pid| {
+                self.repo
+                    .find_commit(pid)
+                    .and_then(|c| c.tree())
+                    .or_else(|e| Err(e.message().to_owned()))
+            })
+            .transpose()?;
+        let mut diff_opts = DiffOptions::new();
+        diff_opts.patience(true);
+        pathspec.iter().for_each(|&ps| {
+            if let Some(p) = ps {
+                diff_opts.pathspec(p);
+            }
+        });
+        self.repo
+            .diff_tree_to_tree(
+                parent_commit_tree.as_ref(),
+                commit_tree.as_ref(),
+                Some(&mut diff_opts),
+            )
+            .or_else(|e| Err(e.message().to_owned()))
+    }
+
+    pub fn get_diff(
+        &self,
+        source: &DiffSourceType,
+        commit_id: Option<&str>,
+        to_parent: Option<&str>,
+        path: Option<&str>,
+        untracked: bool,
+    ) -> Result<Vec<FileDiff>, String> {
+        match source {
+            Commit => {
+                let parent = to_parent.map(|p| p.to_owned()).or_else(|| {
+                    if source == &DiffSourceType::Commit {
+                        commit_id
+                            .map(|id| {
+                                Oid::from_str(id)
+                                    .and_then(|oid| self.repo.find_commit(oid))
+                                    .and_then(|commit| commit.parent_id(0))
+                                    .and_then(|oid| Ok(oid.to_string()))
+                                    .ok()
+                            })
+                            .flatten()
+                    } else {
+                        None
+                    }
+                });
+                self.load_diff(commit_id, parent.as_deref(), &[path])
+                    .and_then(|diff| Diff::try_from(diff))
+                    .and_then(|diff| Ok(diff.0))
+                    .or_else(|e| Err(e))
+            }
+            _ => Err("Unknown type".to_owned()),
+        }
+    }
 }
 
 fn split_branch_name(
@@ -287,4 +365,36 @@ pub async fn get_commit_stats(
         .as_mut()
         .map(|s| s.load_commit_stats(window, oid));
     Ok(())
+}
+
+#[derive(Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum DiffSourceType {
+    Workdir,
+    Index,
+    Commit,
+    Stash,
+}
+
+#[tauri::command]
+pub async fn get_diff(
+    state: StateType<'_>,
+    source: DiffSourceType,
+    commit_id: Option<&str>,
+    to_parent: Option<&str>,
+    path: Option<&str>,
+    untracked: Option<bool>,
+) -> Result<Vec<FileDiff>, String> {
+    let backend_guard = state.backend.lock().await;
+    if let Some(backend) = (*backend_guard).as_ref() {
+        backend.get_diff(
+            &source,
+            commit_id,
+            to_parent,
+            path,
+            untracked.unwrap_or(false),
+        )
+    } else {
+        Err("Cannot load diff without open git repo".to_owned())
+    }
 }

@@ -17,6 +17,7 @@ import { uiStore } from '../state/uiState';
 import { IGitConfig } from '../IGitConfig';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from '../../util/configVariables';
 import { invoke } from '@tauri-apps/api/tauri';
+import { FileDiff } from '../../util/diff-parser';
 
 export const commit = trackError(
     'commit',
@@ -633,4 +634,31 @@ export function selectCommit(ref: CommitStats | string | Commit) {
 function requestAffectedCommits(oid: string, branches: boolean, tags: boolean) {
     Logger().debug('requestAffectedCommits', 'Requesting affected commits', {oid, branches, tags});
     invoke('get_affected_commits', { oid, branches, tags });
+}
+
+export function getDiff(options: {
+    /**
+     * From where to load the diff: from the workdir to the index, the index to the last commit or the change in the given commit
+     */
+    source: 'workdir' | 'index' | 'commit' | 'stash';
+    /**
+     * The ID of the commit for which to load the diff. Only valid for source=commit
+     */
+    commitId?: string;
+    /**
+     * ID of the commit to diff to. This will retrieve the diff in toParent..commitId
+     */
+    toParent?: string;
+    /**
+     * The path of the file from the commit for which to load the diff. If this is undefined, the whole
+     *  source diff
+     */
+    path?: string;
+    /**
+     * Indicate whether the file to be loaded is untracked. Only relevant for stashed untracked files
+     */
+    untracked?: boolean;
+}): Promise<FileDiff[]>
+{
+    return invoke('get_diff', options);
 }
