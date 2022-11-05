@@ -17,7 +17,7 @@ export const TextFileDiff: React.FC<TextFileDiffProps> = (props) => {
             commitId: props.commit,
             toParent: props.toParent,
             path: props.diff.file.path,
-            untracked: props.diff.file.status === 'untracked',
+            untracked: props.diff.file.status === 'untracked'
         })
     );
     if (isLoading) {
