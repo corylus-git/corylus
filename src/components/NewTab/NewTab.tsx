@@ -110,20 +110,20 @@ function FunctionPanel(props: { onClone?: () => void }) {
         <FunctionPanelView>
             <RepoActionButton onClick={() => initRepo(tabs)}>
                 <div>
-                    <InitIcon viewBox="0 0 24 24" height="3rem" width="3rem" />
+                    <InitIcon viewBox="0 0 24 24" style={{ height: "3rem",  width: "3rem"}} />
                     <span>Init new local repository</span>
                 </div>
             </RepoActionButton>
             <RepoActionButton
                 onClick={() => openRepo(tabs)}>
                 <div>
-                    <OpenIcon viewBox="0 0 24 24" height="3rem" width="3rem" />
+                    <OpenIcon viewBox="0 0 24 24" style={{ height: "3rem", width: "3rem" }} />
                     <span>Open local repository</span>
                 </div>
             </RepoActionButton>
             <RepoActionButton onClick={props.onClone}>
                 <div>
-                    <CloneIcon viewBox="0 0 24 24" height="3rem" width="3rem" />
+                    <CloneIcon viewBox="0 0 24 24" style={{ height: "3rem", width: "3rem" }} />
                     <span>Clone remote repository</span>
                 </div>
             </RepoActionButton>

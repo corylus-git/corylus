@@ -14,7 +14,7 @@ export const GraphNode: React.FC<{
         <svg
             transform={props.reverse ? 'scale(1, -1)' : undefined}
             viewBox={`0 0 ${x(props.rails.length + 1)} 50`}
-            height="3rem">
+            style={{ height: "3em"}}>
             {!!props.outgoing && (
                 // TODO draw more than one merge line
                 <BranchMergeLine sourceRail={props.outgoing[0]} targetRail={props.rail} />
