@@ -7,7 +7,6 @@ import '../../style/app.css';
 import { ArrowRight } from '../icons/ArrowRight';
 import { ArrowDown } from '../icons/ArrowDown';
 import { FileStatus } from '../shared/FileStatus';
-import { useSelectedCommit } from '../../model/state/repo';
 import { ImageDiff } from './ImageDiff';
 import { TextFileDiff } from './TextFileDiff';
 import { isSupportedImageType } from '../../util/filetypes';
@@ -155,20 +154,21 @@ export type CommitDetailsViewProps = {
 
 export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
     const { stats } = props
+
     if (stats.found) {
         return (
             <div
-                style={{
-                    height: '100%',
-                    overflow: 'auto',
-                }}>
+            style={{
+                height: '100%',
+                overflow: 'auto',
+            }}>
                 <CommitHeader commit={stats.value.commit} />
                 {stats.value.incoming.found && stats.value.direct.length > 0 && <h2>Conflicts</h2>}
                 <DiffView
                     commit={stats.value.commit.oid}
                     diffs={stats.value.direct}
                     source={stats.value.commit.type}
-                />
+                    />
                 {stats.value.incoming.found && (
                     <>
                         <h2>Incoming</h2>

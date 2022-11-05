@@ -1,20 +1,18 @@
 pub mod graph;
 mod model;
 
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
-use git2::{Delta, DiffDelta, DiffFile, DiffOptions, Oid, Patch, Repository, Sort, Status};
-use tauri::{
-    async_runtime::{spawn, Mutex},
-    Window,
-};
+use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort, Status};
+use serde::{Deserialize, Serialize};
+use tauri::{async_runtime::Mutex, Window};
 
 use self::{
     graph::calculate_graph_layout,
     model::{
         git::{
-            Commit, DiffStat, DiffStatus, FileStats, FullCommitData, GitCommitStats, GitPerson,
-            ParentReference, TimeWithOffset,
+            Commit, Diff, DiffStat, DiffStatus, FileDiff, FileStats, FullCommitData,
+            GitCommitStats, GitPerson, ParentReference, TimeWithOffset,
         },
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
         BranchInfo,
@@ -138,7 +136,7 @@ impl GitBackend {
                                     .unwrap_or((0, 0, 0));
                                 DiffStat {
                                     file: FileStats {
-                                        status: map_diff_status(&delta.status()),
+                                        status: DiffStatus::from(delta.status()),
                                         path: delta
                                             .new_file()
                                             .path()
@@ -207,7 +205,7 @@ fn split_branch_name(
 
 fn map_commit(commit: &git2::Commit) -> Commit {
     // TODO this ignores too many errors
-    Commit::FullCommit(FullCommitData {
+    Commit::Commit(FullCommitData {
         oid: commit.as_object().id().to_string(),
         short_oid: commit
             .as_object()
@@ -248,19 +246,6 @@ fn map_commit(commit: &git2::Commit) -> Commit {
             },
         },
     })
-}
-
-fn map_diff_status(delta: &Delta) -> DiffStatus {
-    match delta {
-        Delta::Added => DiffStatus::Added,
-        Delta::Deleted => DiffStatus::Deleted,
-        Delta::Modified => DiffStatus::Modified,
-        Delta::Unmodified => DiffStatus::Unmodified,
-        Delta::Renamed => DiffStatus::Renamed,
-        Delta::Conflicted => DiffStatus::Conflict,
-        Delta::Untracked => DiffStatus::Untracked,
-        _ => DiffStatus::Unknown,
-    }
 }
 
 #[tauri::command]

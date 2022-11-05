@@ -4,25 +4,25 @@ use serde::Serialize;
  * A reference to a parent with short and full OID
  */
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct ParentReference {
     pub oid: String,
-    pub short_oid: String
+    pub short_oid: String,
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct TimeWithOffset {
-    pub utc_seconds: i64, 
-    pub offset_seconds: i32
+    pub utc_seconds: i64,
+    pub offset_seconds: i32,
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GitPerson {
     pub name: String,
     pub email: String,
-    pub timestamp: TimeWithOffset
+    pub timestamp: TimeWithOffset,
 }
 
 pub trait GraphNodeData {
@@ -34,14 +34,14 @@ pub trait GraphNodeData {
  * Detailed information about a commit
  */
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct FullCommitData {
     pub oid: String,
     pub short_oid: String,
     pub message: String,
     pub parents: Vec<ParentReference>,
     pub author: GitPerson,
-    pub committer: GitPerson
+    pub committer: GitPerson,
 }
 
 impl GraphNodeData for FullCommitData {
@@ -55,21 +55,21 @@ impl GraphNodeData for FullCommitData {
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum Commit {
-    FullCommit(FullCommitData),
+    Commit(FullCommitData),
 }
 
 impl Commit {
     pub fn as_graph_node(&self) -> &dyn GraphNodeData {
         match self {
-            Commit::FullCommit(data) => data
+            Commit::Commit(data) => data,
         }
     }
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub enum DiffStatus {
     Added,
     Modified,
@@ -78,11 +78,26 @@ pub enum DiffStatus {
     Conflict,
     Unknown,
     Unmodified,
-    Untracked
+    Untracked,
+}
+
+impl From<git2::Delta> for DiffStatus {
+    fn from(delta: git2::Delta) -> Self {
+        match delta {
+            git2::Delta::Added => DiffStatus::Added,
+            git2::Delta::Deleted => DiffStatus::Deleted,
+            git2::Delta::Modified => DiffStatus::Modified,
+            git2::Delta::Unmodified => DiffStatus::Unmodified,
+            git2::Delta::Renamed => DiffStatus::Renamed,
+            git2::Delta::Conflicted => DiffStatus::Conflict,
+            git2::Delta::Untracked => DiffStatus::Untracked,
+            _ => DiffStatus::Unknown,
+        }
+    }
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct FileStats {
     /**
      * the status of the file in this commit
@@ -91,14 +106,14 @@ pub struct FileStats {
     /**
      * The path of the object these stats apply to
      */
-    pub path: Option<String>
+    pub path: Option<String>,
 }
 
 /**
  * Statistics of a specific entry in a diff (as output by git show --stat)
  */
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct DiffStat {
     /**
      * The file this diff stat refers to
@@ -119,11 +134,11 @@ pub struct DiffStat {
     /**
      * The number of deleted lines
      */
-    pub deletions: usize
+    pub deletions: usize,
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct GitCommitStats {
     /**
      * The commit these stats belong to

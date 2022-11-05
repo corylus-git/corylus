@@ -119,7 +119,7 @@ mod tests {
     use super::*;
 
     fn make_commit(oid: &str, parents: Vec<&Commit>) -> Commit {
-        Commit::FullCommit(FullCommitData {
+        Commit::Commit(FullCommitData {
             oid: oid.to_owned(),
             short_oid: oid[0..1].to_owned(),
             message: oid.to_owned(),
