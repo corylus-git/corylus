@@ -124,10 +124,6 @@ export type RepoActions = {
     historyLoader: any;
 };
 
-// // Turn the set method into an immer proxy
-// const immer: Middleware<RepoState & RepoActions> = (config) => (set, get, api) =>
-//     config((fn: any) => set(produce(fn)), get, api);
-
 export const repoStore = create<RepoState & RepoActions>()(
         immer((set, get) => ({
             active: false,
@@ -271,6 +267,7 @@ export const repoStore = create<RepoState & RepoActions>()(
                 });
             },
             getStatus: async (): Promise<void> => {
+                invoke('get_status');
                 // const status = await get().backend.getStatus();
                 // const rebaseStatus = await get().backend.getRebaseStatus();
                 // set((state) => {

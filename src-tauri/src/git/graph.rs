@@ -81,10 +81,6 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
             // 6. place all other parents on rails as needed
             if graph_node.parents().len() > 1 {
                 outgoing.iter().zip(graph_node.parents()[1..].iter()).for_each(|(&idx, p)| { rails[idx] = Some(p.oid.clone()) });
-            //     for node in graph_node.parents() {
-            //         let (my_rail, _) = find_first_available_rail(&mut rails, &node.oid, None);
-            //         rails[my_rail] = Some(node.oid.clone());
-            //     }
             };
             // 7. clear all rails requesting us as parent
             rails = rails

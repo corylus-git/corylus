@@ -1,9 +1,10 @@
 pub mod graph;
+pub mod index;
 mod model;
 
 use std::sync::Arc;
 
-use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort, Status};
+use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort};
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
 
@@ -15,6 +16,7 @@ use self::{
             GitCommitStats, GitPerson, ParentReference, TimeWithOffset,
         },
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
+        index::IndexStatus,
         BranchInfo,
     },
 };
@@ -260,6 +262,26 @@ impl GitBackend {
             }
             _ => Err("Unknown type".to_owned()),
         }
+    }
+
+    pub fn get_status(&self) -> Result<Vec<IndexStatus>, String> {
+        let statuses = self
+            .repo
+            .statuses(None)
+            .map_err(|e| e.message().to_string())?;
+
+        let mut output = Vec::new();
+        output.reserve_exact(statuses.len());
+        for status in statuses.iter() {
+            let mapped = IndexStatus::try_from(status);
+            if let Ok(is) = mapped {
+                output.push(is);
+            }
+            else {
+                return Err(mapped.unwrap_err())
+            }
+        };
+        Ok(output)
     }
 }
 

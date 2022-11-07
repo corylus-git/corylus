@@ -1,5 +1,6 @@
 pub mod graph;
 pub mod git;
+pub mod index;
 
 /**
  * Information about a single branch

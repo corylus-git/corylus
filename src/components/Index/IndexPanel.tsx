@@ -22,6 +22,8 @@ import {
 import { useStagingArea } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../util/filetypes';
+import { useQuery } from 'react-query';
+import { invoke } from '@tauri-apps/api';
 
 let splitterX: string | undefined = undefined;
 
@@ -78,6 +80,9 @@ export const IndexPanel: React.FC = () => {
     const index = useStatus();
     Logger().debug('IndexPanel', 'Received new index status', { index: index });
 
+    const { data } = useQuery("test", () => invoke<IndexStatus[]>('get_status'));
+    console.log("Data", data);
+
     function showDiff(file: IndexStatus, source: 'workdir' | 'index') {
         stagingArea.deselectConflictedFile();
         stagingArea.loadDiff(source, file.path);
@@ -92,8 +97,8 @@ export const IndexPanel: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateRows: '1fr 10rem', marginLeft: '5px' }}>
             <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
                 <StagingArea
-                    workdir={index.filter((s) => s.workdirStatus !== 'unmodified')}
-                    staged={index.filter(
+                    workdir={(data ?? []).filter((s) => s.workdirStatus !== 'unmodified')}
+                    staged={(data ??[]).filter(
                         (s) =>
                             s.indexStatus !== 'untracked' &&
                             s.indexStatus !== 'unmodified' &&
