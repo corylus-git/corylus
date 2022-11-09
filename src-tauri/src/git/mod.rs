@@ -269,15 +269,16 @@ impl GitBackend {
             .repo
             .statuses(None)
             .map_err(|e| e.message().to_string())?;
-
+        
         let mut output = Vec::new();
-        output.reserve_exact(statuses.len());
         for status in statuses.iter() {
-            let mapped = IndexStatus::try_from(status);
-            if let Ok(is) = mapped {
-                output.push(is);
-            } else {
-                return Err(mapped.unwrap_err());
+            if !status.status().is_ignored() {
+                let mapped = IndexStatus::try_from(status);
+                if let Ok(is) = mapped {
+                    output.push(is);
+                } else {
+                    return Err(mapped.unwrap_err());
+                }
             }
         }
         Ok(output)
