@@ -18,8 +18,9 @@ import { Logger } from '../util/logger';
 import { push } from '../model/actions/repo';
 import { nothing, just, fromNullable } from '../util/maybe';
 import { useDialog } from '../model/state/dialogs';
-import { useBranches, useCurrentBranch, useStatus } from '../model/state/repo';
+import { useBranches, useCurrentBranch } from '../model/state/repo';
 import { useWorkflows } from '../model/state/workflows';
+import { useIndex } from '../model/state';
 
 const ActionButton = styled.button<{ active?: boolean } & React.HTMLProps<HTMLButtonElement>>`
     ${Hoverable}
@@ -106,9 +107,9 @@ const ModificationIcon = styled.div`
 `;
 
 function ModifificationCounter() {
-    const status = useStatus();
-    Logger().debug('ModificationCounter', 'Status', { status: status });
-    return status.length !== 0 ? <ModificationIcon>{status.length}</ModificationIcon> : <></>;
+    const index = useIndex();
+    Logger().debug('ModificationCounter', 'Status', { status: index.status });
+    return index.status.length !== 0 ? <ModificationIcon>{index.status.length}</ModificationIcon> : <></>;
 }
 
 const BranchButtonContainer = styled.div`
@@ -174,7 +175,7 @@ export const Actions: React.FC = () => {
                     if (currentBranch.found) {
                         dialog.open({
                             type: 'request-merge',
-                            source: just(currentBranch.value.ref),
+                            source: just(currentBranch.value.refName),
                         });
                     }
                 }}

@@ -18,6 +18,7 @@ import { IGitConfig } from '../IGitConfig';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from '../../util/configVariables';
 import { invoke } from '@tauri-apps/api/tauri';
 import { FileDiff } from '../../util/diff-parser';
+import { indexStore } from '../state';
 
 export const commit = trackError(
     'commit',
@@ -28,7 +29,7 @@ export const commit = trackError(
         Logger().debug('commit', 'Success');
         repoStore.getState().loadHistory();
         // repoStore.getState().loadBranches();
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -36,8 +37,8 @@ export const changeBranch = trackError(
     'change branch',
     'changeBranch',
     async (ref: string, ignoreChanges = false, autoStashConfirmed = false): Promise<void> => {
-        await repoStore.getState().getStatus();
-        if (repoStore.getState().status.length !== 0 && !ignoreChanges) {
+        // await repoStore.getState().getStatus();
+        if (indexStore.getState().status.length !== 0 && !ignoreChanges) {
             if (!autoStashConfirmed) {
                 dialogStore.getState().open({ type: 'auto-stash', target: ref });
             } else {
@@ -192,7 +193,7 @@ export const merge = async (from: string, noFF: boolean): Promise<void> => {
         // }
         throw e;
     } finally {
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 };
 
@@ -204,7 +205,7 @@ export const abortMerge = trackError(
         stagingArea.getState().deselectConflictedFile();
         stagingArea.getState().deselectDiff();
         toast('Merge aborted', { type: 'success' });
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -219,7 +220,7 @@ export const resetBranch = trackError(
         });
         await repoStore.getState().backend.reset(branch, toRef, mode);
         // repoStore.getState().loadBranches();
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
         Logger().debug('resetBranch', 'Reset finished');
     }
 );
@@ -282,39 +283,39 @@ export const init = trackError(
     }
 );
 
-export const stage = trackError(
-    'stage changes',
-    'stage',
-    async (path: IndexTreeNode): Promise<void> => {
-        Logger().debug('stage', `Attempting to stage changes for ${path.path}.`, {
-            path: path,
-        });
-        if (path.workdirStatus === 'deleted') {
-            await repoStore.getState().backend.removePath(path.path, true);
-            Logger().debug('stage', 'Successfully staged file deletion');
-            repoStore.getState().getStatus();
-        } else {
-            await repoStore.getState().lock.acquire('git', async () => {
-                await repoStore.getState().backend.addPath(path.path);
-                Logger().debug('stage', 'Successfully staged change');
-            });
-            repoStore.getState().getStatus();
-        }
-    }
-);
+// export const stage = trackError(
+//     'stage changes',
+//     'stage',
+//     async (path: IndexTreeNode): Promise<void> => {
+//         Logger().debug('stage', `Attempting to stage changes for ${path.path}.`, {
+//             path: path,
+//         });
+//         if (path.workdirStatus === 'deleted') {
+//             await repoStore.getState().backend.removePath(path.path, true);
+//             Logger().debug('stage', 'Successfully staged file deletion');
+//             indexStore.getState().getStatus();
+//         } else {
+//             await repoStore.getState().lock.acquire('git', async () => {
+//                 await repoStore.getState().backend.addPath(path.path);
+//                 Logger().debug('stage', 'Successfully staged change');
+//             });
+//             indexStore.getState().getStatus();
+//         }
+//     }
+// );
 
-export const unstage = trackError(
-    'unstage changes',
-    'unstange',
-    async (path: IndexTreeNode): Promise<void> => {
-        Logger().debug('unstage', `Trying to unstage changes for ${path.path}`, {
-            path: path,
-        });
-        await repoStore.getState().backend.resetPath(path.path);
-        Logger().debug('unstage', 'Successfully unstaged change');
-        repoStore.getState().getStatus();
-    }
-);
+// export const unstage = trackError(
+//     'unstage changes',
+//     'unstange',
+//     async (path: IndexTreeNode): Promise<void> => {
+//         Logger().debug('unstage', `Trying to unstage changes for ${path.path}`, {
+//             path: path,
+//         });
+//         await repoStore.getState().backend.resetPath(path.path);
+//         Logger().debug('unstage', 'Successfully unstaged change');
+//         repoStore.getState().getStatus();
+//     }
+// );
 
 export const addDiff = trackError(
     'add partial diff to index',
@@ -327,7 +328,7 @@ export const addDiff = trackError(
     ): Promise<void> => {
         try {
             await repoStore.getState().backend.applyDiff(diff, revert, false);
-            repoStore.getState().getStatus();
+            // repoStore.getState().getStatus();
             const result = await repoStore
                 .getState()
                 .backend.getDiff({ source: source, path: path });
@@ -360,7 +361,7 @@ export const stash = trackError(
             await repoStore.getState().backend.stash(message, untracked);
             Logger().debug('stash', 'Success');
             await repoStore.getState().loadStashes();
-            repoStore.getState().getStatus();
+            // repoStore.getState().getStatus();
         } catch (e) {
             if (e instanceof Error)
             {
@@ -382,7 +383,7 @@ export const applyStash = trackError(
         await repoStore.getState().backend.applyStash(stash, deleteAfterApply);
         Logger().debug('applyStash', 'Success');
         await repoStore.getState().loadStashes();
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -396,7 +397,7 @@ export const dropStash = trackError(
         await repoStore.getState().backend.dropStash(stash);
         Logger().debug('dropStash', 'Success');
         await repoStore.getState().loadStashes();
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -436,7 +437,7 @@ export const resolveConflict = trackError(
         });
         await repoStore.getState().backend.resolveConflict(conflictedPath, resolution);
         Logger().silly('resolveConflict', 'Success');
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -451,7 +452,7 @@ export const saveManualMerge = trackError(
         // TODO
         // fs.writeFileSync(await join(repoStore.getState().backend.dir, filePath), code);
         await repoStore.getState().backend.addPath(filePath);
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
         Logger().debug('saveManualMerge', 'Success');
     }
 );
@@ -471,7 +472,7 @@ export const discardChanges = trackError(
                 // fs.unlinkSync(await join(repoStore.getState().backend.dir, node.path));
                 break;
         }
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
         stagingArea.getState().deselectDiff();
     }
 );
@@ -497,7 +498,7 @@ export const discardDiff = trackError(
         Logger().silly('discardDiff', 'Diff is', { diff: diff });
         await repoStore.getState().backend.applyDiff(diff, true, true); // revert this diff in the working copy
         Logger().silly('discardDiff', 'Success.');
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -541,7 +542,7 @@ export const addToGitIgnore = trackError(
         const p = await join(repoStore.getState().backend.dir, '.gitignore');
         // TODO
         // await fs.promises.appendFile(p, `${pattern}\n`);
-        repoStore.getState().getStatus();
+        // repoStore.getState().getStatus();
     }
 );
 
@@ -558,7 +559,7 @@ export const rebase = trackError(
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
-            repoStore.getState().getStatus(),
+            // repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
     }
@@ -574,7 +575,7 @@ export const abortRebase = trackError(
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
-            repoStore.getState().getStatus(),
+            // repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
     }
@@ -590,7 +591,7 @@ export const continueRebase = trackError(
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
             repoStore.getState().loadTags(),
-            repoStore.getState().getStatus(),
+            // repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
     }

@@ -276,11 +276,10 @@ impl GitBackend {
             let mapped = IndexStatus::try_from(status);
             if let Ok(is) = mapped {
                 output.push(is);
+            } else {
+                return Err(mapped.unwrap_err());
             }
-            else {
-                return Err(mapped.unwrap_err())
-            }
-        };
+        }
         Ok(output)
     }
 }

@@ -11,9 +11,8 @@ import { StagingDiffPanel } from './StagingDiffPanel';
 import { ConflictResolutionPanel } from '../Merging/ConflictResolutionPanel';
 import { Logger } from '../../util/logger';
 import { nothing, just, Maybe } from '../../util/maybe';
-import { commit, stage, unstage, addDiff, continueRebase } from '../../model/actions/repo';
+import { commit, addDiff, continueRebase } from '../../model/actions/repo';
 import {
-    useStatus,
     useRepo,
     usePendingCommit,
     repoStore,
@@ -24,6 +23,7 @@ import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../util/filetypes';
 import { useQuery } from 'react-query';
 import { invoke } from '@tauri-apps/api';
+import { useIndex } from '../../model/state';
 
 let splitterX: string | undefined = undefined;
 
@@ -77,11 +77,8 @@ const DiffDisplayPanel: React.FC = () => {
 
 export const IndexPanel: React.FC = () => {
     const stagingArea = useStagingArea();
-    const index = useStatus();
+    const index = useIndex();
     Logger().debug('IndexPanel', 'Received new index status', { index: index });
-
-    const { data } = useQuery("test", () => invoke<IndexStatus[]>('get_status'));
-    console.log("Data", data);
 
     function showDiff(file: IndexStatus, source: 'workdir' | 'index') {
         stagingArea.deselectConflictedFile();
@@ -97,15 +94,15 @@ export const IndexPanel: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateRows: '1fr 10rem', marginLeft: '5px' }}>
             <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
                 <StagingArea
-                    workdir={(data ?? []).filter((s) => s.workdirStatus !== 'unmodified')}
-                    staged={(data ??[]).filter(
+                    workdir={index.status.filter((s) => s.workdirStatus !== 'unmodified')}
+                    staged={index.status.filter(
                         (s) =>
                             s.indexStatus !== 'untracked' &&
                             s.indexStatus !== 'unmodified' &&
                             !s.isConflicted // only show conflicted files in the work directory. They'll have to be sorted out anyway.
                     )}
-                    onStagePath={(path) => stage(path)}
-                    onUnstagePath={(path) => unstage(path)}
+                    onStagePath={(path) => invoke('stage', { path: path.path })}
+                    onUnstagePath={(path) => invoke('unstage', { path: path.path })}
                     onSelectWorkdirEntry={(entry) => {
                         if (!entry.isConflicted) {
                             if (entry.type !== 'dir') {

@@ -74,10 +74,7 @@ export type RepoState = {
      * The tags in this repo
      */
     tags: readonly Tag[];
-    /**
-     * The current state of the index
-     */
-    status: readonly IndexStatus[];
+
     /**
      * The status of the current ongoing rebase, if any
      */
@@ -113,7 +110,6 @@ export type RepoActions = {
     loadTags(): Promise<void>;
     loadStashes(): Promise<void>;
     loadRemotes(): Promise<void>;
-    getStatus(): Promise<void>;
     getConfig(): Promise<void>;
     setSelectedCommit(commit: Maybe<CommitStats>): void;
     selectStash(stash: Stash): Promise<void>;
@@ -180,7 +176,6 @@ export const repoStore = create<RepoState & RepoActions>()(
                     get().loadTags(),
                     get().loadStashes(),
                     get().loadRemotes(),
-                    get().getStatus(),
                     get().getConfig(),
                 ];
                 await Promise.all(loaders);
@@ -266,47 +261,6 @@ export const repoStore = create<RepoState & RepoActions>()(
                     state.remotes = remotes;
                 });
             },
-            getStatus: async (): Promise<void> => {
-                invoke('get_status');
-                // const status = await get().backend.getStatus();
-                // const rebaseStatus = await get().backend.getRebaseStatus();
-                // set((state) => {
-                //     state.status = status;
-                //     state.rebaseStatus = rebaseStatus;
-                // });
-                // // check whether there's a merge currently going on
-                // if (fs.existsSync(path.join(get().backend.dir, '.git', 'MERGE_MODE'))) {
-                //     Logger().debug('getStatus', 'Merge pending. Reading merge info');
-                //     try {
-                //         const pending = {
-                //             message: fs.readFileSync(
-                //                 path.join(get().backend.dir, '.git', 'MERGE_MSG'),
-                //                 'utf8'
-                //             ),
-                //             parents: [
-                //                 fs.readFileSync(
-                //                     path.join(get().backend.dir, '.git', 'ORIG_HEAD'),
-                //                     'utf8'
-                //                 ),
-                //                 fs.readFileSync(
-                //                     path.join(get().backend.dir, '.git', 'MERGE_HEAD'),
-                //                     'utf8'
-                //                 ),
-                //             ],
-                //         };
-                //         Logger().debug('getStatus', 'Read pending merge info', pending);
-                //         set((state) => {
-                //             state.pendingCommit = just(pending);
-                //         });
-                //     } catch (e) {
-                //         Logger().error('getStatus', 'Could not read pending merge info', e);
-                //     }
-                // } else {
-                //     set((state) => {
-                //         state.pendingCommit = nothing;
-                //     });
-                // }
-            },
             getConfig: async (): Promise<void> => {
                 Logger().debug('getConfig', 'Loading repository config');
                 const config = await get().backend.getConfig();
@@ -391,12 +345,6 @@ export const useStashes = (): readonly Stash[] =>
 /**
  * Get the current state of the index
  */
-export const useStatus = (): readonly IndexStatus[] =>
-    useRepo((state: RepoState & RepoActions) => state.status);
-
-/**
- * Get the current state of the index
- */
 export const useConfig = (): IGitConfig =>
     useRepo((state: RepoState & RepoActions) => state.config);
 
@@ -405,16 +353,6 @@ export const useConfig = (): IGitConfig =>
  */
 export const usePendingCommit = (): Maybe<PendingCommit> =>
     useRepo((state: RepoState & RepoActions) => state.pendingCommit);
-
-/**
- * Get the current conflicts in the repository
- *
- * @returns true if there are conflicts, false otherwise
- */
-export const useConflicts = (): boolean =>
-    useRepo(
-        (state: RepoState & RepoActions) => state.status.find((s) => s.isConflicted) !== undefined
-    );
 
 /**
  * get the currently selected commit (e.g. for displaying commit details)

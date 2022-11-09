@@ -2,7 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 import { StyledButton } from '../util/StyledButton';
 import { abortMerge, abortRebase } from '../../model/actions/repo';
-import { useConflicts, useRebaseStatus } from '../../model/state/repo';
+import { useRebaseStatus } from '../../model/state/repo';
+import { useConflicts } from '../../model/state';
 
 const MergeStatusBarContainer = styled.div`
     background: var(--conflict);

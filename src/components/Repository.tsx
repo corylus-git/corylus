@@ -15,7 +15,6 @@ import styled from 'styled-components';
 import { MergeStatusBar } from './Merging/MergeStatusBar';
 import { CheckoutRemoteDialog } from './Dialogs/CheckoutRemote';
 import { PullDialog } from './Dialogs/PullDialog';
-// import { useDirWatcher } from '../workers/dirwatcher';
 import { ConfigurationPanel } from './Configuration/ConfigurationPanel';
 import { ManualMergePanel } from './Merging/ManualMergePanel';
 import { StatusBar } from './StatusBar';
@@ -26,7 +25,7 @@ import { ConfigureGitFlow } from './Dialogs/ConfigureGitFlow';
 import { Logger } from '../util/logger';
 import { BranchResetDialog } from './Dialogs/BranchResetDialog';
 import { useDialog } from '../model/state/dialogs';
-import { useCurrentBranch, useRepo, useStatus } from '../model/state/repo';
+import { useCurrentBranch, useRepo } from '../model/state/repo';
 import { useWorkflows } from '../model/state/workflows';
 import { Gitflow } from '../util/workflows/gitflow';
 import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
@@ -36,6 +35,7 @@ import { InteractiveRebase } from './Dialogs/InteractiveRebase';
 import { Rebase } from './Dialogs/Rebase';
 import { AutoStashDialog } from './Dialogs/AutoStashDialog';
 import { useAutoFetcher } from '../util/AutoFetcher';
+import { useIndex } from '../model/state';
 
 export const MainView = styled.div`
     display: grid;
@@ -83,14 +83,14 @@ const Detached = styled.span`
 
 const MainStatusBar: React.FC = () => {
     const currentBranch = useCurrentBranch();
-    const status = useStatus();
+    const index = useIndex();
     return (
         <StatusBar>
             <CurrentBranch>
                 {currentBranch.found && currentBranch.value.isDetached && (
                     <Detached>DETACHED HEAD: </Detached>
                 )}
-                {status.length > 0 && '*'}
+                {index.status.length > 0 && '*'}
                 {currentBranch.found && currentBranch.value.refName}
             </CurrentBranch>
         </StatusBar>
@@ -99,6 +99,7 @@ const MainStatusBar: React.FC = () => {
 
 export const Repository: React.FC = () => {
     const repo = useRepo();
+    const index = useIndex();
     const path = repo.path;
     const dialog = useDialog();
     // TODO fix
@@ -115,8 +116,8 @@ export const Repository: React.FC = () => {
         }
     }, [path]);
     React.useEffect(() => {
-        if (repo.active && location.pathname === '/index') {
-            repo.getStatus();
+        if (repo.active) {
+            index.loadStatus();
         }
     }, [location]);
     return (
