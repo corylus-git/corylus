@@ -2,7 +2,7 @@ pub mod graph;
 pub mod index;
 mod model;
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort};
 use serde::{Deserialize, Serialize};
@@ -281,6 +281,25 @@ impl GitBackend {
             }
         }
         Ok(output)
+    }
+
+    pub fn stage(&self, path: &str) -> Result<(), String> {
+        self.repo
+            .index()
+            .and_then(|mut idx| idx.add_all([path], git2::IndexAddOption::DEFAULT, None))
+            .map_err(|e| e.message().to_string())
+    }
+
+    pub fn unstage(&self, path: &str) -> Result<(), String> {
+        let head = self
+            .repo
+            .head()
+            .map_err(|e| e.message().to_string())?
+            .peel_to_commit()
+            .map_err(|e| e.message().to_string())?;
+        self.repo
+            .reset_default(Some(&head.into_object()), [path])
+            .map_err(|e| e.message().to_string())
     }
 }
 
