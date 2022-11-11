@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use crate::error::BackendError;
 
 /**
  * The status a file can have in a diff
@@ -29,12 +30,12 @@ pub struct IndexStatus {
     /**
      * The status of this file in the working copy
      */
-    pub workdir_status:DiffStatus,
+    pub workdir_status: DiffStatus,
 
     /**
      * The status of this file in the index/staging area
      */
-    pub index_status:DiffStatus,
+    pub index_status: DiffStatus,
 
     /**
      * Denotes whether the file is currently staged in any form
@@ -44,15 +45,20 @@ pub struct IndexStatus {
     /**
      * Denotes whether the file is currently in conflict due to a broken merge
      */
-    pub is_conflicted: bool
+    pub is_conflicted: bool,
 }
 
 impl TryFrom<git2::StatusEntry<'_>> for IndexStatus {
-    type Error = String;
-    
+    type Error = BackendError;
+
     fn try_from(value: git2::StatusEntry<'_>) -> Result<Self, Self::Error> {
         Ok(Self {
-            path: value.path().ok_or("Cannot get index status for entry without path")?.into(),
+            path: value
+                .path()
+                .ok_or(BackendError {
+                    message: "Cannot get index status for entry without path".to_string(),
+                })?
+                .into(),
             workdir_status: get_workdir_status(&value),
             index_status: get_index_status(&value),
             is_staged: get_index_status(&value) != DiffStatus::Ignored, // TODO check whether this actually makes sense in here or whether this is purely a frontend thing
@@ -61,8 +67,7 @@ impl TryFrom<git2::StatusEntry<'_>> for IndexStatus {
     }
 }
 
-fn get_workdir_status(entry: &git2::StatusEntry<'_>) -> DiffStatus
-{
+fn get_workdir_status(entry: &git2::StatusEntry<'_>) -> DiffStatus {
     let status = entry.status();
     if status.is_wt_new() {
         DiffStatus::Untracked
@@ -77,8 +82,7 @@ fn get_workdir_status(entry: &git2::StatusEntry<'_>) -> DiffStatus
     }
 }
 
-fn get_index_status(entry: &git2::StatusEntry<'_>) -> DiffStatus
-{
+fn get_index_status(entry: &git2::StatusEntry<'_>) -> DiffStatus {
     let status = entry.status();
     if status.is_index_new() {
         DiffStatus::Added

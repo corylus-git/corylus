@@ -2,11 +2,14 @@ pub mod graph;
 pub mod index;
 mod model;
 
-use std::{path::Path, sync::Arc};
+use std::{sync::Arc};
 
-use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort};
+use async_trait::async_trait;
+use git2::{Delta, DiffOptions, Oid, Patch, Repository, Signature, Sort};
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
+
+use crate::error::BackendError;
 
 use self::{
     graph::calculate_graph_layout,
@@ -264,43 +267,49 @@ impl GitBackend {
         }
     }
 
-    pub fn get_status(&self) -> Result<Vec<IndexStatus>, String> {
+    pub fn get_status(&self) -> Result<Vec<IndexStatus>, BackendError> {
         let statuses = self
             .repo
-            .statuses(None)
-            .map_err(|e| e.message().to_string())?;
-        
+            .statuses(None)?;
+
         let mut output = Vec::new();
         for status in statuses.iter() {
             if !status.status().is_ignored() {
-                let mapped = IndexStatus::try_from(status);
-                if let Ok(is) = mapped {
-                    output.push(is);
-                } else {
-                    return Err(mapped.unwrap_err());
-                }
+                output.push(IndexStatus::try_from(status)?);
             }
         }
         Ok(output)
     }
 
-    pub fn stage(&self, path: &str) -> Result<(), String> {
+    pub fn stage(&self, path: &str) -> Result<(), BackendError> {
         self.repo
             .index()
-            .and_then(|mut idx| idx.add_all([path], git2::IndexAddOption::DEFAULT, None))
-            .map_err(|e| e.message().to_string())
+            .and_then(|mut idx| idx.add_all([path], git2::IndexAddOption::DEFAULT, None))?;
+            Ok(())
     }
 
-    pub fn unstage(&self, path: &str) -> Result<(), String> {
+    pub fn unstage(&self, path: &str) -> Result<(), BackendError> {
+        let head = self
+            .repo
+            .head()?
+            .peel_to_commit()?;
+        self.repo
+            .reset_default(Some(&head.into_object()), [path])?;
+        Ok(())
+    }
+
+    pub fn commit(&self, message: &str) -> Result<(), BackendError> {
+        let tree_id = self.repo.index()?.write_tree()?;
+        self.repo.index()?.write()?;
+        let tree = self.repo.find_tree(tree_id)?;
         let head = self
             .repo
             .head()
-            .map_err(|e| e.message().to_string())?
-            .peel_to_commit()
-            .map_err(|e| e.message().to_string())?;
-        self.repo
-            .reset_default(Some(&head.into_object()), [path])
-            .map_err(|e| e.message().to_string())
+            .and_then(|h| h.peel_to_commit())?;
+        let signature = self.repo.signature()?;
+        let oid = self.repo
+            .commit(Some("HEAD"), &signature, &signature, message, &tree, &[&head])?;
+        Ok(())
     }
 }
 
@@ -439,3 +448,4 @@ pub async fn get_diff(
         Err("Cannot load diff without open git repo".to_owned())
     }
 }
+

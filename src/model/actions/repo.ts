@@ -25,9 +25,8 @@ export const commit = trackError(
     'commit',
     async (message: string, amend: boolean): Promise<void> => {
         Logger().debug('commit', 'Committing changes', { message: message, amend: amend });
-        await repoStore.getState().backend.commit(message, amend);
-        Logger().debug('commit', 'Success');
-        repoStore.getState().loadHistory();
+        invoke('commit', { message, amend});
+        // repoStore.getState().loadHistory();
         // repoStore.getState().loadBranches();
         // repoStore.getState().getStatus();
     }
