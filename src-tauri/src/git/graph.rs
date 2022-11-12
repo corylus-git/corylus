@@ -1,5 +1,5 @@
 use super::model::{
-    git::{Commit, GraphNodeData, ParentReference},
+    git::{Commit},
     graph::{self, GraphLayoutData, LayoutListEntry, Rail},
 };
 

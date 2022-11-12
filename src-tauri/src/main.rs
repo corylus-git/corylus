@@ -16,8 +16,8 @@ use git::{git_open, is_git_dir, AppState};
 use tauri::async_runtime::Mutex;
 
 use crate::git::{
-    get_commit_stats, get_diff,
-    index::{commit, get_status, stage, unstage},
+    get_commit_stats,
+    index::{commit, get_status, stage, unstage}, diff::get_diff,
 };
 
 // #[cfg(not(test))]

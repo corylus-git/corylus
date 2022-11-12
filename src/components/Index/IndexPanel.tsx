@@ -21,7 +21,6 @@ import {
 import { useStagingArea } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../util/filetypes';
-import { useQuery } from 'react-query';
 import { invoke } from '@tauri-apps/api';
 import { useIndex } from '../../model/state';
 
@@ -31,7 +30,8 @@ const DiffDisplayPanel: React.FC = () => {
     const stagingArea = useStagingArea();
     if (stagingArea.selectedFile.found) {
         const source = stagingArea.selectedFile.value.source;
-        const fileType = mime.lookup(stagingArea.selectedFile.value.path) || 'text/plain';
+        // const fileType = mime.lookup(stagingArea.selectedFile.value.path) || 'text/plain';
+        const fileType = 'text/plain';
         if (isSupportedImageType(fileType)) {
             return (
                 <div>

@@ -7,11 +7,17 @@ pub struct BackendError {
     pub message: String
 }
 
+impl BackendError {
+    pub fn new(message: &str) -> Self {
+        Self {
+            message: message.to_string()
+        }
+    }
+}
+
 impl From<git2::Error> for BackendError {
     fn from(err: git2::Error) -> Self {
-        Self {
-            message: err.message().to_string()
-        }
+        Self::new(err.message())
     }
 }
 

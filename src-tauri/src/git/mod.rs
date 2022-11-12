@@ -1,11 +1,11 @@
 pub mod graph;
 pub mod index;
+pub mod diff;
 mod model;
 
 use std::{sync::Arc};
 
-use async_trait::async_trait;
-use git2::{Delta, DiffOptions, Oid, Patch, Repository, Signature, Sort};
+use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort};
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
 
@@ -15,11 +15,10 @@ use self::{
     graph::calculate_graph_layout,
     model::{
         git::{
-            Commit, Diff, DiffStat, DiffStatus, FileDiff, FileStats, FullCommitData,
+            Commit, DiffStat, DiffStatus, FileStats, FullCommitData,
             GitCommitStats, GitPerson, ParentReference, TimeWithOffset,
         },
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
-        index::IndexStatus,
         BranchInfo,
     },
 };
@@ -194,27 +193,25 @@ impl GitBackend {
         commit_id: Option<&str>,
         to_parent: Option<&str>,
         pathspec: &[Option<&str>],
-    ) -> Result<git2::Diff, String> {
+    ) -> Result<git2::Diff, BackendError> {
         let oid = commit_id
-            .map(|id| Oid::from_str(id).or_else(|e| Err(e.message().to_owned())))
+            .map(|id| Oid::from_str(id))
             .transpose()?;
         let commit_tree = oid
             .map(|coid| {
                 self.repo
                     .find_commit(coid)
                     .and_then(|c| c.tree())
-                    .or_else(|e| Err(e.message().to_owned()))
             })
             .transpose()?;
         let parent_commit_oid = to_parent
-            .map(|id| Oid::from_str(id).or_else(|e| Err(e.message().to_owned())))
+            .map(|id| Oid::from_str(id))
             .transpose()?;
         let parent_commit_tree = parent_commit_oid
             .map(|pid| {
                 self.repo
                     .find_commit(pid)
                     .and_then(|c| c.tree())
-                    .or_else(|e| Err(e.message().to_owned()))
             })
             .transpose()?;
         let mut diff_opts = DiffOptions::new();
@@ -224,92 +221,12 @@ impl GitBackend {
                 diff_opts.pathspec(p);
             }
         });
-        self.repo
+        Ok(self.repo
             .diff_tree_to_tree(
                 parent_commit_tree.as_ref(),
                 commit_tree.as_ref(),
                 Some(&mut diff_opts),
-            )
-            .or_else(|e| Err(e.message().to_owned()))
-    }
-
-    pub fn get_diff(
-        &self,
-        source: &DiffSourceType,
-        commit_id: Option<&str>,
-        to_parent: Option<&str>,
-        path: Option<&str>,
-        untracked: bool,
-    ) -> Result<Vec<FileDiff>, String> {
-        match source {
-            Commit => {
-                let parent = to_parent.map(|p| p.to_owned()).or_else(|| {
-                    if source == &DiffSourceType::Commit {
-                        commit_id
-                            .map(|id| {
-                                Oid::from_str(id)
-                                    .and_then(|oid| self.repo.find_commit(oid))
-                                    .and_then(|commit| commit.parent_id(0))
-                                    .and_then(|oid| Ok(oid.to_string()))
-                                    .ok()
-                            })
-                            .flatten()
-                    } else {
-                        None
-                    }
-                });
-                self.load_diff(commit_id, parent.as_deref(), &[path])
-                    .and_then(|diff| Diff::try_from(diff))
-                    .and_then(|diff| Ok(diff.0))
-                    .or_else(|e| Err(e))
-            }
-            _ => Err("Unknown type".to_owned()),
-        }
-    }
-
-    pub fn get_status(&self) -> Result<Vec<IndexStatus>, BackendError> {
-        let statuses = self
-            .repo
-            .statuses(None)?;
-
-        let mut output = Vec::new();
-        for status in statuses.iter() {
-            if !status.status().is_ignored() {
-                output.push(IndexStatus::try_from(status)?);
-            }
-        }
-        Ok(output)
-    }
-
-    pub fn stage(&self, path: &str) -> Result<(), BackendError> {
-        self.repo
-            .index()
-            .and_then(|mut idx| idx.add_all([path], git2::IndexAddOption::DEFAULT, None))?;
-            Ok(())
-    }
-
-    pub fn unstage(&self, path: &str) -> Result<(), BackendError> {
-        let head = self
-            .repo
-            .head()?
-            .peel_to_commit()?;
-        self.repo
-            .reset_default(Some(&head.into_object()), [path])?;
-        Ok(())
-    }
-
-    pub fn commit(&self, message: &str) -> Result<(), BackendError> {
-        let tree_id = self.repo.index()?.write_tree()?;
-        self.repo.index()?.write()?;
-        let tree = self.repo.find_tree(tree_id)?;
-        let head = self
-            .repo
-            .head()
-            .and_then(|h| h.peel_to_commit())?;
-        let signature = self.repo.signature()?;
-        let oid = self.repo
-            .commit(Some("HEAD"), &signature, &signature, message, &tree, &[&head])?;
-        Ok(())
+            )?)
     }
 }
 
@@ -426,26 +343,12 @@ pub enum DiffSourceType {
     Stash,
 }
 
-#[tauri::command]
-pub async fn get_diff(
-    state: StateType<'_>,
-    source: DiffSourceType,
-    commit_id: Option<&str>,
-    to_parent: Option<&str>,
-    path: Option<&str>,
-    untracked: Option<bool>,
-) -> Result<Vec<FileDiff>, String> {
+pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(state: StateType<'_>, op: F) -> Result<R, BackendError>
+{
     let backend_guard = state.backend.lock().await;
     if let Some(backend) = (*backend_guard).as_ref() {
-        backend.get_diff(
-            &source,
-            commit_id,
-            to_parent,
-            path,
-            untracked.unwrap_or(false),
-        )
+        op(backend)
     } else {
-        Err("Cannot load diff without open git repo".to_owned())
+        Err(BackendError::new("Cannot load diff without open git repo"))
     }
 }
-

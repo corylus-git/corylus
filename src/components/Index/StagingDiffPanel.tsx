@@ -3,10 +3,11 @@ import { StagingDiff } from './StagingDiff';
 import { Logger } from '../../util/logger';
 import { Maybe } from '../../util/maybe';
 import { discardDiff } from '../../model/actions/repo';
+import { FileDiff } from '../../util/diff-parser';
 
 export const StagingDiffPanel: React.FC<{
     file: { path: string; source: 'workdir' | 'index' };
-    diff: Maybe<string>;
+    diff: Maybe<FileDiff>;
     onAddDiff: (diff: string, path: string, source: 'workdir' | 'index', isIndex: boolean) => void;
 }> = (props) => {
     Logger().silly('StagingDiffPanel', 'Displaying diff', { unparsed: props.diff });

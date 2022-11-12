@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+use crate::error::BackendError;
+
 /**
  * A reference to a parent with short and full OID
  */
@@ -273,15 +275,14 @@ impl TryFrom<git2::DiffLine<'_>> for DiffLine {
 pub struct Diff(pub Vec<FileDiff>);
 
 impl TryFrom<git2::Diff<'_>> for Diff {
-    type Error = String; // TODO more structured error?
+    type Error = BackendError;
 
     fn try_from(diff: git2::Diff) -> Result<Self, Self::Error> {
         let mut diffs = vec![];
         diff.print(git2::DiffFormat::Patch, |delta, hunk, line| {
             handle_line(delta, hunk, line, &mut diffs)
-        })
-        .and_then(|_| Ok(Diff(diffs)))
-        .or_else(|e| Err(e.message().to_owned()))
+        })?;
+        Ok(Diff(diffs))
     }
 }
 

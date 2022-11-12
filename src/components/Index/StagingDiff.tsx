@@ -2,7 +2,7 @@ import React from 'react';
 import { ChunkRendererProps, DiffViewer, SelectedLines, maxLineNumber } from '../Diff/DiffViewer';
 import { serializeDiff, modifyDiff } from '../../util/diff';
 import styled from 'styled-components';
-import { parse } from '../../util/diff-parser';
+import { FileDiff, parse } from '../../util/diff-parser';
 import { Logger } from '../../util/logger';
 import { calculateHighlightAreas } from '../../util/diff-highlighter';
 
@@ -16,21 +16,21 @@ const StagingChunkHeader = styled.div`
 `;
 
 export const StagingDiff: React.FC<{
-    diff: string;
+    diff: FileDiff;
     onAddDiff: (diff: string) => void;
     onDiscardDiff: (diff: string) => void;
     isIndex?: boolean;
 }> = (props) => {
-    const parsedDiff = React.useMemo(() => {
-        return parse(props.diff, 125);
-    }, [props.diff]);
-    const { onAddDiff, onDiscardDiff } = props;
+    // const parsedDiff = React.useMemo(() => {
+    //     return parse(props.diff, 125);
+    // }, [props.diff]);
+    const { onAddDiff, onDiscardDiff, diff } = props;
     const isIndex = props.isIndex;
 
     const maxLineNumberLength =
         Math.floor(
             Math.log10(
-                (parsedDiff && parsedDiff.length > 0 && maxLineNumber(parsedDiff[0].chunks)) || 0
+                (diff && diff.chunks.length > 0 && maxLineNumber(diff.chunks)) || 0
             )
         ) + 1;
 
@@ -46,8 +46,8 @@ export const StagingDiff: React.FC<{
                             onClick={() =>
                                 onAddDiff(
                                     serializeDiff(
-                                        parsedDiff[0].header,
-                                        modifyDiff(parsedDiff[0], {
+                                        diff.header,
+                                        modifyDiff(diff, {
                                             first: {
                                                 chunkIndex: props.chunkIndex,
                                                 lineIndex: 0,
@@ -68,8 +68,8 @@ export const StagingDiff: React.FC<{
                             onClick={() =>
                                 onDiscardDiff(
                                     serializeDiff(
-                                        parsedDiff[0].header,
-                                        modifyDiff(parsedDiff[0], {
+                                        diff.header,
+                                        modifyDiff(diff, {
                                             first: {
                                                 chunkIndex: props.chunkIndex,
                                                 lineIndex: 0,
@@ -118,15 +118,15 @@ export const StagingDiff: React.FC<{
         );
     }
 
-    return parsedDiff && parsedDiff.length > 0 ? (
+    return diff ? (
         <DiffViewer
-            file={parsedDiff[0]}
+            file={diff}
             chunk={StagingChunk}
             onContextMenu={(ev, currentSelection) => {
                 if (currentSelection) {
                     const newDiff = serializeDiff(
-                        parsedDiff[0].header,
-                        modifyDiff(parsedDiff[0], normalize(currentSelection))
+                        diff.header,
+                        modifyDiff(diff, normalize(currentSelection))
                     );
                     Logger().silly('StagingDiff', 'Adding partial diff', { diff: newDiff });
                     onAddDiff(newDiff);
