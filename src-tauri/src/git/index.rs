@@ -2,7 +2,7 @@ use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{model::index::IndexStatus, with_backend, StateType};
+use super::{model::index::IndexStatus, with_backend, StateType, with_backend_mut};
 
 #[tauri::command]
 pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>, BackendError> {
@@ -45,21 +45,25 @@ pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> Result
 }
 
 #[tauri::command]
-pub async fn commit(state: StateType<'_>, message: &str, amend: bool) -> Result<(), BackendError> {
-    with_backend(state, |backend| {
+pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: bool) -> Result<(), BackendError> {
+    with_backend_mut(state, |backend| {
         let tree_id = backend.repo.index()?.write_tree()?;
-        backend.repo.index()?.write()?;
-        let tree = backend.repo.find_tree(tree_id)?;
-        let head = backend.repo.head().and_then(|h| h.peel_to_commit())?;
-        let signature = backend.repo.signature()?;
-        let oid = backend.repo.commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            message,
-            &tree,
-            &[&head],
-        )?;
+        {
+            backend.repo.index()?.write()?;
+            let tree = backend.repo.find_tree(tree_id)?;
+            let head = backend.repo.head().and_then(|h| h.peel_to_commit())?;
+            let signature = backend.repo.signature()?;
+            let oid = backend.repo.commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                message,
+                &tree,
+                &[&head],
+            )?;
+        }
+        backend.load_history(&window);
+        window.emit("status-changed", {});
         Ok(())
     })
     .await

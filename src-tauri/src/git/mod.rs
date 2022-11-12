@@ -352,3 +352,13 @@ pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
         Err(BackendError::new("Cannot load diff without open git repo"))
     }
 }
+
+pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> Result<R, BackendError>, R>(state: StateType<'_>, op: F) -> Result<R, BackendError>
+{
+    let mut backend_guard = state.backend.lock().await;
+    if let Some(backend) = (*backend_guard).as_mut() {
+        op(backend)
+    } else {
+        Err(BackendError::new("Cannot load diff without open git repo"))
+    }
+}
