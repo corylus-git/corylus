@@ -2,7 +2,7 @@ import * as React from 'react';
 import styled from 'styled-components';
 import mime from 'mime-types';
 
-import { Commit, CommitStats, DiffStat } from '../../model/stateObjects';
+import { Commit, CommitStats, DiffStat, formatTimestamp } from '../../model/stateObjects';
 import '../../style/app.css';
 import { ArrowRight } from '../icons/ArrowRight';
 import { ArrowDown } from '../icons/ArrowDown';
@@ -54,12 +54,12 @@ export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
         <>
             <p style={{ margin: 0 }}>
                 Author: {props.commit.author.name} &lt;{props.commit.author.email}&gt; (
-                {props.commit.author.timestamp.toLocaleString()})
+                {formatTimestamp(props.commit.author.timestamp)})
             </p>
             {props.commit.type === 'commit' && (
                 <p style={{ margin: 0 }}>
                     Committer: {props.commit.committer.name} &lt;{props.commit.committer.email}&gt;
-                    ({props.commit.committer.timestamp.toLocaleString()})
+                    ({formatTimestamp(props.commit.committer.timestamp)})
                 </p>
             )}
             <p style={{ margin: 0, fontSize: '80%' }}>

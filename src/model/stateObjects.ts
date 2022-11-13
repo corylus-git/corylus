@@ -114,8 +114,17 @@ export interface Person {
     readonly email: string;
 }
 
+export interface Timestamp {
+    utcSeconds: number; 
+    offsetSeconds: number;
+}
+
 export interface GitPerson extends Person {
-    readonly timestamp: { utc_seconds: number, offset_seconds: number };
+    readonly timestamp: Timestamp
+}
+
+export function formatTimestamp(timestamp: Timestamp) {
+    return new Date((timestamp.utcSeconds)*1000).toLocaleString();
 }
 
 /**

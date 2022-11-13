@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { BranchInfo, Commit, Tag } from '../../model/stateObjects';
+import { BranchInfo, Commit, formatTimestamp, Tag } from '../../model/stateObjects';
 import { BranchDisplay } from './BranchDisplay';
 import { TagDisplay } from './TagDisplay';
 import styled from 'styled-components';
-import { Timestamp } from '../shared/Timestamp';
 
 export interface CommitInfoProps {
     commit: Commit;
@@ -117,7 +116,7 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                         <TagDisplay key={`t-${t.name}`} tag={t} rail={props.rail} />
                     ))}
                 <Highlighter str={props.commit.author.name} searchTerm={props.searchTerm} /> on{' '}
-                <Timestamp timestamp={props.commit.author.timestamp} />{' '}
+                {formatTimestamp(props.commit.author.timestamp)}{' '}
             </p>
         </div>
     );
