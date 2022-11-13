@@ -57,10 +57,10 @@ export const Application = () => {
         //     setShowAbout(true);
         // });
     }, []);
-    // React.useEffect(() => {
-    //     document.documentElement.style.setProperty('--hue', theme.current.hue.toString());
-    //     document.documentElement.style.setProperty('--lightness', theme.current.lightness);
-    // }, [theme.current]);
+    React.useEffect(() => {
+        document.documentElement.style.setProperty('--hue', theme.current.hue.toString());
+        document.documentElement.style.setProperty('--lightness', theme.current.lightness);
+    }, [theme.current]);
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme.current}>
