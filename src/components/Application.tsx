@@ -7,7 +7,7 @@ import '../style/app.css';
 import styled, { ThemeProvider, DefaultTheme } from 'styled-components';
 import { Tabs } from './util/Tabs';
 import { Logger } from '../util/logger';
-import { appSettings } from '../model/settings';
+import { useSettings } from '../model/settings';
 import { GlobalErrorBoundary } from './GlobalErrorBoundary';
 import { AboutPanel } from './AboutPanel';
 // import { ipcRenderer } from 'electron';
@@ -31,20 +31,26 @@ export const Application = () => {
     const [showAbout, setShowAbout] = useState(false);
     const theme = useTheme();
     const tabs = useTabs();
+    const settings = useSettings();
+
 
     const queryClient = new QueryClient();
 
     useEffect(() => {
+        settings.load();
+    }, []);
+
+    useEffect(() => {
         (async () => {
-            const tabInfos = await Promise.all((await appSettings()).openTabs.map(async (t) => ({
+            const tabInfos = await Promise.all(settings.openTabs.map(async (t) => ({
                 id: nanoid(),
                 path: just(t),
                 title: await basename(t),
             })));
             tabs.loadTabs(tabInfos);
-            theme.switchTheme((await appSettings()).theme ?? darkTheme.name);
+            theme.switchTheme(settings.theme ?? darkTheme.name);
         })();
-    }, []);
+    }, [settings.openTabs, settings.theme]);
     Logger().debug('Application', 'Re-rendering <Application />', { theme: theme.current });
     React.useEffect(() => {
         // ipcRenderer.on('show-about', (_) => {

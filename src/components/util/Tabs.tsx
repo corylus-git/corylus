@@ -138,8 +138,6 @@ function showScrollButtons(
 
 /**
  * An extendable tab component
- *
- * @param props The properties of this element
  */
 export const Tabs: React.FC = () => {
     const tabs = useTabs();

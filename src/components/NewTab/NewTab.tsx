@@ -6,7 +6,6 @@ import OpenIcon from '../icons/OpenIcon.svg';
 import CloneIcon from '../icons/CloneIcon.svg';
 import { Modal } from '../util/Modal';
 import { StyledButton } from '../util/StyledButton';
-import { appSettings } from '../../model/settings';
 import { RepositoryHistory } from './RepositoryHistory';
 import { init } from '../../model/actions/repo';
 import { useTabs, TabsActions } from '../../model/state/tabs';
@@ -17,6 +16,7 @@ import { structuredToast } from '../../util/structuredToast';
 import { CloneDialog } from './CloneDialog';
 import { invoke } from '@tauri-apps/api';
 import { useQuery } from 'react-query';
+import { useSettings } from '../../model/settings';
 
 const NewTabView = styled.div<{ hasHistory: boolean }>`
     height: 100%;
@@ -111,7 +111,7 @@ function FunctionPanel(props: { onClone?: () => void }) {
         <FunctionPanelView>
             <RepoActionButton onClick={() => initRepo(tabs)}>
                 <div>
-                    <InitIcon viewBox="0 0 24 24" style={{ height: "3rem",  width: "3rem"}} />
+                    <InitIcon viewBox="0 0 24 24" style={{ height: "3rem", width: "3rem" }} />
                     <span>Init new local repository</span>
                 </div>
             </RepoActionButton>
@@ -134,32 +134,21 @@ function FunctionPanel(props: { onClone?: () => void }) {
 
 export const NewTab: React.FC = () => {
     const [cloneOpen, setCloneOpen] = useState(false);
-    const {isLoading, error, data} = useQuery("", appSettings)
-    if (isLoading) {
-        return <div>Initializing...</div>
-    }
-    if (error) {
-        return <div>Something really broke...</div>
-    }
-    if (data) {
-        const settings = data;
-        console.log("Settings", settings);        
-        return (
-            <div style={{ height: '100%' }}>
-                <NewTabView hasHistory={history.length !== 0}>
-                    <FunctionPanel onClone={() => setCloneOpen(true)} />
-                    {settings.repositoryHistory && (
-                        <RepositoryHistory
-                            history={settings.repositoryHistory}
-                            alreadyOpen={settings.openTabs}
-                        />
-                    )}
-                </NewTabView>
-                <Modal isOpen={cloneOpen}>
-                    <CloneDialog onClose={() => setCloneOpen(false)} />
-                </Modal>
-            </div>
-        );
-    }
-    return <div>Internal error. No settings found.</div>
+    const settings = useSettings();
+    return (
+        <div style={{ height: '100%' }}>
+            <NewTabView hasHistory={history.length !== 0}>
+                <FunctionPanel onClone={() => setCloneOpen(true)} />
+                {settings.repositoryHistory && (
+                    <RepositoryHistory
+                        history={settings.repositoryHistory}
+                        alreadyOpen={settings.openTabs}
+                    />
+                )}
+            </NewTabView>
+            <Modal isOpen={cloneOpen}>
+                <CloneDialog onClose={() => setCloneOpen(false)} />
+            </Modal>
+        </div>
+    );
 };

@@ -1,15 +1,18 @@
 import { tabsStore } from './state/tabs';
+import createHook from 'zustand';
+import create from 'zustand/vanilla';
 import { allActivePaths } from './state/util';
 import { themeStore } from './state/theme';
 import { darkTheme } from '../style/dark-theme';
 import { Logger } from '../util/logger';
 import { Theme } from '../style/theme';
 import { invoke } from '@tauri-apps/api';
+import { immer } from 'zustand/middleware/immer';
 
 /**
  * The settings known to the program
  */
-export interface ISettings {
+export interface SettingsState {
     /**
      * The paths of the tabs currently open
      */
@@ -23,7 +26,13 @@ export interface ISettings {
      */
     repositoryHistory: Map<string, Date>;
 
+    /**
+     * The name of the theme currently in use by the app
+     */
+    theme: string;
+}
 
+export interface SettingsActions {
     /**
      * Update the given entry in the repository history.
      * If the path already exists, update its access date, otherwise add it to
@@ -31,54 +40,52 @@ export interface ISettings {
      *
      * @param path The path to add to the history
      */
-    updateHistory(path: string): void;
+     updateHistory(path: string): void;
 
-    /**
-     * The name of the theme currently in use by the app
-     */
-    theme: string;
+     load(): Promise<void>;
 }
 
-class SettingsImpl implements ISettings {
-    async load() {
-        const data = await invoke<any>('get_settings');
-        this.openTabs = data.openTabs;
-        this.theme = data.theme;
-        const s = data.repositoryHistory as { path: string; date: number }[];
-        const map = new Map<string, Date>();
-        s?.forEach((e) => map.set(e.path, new Date(e.date)));
-        this.repositoryHistory = map;
-    }
+// class SettingsImpl implements ISettings {
+//     async load() {
+        
+//     }
 
-    openTabs: string[] = [];
+//     updateHistory(path: string) {
+//         const currentHistory = this.repositoryHistory;
+//         currentHistory.set(path, new Date(Date.now()));
+//         if (currentHistory.size >= 100) {
+//             const remainingEntries = Array.from(currentHistory.entries());
+//             remainingEntries.sort(([_, date1], [__, date2]) => date2.getDate() - date1.getDate());
+//             currentHistory.clear();
+//             remainingEntries.forEach(([repoPath, date]) => currentHistory.set(repoPath, date));
+//         }
+//         this.repositoryHistory = currentHistory;
+//     }
+// }
 
-    theme: string = darkTheme.name;
-
-    repositoryHistory: Map<string, Date> = new Map<string, Date>();
-
-    updateHistory(path: string) {
-        const currentHistory = this.repositoryHistory;
-        currentHistory.set(path, new Date(Date.now()));
-        if (currentHistory.size >= 100) {
-            const remainingEntries = Array.from(currentHistory.entries());
-            remainingEntries.sort(([_, date1], [__, date2]) => date2.getDate() - date1.getDate());
-            currentHistory.clear();
-            remainingEntries.forEach(([repoPath, date]) => currentHistory.set(repoPath, date));
+export const settingsStore = create<SettingsState & SettingsActions>()(
+    immer((set, get) => ({
+        openTabs: [],
+        theme: "dark",
+        repositoryHistory: new Map<string, Date>(),
+        updateHistory: (path: string) => {
+            
+        },
+        load: async () => {
+            const data = await invoke<any>('get_settings');
+            set(state => {
+                state.openTabs = data.openTabs;
+                state.theme = data.theme;
+                const s = data.repositoryHistory as { path: string; date: number }[];
+                const map = new Map<string, Date>();
+                s?.forEach((e) => map.set(e.path, new Date(e.date)));
+                state.repositoryHistory = map;
+            })
         }
-        this.repositoryHistory = currentHistory;
-    }
-}
+    })),
+);
 
-export async function appSettings(): Promise<ISettings> {
-    if (_appSettings === undefined) {
-        const s = new SettingsImpl();
-        await s.load();
-        _appSettings = s;
-    }
-    return _appSettings;
-}
-
-let _appSettings: ISettings | undefined = undefined;
+export const useSettings = createHook(settingsStore);
 
 export function startAppSettingsStorage(): void {
     // TODO

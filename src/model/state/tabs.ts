@@ -9,9 +9,10 @@ import { log } from './log';
 import { basename } from '@tauri-apps/api/path';
 import { appWindow } from '@tauri-apps/api/window';
 import { repoStore } from './repo';
-import { appSettings } from '../settings';
+import { settingsStore } from '../settings';
 import { stagingArea } from './stagingArea';
 import { getActiveElement } from 'formik';
+import { immer } from 'zustand/middleware/immer';
 
 export interface TabState {
     /**
@@ -52,117 +53,111 @@ export type TabsActions = {
     loadTabs: (tabs: readonly TabState[]) => void;
 };
 
-// Turn the set method into an immer proxy
-const immer: Middleware<TabsState & TabsActions> = (config) => (set, get, api) =>
-    config((fn: any) => set(produce(fn)), get, api);
-
-export const tabsStore = create(
-    log(
-        immer((set, get) => ({
-            left: [],
-            active: nothing,
-            right: [],
-            addTab: (): void => {
-                set((state) => {
-                    Logger().debug('addTab', 'Opening new tab');
-                    const tab: TabState = {
-                        id: `tab-${nanoid()}`,
-                        path: nothing,
-                        title: '(New Tab)',
-                    };
-                    return {
-                        left: state.active.found
-                            ? [...state.left, state.active.value, ...state.right]
-                            : [...state.left, ...state.right],
-                        active: just(tab),
-                        right: [],
-                    };
-                });
-            },
-            closeTab: (id: string): void => {
-                set((state) => {
-                    const intermediate: TabsState = {
-                        left: state.left.filter((t) => t.id !== id),
-                        active:
-                            !state.active.found || id !== state.active.value.id
-                                ? state.active
-                                : nothing,
-                        right: state.right.filter((t) => t.id !== id),
-                    };
-                    if (intermediate.active.found) {
-                        Logger().debug('closeTab', 'Closed non-active tab', {
-                            tabs: intermediate,
-                        });
-                        return intermediate;
-                    }
-                    const ret = {
-                        left:
-                            intermediate.left.length > 0
-                                ? intermediate.left.slice(0, intermediate.left.length)
-                                : intermediate.left,
-                        active: fromNullable(
-                            intermediate.left[intermediate.left.length] ?? intermediate.right[0]
-                        ),
-                        right:
-                            intermediate.left.length > 0
-                                ? intermediate.right
-                                : intermediate.right.slice(1),
-                    };
-                    Logger().debug('closeTab', 'Closed active tab', { tabs: ret });
-                    return ret;
-                });
-            },
-            switchTab: (tab: TabState): void => {
-                set((state) => {
-                    Logger().silly('switchTab', 'Switching active tab', { tab: tab });
-                    const all = state.active.found
+export const tabsStore = create<TabsState & TabsActions>()(
+    immer((set, get) => ({
+        left: [],
+        active: nothing,
+        right: [],
+        addTab: (): void => {
+            set((state) => {
+                Logger().debug('addTab', 'Opening new tab');
+                const tab: TabState = {
+                    id: `tab-${nanoid()}`,
+                    path: nothing,
+                    title: '(New Tab)',
+                };
+                return {
+                    left: state.active.found
                         ? [...state.left, state.active.value, ...state.right]
-                        : [...state.left, ...state.right];
-                    const index = all.findIndex((t) => t.id === tab.id);
-                    if (tab.path.found) {
-                        Logger().debug('switchTabs', 'Re-loading repository', {
-                            path: tab.path.value,
-                        });
-                        repoStore.getState().openRepo(tab.path.value);
-                        stagingArea.getState().reset();
-                    }
-                    all.forEach((t) => t.path.found && appSettings().updateHistory(t.path.value));
-                    return {
-                        left: all.slice(0, index),
-                        active: just(tab),
-                        right: all.slice(index + 1),
-                    };
-                });
-            },
-            openRepoInActive: async (path: string): Promise<void> => {
-                const tab = await openInActiveTab(path);
-                set((state) => {
-                    state.active = tab;
-                    return state;
-                });
-            },
-            openRepoInNew: (path: string): void => {
-                set((state) => {
-                    if (state.active.found) {
-                        state.left = [...state.left, state.active.value];
-                    }
-                    openInActiveTab(state, path);
-                });
-            },
-            loadTabs: (tabs: readonly TabState[]): void => {
-                set((state) => {
-                    Logger().debug('loadTabs', 'Loading stored tabs', { tabs: tabs });
-                    state.left = [];
-                    state.active = fromNullable(tabs[0]);
-                    state.right = tabs.slice(1);
-                });
-                const active = get().active;
-                if (active.found && active.value.path.found) {
-                    repoStore.getState().openRepo(active.value.path.value);
+                        : [...state.left, ...state.right],
+                    active: just(tab),
+                    right: [],
+                };
+            });
+        },
+        closeTab: (id: string): void => {
+            set((state) => {
+                const intermediate: TabsState = {
+                    left: state.left.filter((t) => t.id !== id),
+                    active:
+                        !state.active.found || id !== state.active.value.id
+                            ? state.active
+                            : nothing,
+                    right: state.right.filter((t) => t.id !== id),
+                };
+                if (intermediate.active.found) {
+                    Logger().debug('closeTab', 'Closed non-active tab', {
+                        tabs: intermediate,
+                    });
+                    return intermediate;
                 }
-            },
-        }))
-    )
+                const ret = {
+                    left:
+                        intermediate.left.length > 0
+                            ? intermediate.left.slice(0, intermediate.left.length)
+                            : intermediate.left,
+                    active: fromNullable(
+                        intermediate.left[intermediate.left.length] ?? intermediate.right[0]
+                    ),
+                    right:
+                        intermediate.left.length > 0
+                            ? intermediate.right
+                            : intermediate.right.slice(1),
+                };
+                Logger().debug('closeTab', 'Closed active tab', { tabs: ret });
+                return ret;
+            });
+        },
+        switchTab: (tab: TabState): void => {
+            set((state) => {
+                Logger().silly('switchTab', 'Switching active tab', { tab: tab });
+                const all = state.active.found
+                    ? [...state.left, state.active.value, ...state.right]
+                    : [...state.left, ...state.right];
+                const index = all.findIndex((t) => t.id === tab.id);
+                if (tab.path.found) {
+                    Logger().debug('switchTabs', 'Re-loading repository', {
+                        path: tab.path.value,
+                    });
+                    repoStore.getState().openRepo(tab.path.value);
+                    stagingArea.getState().reset();
+                }
+                all.forEach((t) => t.path.found && settingsStore.getState().updateHistory(t.path.value));
+                return {
+                    left: all.slice(0, index),
+                    active: just(tab),
+                    right: all.slice(index + 1),
+                };
+            });
+        },
+        openRepoInActive: async (path: string): Promise<void> => {
+            const tab = await openInActiveTab(path);
+            set((state) => {
+                state.active = tab;
+                return state;
+            });
+        },
+        openRepoInNew: (path: string): void => {
+            set((state) => {
+                if (state.active.found) {
+                    state.left = [...state.left, state.active.value];
+                }
+                openInActiveTab(state, path);
+            });
+        },
+        loadTabs: (tabs: readonly TabState[]): void => {
+            set((state) => {
+                Logger().debug('loadTabs', 'Loading stored tabs', { tabs: tabs });
+                state.left = [];
+                state.active = fromNullable(tabs[0]);
+                state.right = tabs.slice(1);
+            });
+            const active = get().active;
+            if (active.found && active.value.path.found) {
+                repoStore.getState().openRepo(active.value.path.value);
+            }
+        },
+    }))
 );
 
 appWindow.listen('branchesChanged', ev => {
@@ -174,14 +169,13 @@ appWindow.listen('historyChanged', ev => {
 });
 
 
-async function openInActiveTab(path: string): Promise<Maybe<TabState>>
-{
+async function openInActiveTab(path: string): Promise<Maybe<TabState>> {
     Logger().debug('openInActiveTab', 'Re-loading repository', {
         path,
     });
 
     repoStore.getState().openRepo(path);
-    (await appSettings()).updateHistory(path);
+    settingsStore.getState().updateHistory(path);
     return just({
         id: nanoid(),
         path: just(path),
@@ -192,8 +186,7 @@ async function openInActiveTab(path: string): Promise<Maybe<TabState>>
 /**
  * Get the tab containing the given path, if any
  */
-export function getTab(path: string): TabState | undefined
-{
+export function getTab(path: string): TabState | undefined {
     const tabs = tabsStore.getState();
     let tab = tabs.left.find(t => t.path.found && t.path.value === path);
     if (tab) {
@@ -203,7 +196,7 @@ export function getTab(path: string): TabState | undefined
     if (tab) {
         return tab;
     }
-    if (tabs.active.found && tabs.active.value.path.found &&  tabs.active.value.path.value === path) {
+    if (tabs.active.found && tabs.active.value.path.found && tabs.active.value.path.value === path) {
         return tabs.active.value;
     }
     return undefined;
