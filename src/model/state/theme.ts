@@ -35,6 +35,7 @@ export const themeStore = create<ThemeStore & ThemeActions>(
             Logger().debug('themeStore', 'Switching theme', { name, newTheme });
             set((state) => {
                 state.current = newTheme;
+                return state;
             });
         },
     }))

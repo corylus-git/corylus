@@ -181,7 +181,7 @@ async function openInActiveTab(path: string): Promise<Maybe<TabState>>
     });
 
     repoStore.getState().openRepo(path);
-    appSettings().updateHistory(path);
+    (await appSettings()).updateHistory(path);
     return just({
         id: nanoid(),
         path: just(path),

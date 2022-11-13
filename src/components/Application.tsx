@@ -36,15 +36,14 @@ export const Application = () => {
 
     useEffect(() => {
         (async () => {
-            const tabInfos = await Promise.all(appSettings().openTabs.map(async (t) => ({
+            const tabInfos = await Promise.all((await appSettings()).openTabs.map(async (t) => ({
                 id: nanoid(),
                 path: just(t),
                 title: await basename(t),
             })));
             tabs.loadTabs(tabInfos);
+            theme.switchTheme((await appSettings()).theme ?? darkTheme.name);
         })();
-        // TODO
-        // theme.switchTheme(appSettings().theme ?? darkTheme.name);
     }, []);
     Logger().debug('Application', 'Re-rendering <Application />', { theme: theme.current });
     React.useEffect(() => {

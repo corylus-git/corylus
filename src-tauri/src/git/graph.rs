@@ -1,6 +1,6 @@
 use super::model::{
     git::{Commit},
-    graph::{self, GraphLayoutData, LayoutListEntry, Rail},
+    graph::{GraphLayoutData, LayoutListEntry, Rail},
 };
 
 static EMPTY_STRING: String = String::new();

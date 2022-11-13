@@ -16,6 +16,7 @@ import { Logger } from '../../util/logger';
 import { structuredToast } from '../../util/structuredToast';
 import { CloneDialog } from './CloneDialog';
 import { invoke } from '@tauri-apps/api';
+import { useQuery } from 'react-query';
 
 const NewTabView = styled.div<{ hasHistory: boolean }>`
     height: 100%;
@@ -133,20 +134,32 @@ function FunctionPanel(props: { onClone?: () => void }) {
 
 export const NewTab: React.FC = () => {
     const [cloneOpen, setCloneOpen] = useState(false);
-    return (
-        <div style={{ height: '100%' }}>
-            <NewTabView hasHistory={history.length !== 0}>
-                <FunctionPanel onClone={() => setCloneOpen(true)} />
-                {appSettings().repositoryHistory && (
-                    <RepositoryHistory
-                        history={appSettings().repositoryHistory}
-                        alreadyOpen={appSettings().openTabs}
-                    />
-                )}
-            </NewTabView>
-            <Modal isOpen={cloneOpen}>
-                <CloneDialog onClose={() => setCloneOpen(false)} />
-            </Modal>
-        </div>
-    );
+    const {isLoading, error, data} = useQuery("", appSettings)
+    if (isLoading) {
+        return <div>Initializing...</div>
+    }
+    if (error) {
+        return <div>Something really broke...</div>
+    }
+    if (data) {
+        const settings = data;
+        console.log("Settings", settings);        
+        return (
+            <div style={{ height: '100%' }}>
+                <NewTabView hasHistory={history.length !== 0}>
+                    <FunctionPanel onClone={() => setCloneOpen(true)} />
+                    {settings.repositoryHistory && (
+                        <RepositoryHistory
+                            history={settings.repositoryHistory}
+                            alreadyOpen={settings.openTabs}
+                        />
+                    )}
+                </NewTabView>
+                <Modal isOpen={cloneOpen}>
+                    <CloneDialog onClose={() => setCloneOpen(false)} />
+                </Modal>
+            </div>
+        );
+    }
+    return <div>Internal error. No settings found.</div>
 };

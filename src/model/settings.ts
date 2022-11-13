@@ -4,6 +4,7 @@ import { themeStore } from './state/theme';
 import { darkTheme } from '../style/dark-theme';
 import { Logger } from '../util/logger';
 import { Theme } from '../style/theme';
+import { invoke } from '@tauri-apps/api';
 
 /**
  * The settings known to the program
@@ -22,6 +23,7 @@ export interface ISettings {
      */
     repositoryHistory: Map<string, Date>;
 
+
     /**
      * Update the given entry in the repository history.
      * If the path already exists, update its access date, otherwise add it to
@@ -38,39 +40,21 @@ export interface ISettings {
 }
 
 class SettingsImpl implements ISettings {
-    constructor() {
-        // TODO temporary workaround because electron-settings is not compatible with enableRemoteModule: false
-        // settings.configure({ dir: app.getPath('userData') });
+    async load() {
+        const data = await invoke<any>('get_settings');
+        this.openTabs = data.openTabs;
+        this.theme = data.theme;
+        const s = data.repositoryHistory as { path: string; date: number }[];
+        const map = new Map<string, Date>();
+        s?.forEach((e) => map.set(e.path, new Date(e.date)));
+        this.repositoryHistory = map;
     }
 
-    get openTabs() {
-        return [];
-        // return (settings.getSync('openTabs') as string[]) ?? [];
-    }
-    set openTabs(tabs: string[]) {
-        // settings.setSync('openTabs', tabs);
-    }
-    private _repositoryHistory: Map<string, Date> | undefined = undefined;
+    openTabs: string[] = [];
 
-    get repositoryHistory() {
-        return new Map<string, Date>();
-        // if (!this._repositoryHistory) {
-        //     const s = settings.getSync('repositoryHistory') as { path: string; date: number }[];
-        //     const map = new Map<string, Date>();
-        //     s?.forEach((e) => map.set(e.path, new Date(e.date)));
-        //     this._repositoryHistory = map;
-        // }
-        // return this._repositoryHistory;
-    }
-    set repositoryHistory(history: Map<string, Date>) {
-        // settings.setSync(
-        //     'repositoryHistory',
-        //     Array.from(history.entries()).map(([path, date]) => ({
-        //         path,
-        //         date: date.getTime(),
-        //     }))
-        // );
-    }
+    theme: string = darkTheme.name;
+
+    repositoryHistory: Map<string, Date> = new Map<string, Date>();
 
     updateHistory(path: string) {
         const currentHistory = this.repositoryHistory;
@@ -83,20 +67,13 @@ class SettingsImpl implements ISettings {
         }
         this.repositoryHistory = currentHistory;
     }
-
-    get theme(): string {
-        return darkTheme.name;
-        // return (settings.getSync('theme') as string) ?? darkTheme.name;
-    }
-
-    set theme(theme: string) {
-        // settings.setSync('theme', theme);
-    }
 }
 
-export function appSettings(): ISettings {
+export async function appSettings(): Promise<ISettings> {
     if (_appSettings === undefined) {
-        _appSettings = new SettingsImpl();
+        const s = new SettingsImpl();
+        await s.load();
+        _appSettings = s;
     }
     return _appSettings;
 }
