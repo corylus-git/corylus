@@ -19,6 +19,7 @@ import { just } from '../util/maybe';
 import { useTabs } from '../model/state/tabs';
 import { useTheme } from '../model/state/theme';
 import { darkTheme } from '../style/dark-theme';
+import { queryClient } from '../util/queryClient';
 
 const ApplicationView = styled.div`
     block-size: 100vh;
@@ -32,9 +33,6 @@ export const Application = () => {
     const theme = useTheme();
     const tabs = useTabs();
     const settings = useSettings();
-
-
-    const queryClient = new QueryClient();
 
     useEffect(() => {
         settings.load();

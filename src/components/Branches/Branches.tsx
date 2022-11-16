@@ -32,6 +32,8 @@ import { WorkTree } from './WorkTree';
 import { UpstreamMissing } from './UpstreamMissing';
 import { SectionHeader } from './SectionHeader';
 import { getTab, tabsStore, TabState } from '../../model/state/tabs';
+import { invoke } from '@tauri-apps/api';
+import { useQuery } from 'react-query';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -362,7 +364,7 @@ function BranchTree(props: {
             }}
             onEntryClick={(meta) => {
                 if ((meta as BranchInfo)?.head) {
-                    repoStore.getState().selectCommit((meta as BranchInfo).head);
+                    // repoStore.getState().selectCommit((meta as BranchInfo).head);
                 }
             }}
             onEntryDoubleClick={(branch) => {
@@ -427,22 +429,30 @@ function createBranchTreeData(
 }
 
 export const Branches: React.FC = () => {
-    const branches = useBranches();
+    // const branches = useBranches();
+    const { isLoading, error, data } = useQuery('branches', () => invoke<BranchInfo[]>('get_branches'));
     const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
     const affected = useAffected();
     const branchTree = React.useMemo(
         () =>
+            data && 
             currentBranch !== undefined &&
             createBranchTreeData(
-                branches.filter((b) => !b.remote),
-                branches.filter((b) => b.remote),
+                data.filter((b) => !b.remote),
+                data.filter((b) => b.remote),
                 remotes,
                 currentBranch
             ),
-        [branches, currentBranch]
+        [data, currentBranch]
     );
 
+    if (isLoading) {
+        return <div>Loading branches...</div>
+    }
+    if (error) {
+        return <div>Could not load branch data.</div>
+    }
     return (
         <>
             {branchTree && (

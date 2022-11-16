@@ -18,8 +18,7 @@ use git::{git_open, is_git_dir, AppState};
 use tauri::async_runtime::Mutex;
 
 use crate::{git::{
-    get_commit_stats,
-    index::{commit, get_status, stage, unstage}, diff::get_diff,
+    index::{commit, get_status, stage, unstage}, diff::get_diff, history::get_commit_stats, get_branches,
 }, settings::get_settings};
 
 // #[cfg(not(test))]
@@ -31,6 +30,7 @@ fn main() {
         })))
         .invoke_handler(tauri::generate_handler![
             get_settings,
+            get_branches,
             is_git_dir,
             git_open,
             get_commit_stats,

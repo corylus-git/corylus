@@ -26,6 +26,7 @@ import AsyncLock from 'async-lock';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { castDraft } from 'immer';
+import { queryClient } from '../../util/queryClient';
 
 /**
  * Information about the git history
@@ -387,7 +388,7 @@ export const loadCommitStats = (commit: Commit): Promise<CommitStats> => repoSto
  * =================================================
  */
 listen<BranchInfo[]>('branchesChanged', ev => {
-    repoStore.getState().setBranches(ev.payload);
+    queryClient.invalidateQueries('branches');
 });
 
 listen<HistoryInfo>('historyChanged', ev => {
