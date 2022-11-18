@@ -17,7 +17,6 @@ import {
     useRepo,
     HistoryInfo,
 } from '../../model/state/repo';
-import { useGraph } from '../../model/state/graph';
 import { GraphLayoutData, LayoutListEntry } from '../../util/graphLayout';
 import { changeBranch, selectCommit } from '../../model/actions/repo';
 import { ListSelector, SelectableList, SelectableListEntryProps } from '../util/SelectableList';
@@ -99,7 +98,6 @@ export const Graph: React.FC<{
     height: number;
     history: HistoryInfo;
 }> = (props) => {
-    const entries = useGraph();
     const dialog = useDialog();
     const currentBranch = useCurrentBranch();
     const selectedCommit = useSelectedCommit();
@@ -108,13 +106,13 @@ export const Graph: React.FC<{
     const [currentMatchIndex, setCurrentMatchIndex] = React.useState<number>(0);
     const branches = useBranches();
     const tags = useTags();
-    const lines = entries.lines;
     const listSelector = React.useRef<ListSelector>(null);
 
     React.useEffect(() => {
-        const index = lines.findIndex(
-            (l) => selectedCommit.found && l.commit.oid === selectedCommit.value.commit.oid
-        );
+        const index = -1; // TODO implement searching in the backend
+        // const index = lines.findIndex(
+        //     (l) => selectedCommit.found && l.commit.oid === selectedCommit.value.commit.oid
+        // );
         if (index !== -1) {
             listSelector.current?.scrollToItem(index);
             listSelector.current?.selectItems([index]);
@@ -132,17 +130,17 @@ export const Graph: React.FC<{
             <SearchBox
                 onTermChange={(term) => {
                     const termLowerCase = term.toLocaleLowerCase();
-                    const matches =
-                        termLowerCase.length > 0
-                            ? lines.reduce(
-                                (existingMatches, current, index) =>
-                                    matchCommit(current.commit, termLowerCase)
-                                        ? existingMatches.concat(index)
-                                        : existingMatches,
+                    const matches: number[] = []; // TODO implement matching in the backend
+                        // termLowerCase.length > 0
+                        //     ? lines.reduce(
+                        //         (existingMatches, current, index) =>
+                        //             matchCommit(current.commit, termLowerCase)
+                        //                 ? existingMatches.concat(index)
+                        //                 : existingMatches,
 
-                                [] as number[]
-                            )
-                            : [];
+                        //         [] as number[]
+                        //     )
+                        //     : [];
                     setMatches(matches);
                     setCurrentMatchIndex(0);
                     if (matches.length !== 0) {

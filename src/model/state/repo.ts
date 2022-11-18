@@ -21,7 +21,6 @@ import { log } from './log';
 import { Logger } from '../../util/logger';
 // import fs from 'fs';
 import * as path from '@tauri-apps/api/path';
-import { graph } from './graph';
 import AsyncLock from 'async-lock';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
@@ -219,7 +218,6 @@ export const repoStore = create<RepoState & RepoActions>()(
                         });
                     }
                 };
-                graph.getState().reset();
                 partLoader();
             },
             setBranches: (branches: BranchInfo[]): void => {
