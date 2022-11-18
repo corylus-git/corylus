@@ -13,7 +13,11 @@ export const graph = create<GraphLayoutData & GraphActions>((set, _) => ({
     lines: [],
     rails: [],
     setGraph: (graph: GraphLayoutData): void => {
-        set((_) => graph, true);
+        set((state) => {
+            state.lines = graph.lines;
+            state.rails = graph.rails;
+            return state;
+        });
     },
     reset: (): void => {
         set((state) => {

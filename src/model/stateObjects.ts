@@ -122,7 +122,7 @@ export interface Timestamp {
 export interface GitPerson extends Person {
     readonly timestamp: Timestamp
 }
-
+// TODO check whether this works if a commit is from a different timezone
 export function formatTimestamp(timestamp: Timestamp) {
     return new Date((timestamp.utcSeconds)*1000).toLocaleString();
 }
@@ -266,7 +266,7 @@ export interface CommitStats {
      * The incoming changes, i.e. the changes between a merge commit and its first parent
      * Only valid filled for merge commits
      */
-    readonly incoming: Maybe<readonly DiffStat[]>;
+    readonly incoming?: readonly DiffStat[];
 }
 
 /**

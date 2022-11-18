@@ -110,6 +110,7 @@ export const Repository: React.FC = () => {
     React.useEffect(() => {
         if (repo.active) {
             Logger().debug('Repository', 'Path changed', { path: path });
+            repo.loadHistory();
             // repo.loadRepo().then(() => {
             //     workflows.registerGitWorkflows([new Gitflow(dialog)]);
             // });

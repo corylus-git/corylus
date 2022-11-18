@@ -163,18 +163,18 @@ export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
                 overflow: 'auto',
             }}>
                 <CommitHeader commit={stats.value.commit} />
-                {stats.value.incoming.found && stats.value.direct.length > 0 && <h2>Conflicts</h2>}
+                {stats.value.incoming && stats.value.direct.length > 0 && <h2>Conflicts</h2>}
                 <DiffView
                     commit={stats.value.commit.oid}
                     diffs={stats.value.direct}
                     source={stats.value.commit.type}
                     />
-                {stats.value.incoming.found && (
+                {stats.value.incoming && (
                     <>
                         <h2>Incoming</h2>
                         <DiffView
                             commit={stats.value.commit.oid}
-                            diffs={stats.value.incoming.value}
+                            diffs={stats.value.incoming}
                             source={stats.value.commit.type}
                             toParent={`${stats.value.commit.oid}^`}
                         />

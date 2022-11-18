@@ -18,10 +18,11 @@ import {
     HistoryInfo,
 } from '../../model/state/repo';
 import { useGraph } from '../../model/state/graph';
-import { GraphLayoutData } from '../../util/graphLayout';
+import { GraphLayoutData, LayoutListEntry } from '../../util/graphLayout';
 import { changeBranch, selectCommit } from '../../model/actions/repo';
 import { ListSelector, SelectableList, SelectableListEntryProps } from '../util/SelectableList';
 import { GraphRenderer } from './GraphRenderer';
+import { invoke } from '@tauri-apps/api';
 
 function openContextMenu(
     dialog: DialogActions,
@@ -134,13 +135,13 @@ export const Graph: React.FC<{
                     const matches =
                         termLowerCase.length > 0
                             ? lines.reduce(
-                                  (existingMatches, current, index) =>
-                                      matchCommit(current.commit, termLowerCase)
-                                          ? existingMatches.concat(index)
-                                          : existingMatches,
+                                (existingMatches, current, index) =>
+                                    matchCommit(current.commit, termLowerCase)
+                                        ? existingMatches.concat(index)
+                                        : existingMatches,
 
-                                  [] as number[]
-                              )
+                                [] as number[]
+                            )
                             : [];
                     setMatches(matches);
                     setCurrentMatchIndex(0);
@@ -158,8 +159,7 @@ export const Graph: React.FC<{
             <GraphRenderer
                 width={props.width}
                 height={props.height}
-                lines={entries.lines}
-                rails={entries.rails}
+                getLine={async idx => (await invoke<LayoutListEntry[]>('get_graph_entries', { startIdx: idx, endIdx: idx + 1 }))[0]} // TODO directly request from the backend
                 totalCommits={props.history.total}
                 first={props.history.first}
                 branches={branches}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from 'react-query';
 import styled from 'styled-components';
 import { BranchInfo, Commit, Tag } from '../../model/stateObjects';
 import { GraphLayoutData, LayoutListEntry } from '../../util/graphLayout';
@@ -12,7 +13,7 @@ const CommitMessage = styled.div`
     flex-grow: 1;
 `;
 
-const CommitEntry = styled(HoverableDiv)<{ isSelected?: boolean }>`
+const CommitEntry = styled(HoverableDiv) <{ isSelected?: boolean }>`
     display: flex;
     min-height: 3rem;
     background-color: ${(props) => (props.isSelected ? 'var(--selected)' : undefined)};
@@ -24,6 +25,7 @@ export interface SizableControlProps {
 }
 
 export type GraphRendererProps = {
+    getLine: (idx: number) => Promise<LayoutListEntry>;
     totalCommits: number;
     first: number;
     branches: readonly BranchInfo[];
@@ -32,11 +34,10 @@ export type GraphRendererProps = {
     multi?: boolean;
     onOpenContextMenu?: (commit: Commit) => void;
     onCommitsSelected?: (commits: readonly Commit[]) => void;
-} & GraphLayoutData &
-    SizableControlProps;
+} & SizableControlProps;
 
 export type GraphLineProps = {
-    lines: readonly LayoutListEntry[];
+    getLine: (idx: number) => Promise<LayoutListEntry>;
     selected: boolean;
     onOpenContextMenu?: (commit: Commit) => void;
     branches: readonly BranchInfo[];
@@ -46,9 +47,12 @@ export type GraphLineProps = {
 };
 
 export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps> = (props) => {
-    const e = props.lines[props.index];
-    if (!e) {
-        return <></>;
+    const { isLoading, error, data: e } = useQuery(["graphLine", props.index], () => props.getLine(props.index));
+    if (isLoading) {
+        return <>...</>;
+    }
+    if (error || !e) {
+        return <>Could not load graph line...</>
     }
     let width = e.rails.length - 1;
     while (e.rails[width] === undefined && width > 0) {
@@ -89,12 +93,12 @@ export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps> = (p
 };
 
 export const GraphRenderer = React.forwardRef<ListSelector, GraphRendererProps>((props, ref) => {
-    const { lines, branches, tags, searchTerm, onOpenContextMenu } = props;
+    const { getLine, branches, tags, searchTerm, onOpenContextMenu } = props;
 
     const ListEntry = (props: SelectableListEntryProps) => (
         <GraphLine
             branches={branches}
-            lines={lines}
+            getLine={getLine}
             tags={tags}
             searchTerm={searchTerm}
             onOpenContextMenu={onOpenContextMenu}
@@ -113,9 +117,8 @@ export const GraphRenderer = React.forwardRef<ListSelector, GraphRendererProps>(
                 width={props.width}
                 height={props.height}
                 onSelectionChange={(selected) => {
-                    props.onCommitsSelected?.(
-                        Array.from(selected.values()).map((idx) => lines![idx]?.commit)
-                    );
+                    Promise.all(Array.from(selected.values()).map(async (idx) => (await getLine(idx))?.commit)).then(
+                        results => props.onCommitsSelected?.(results));
                 }}
                 ref={ref}
                 multi={props.multi}>

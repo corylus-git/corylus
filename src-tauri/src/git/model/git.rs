@@ -156,7 +156,7 @@ pub struct GitCommitStats {
      * The incoming changes, i.e. the changes between a merge commit and its first parent
      * Only valid filled for merge commits
      */
-    pub incoming: Vec<DiffStat>,
+    pub incoming: Option<Vec<DiffStat>>,
 }
 
 /**

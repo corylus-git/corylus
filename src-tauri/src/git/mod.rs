@@ -1,32 +1,30 @@
-pub mod graph;
-pub mod index;
 pub mod diff;
-pub mod model;
+pub mod graph;
 pub mod history;
+pub mod index;
+pub mod model;
 
 use std::sync::Arc;
 
 use git2::{Delta, DiffOptions, Oid, Patch, Repository, Sort};
 use serde::{Deserialize, Serialize};
-use tauri::{Window, async_runtime::Mutex};
+use tauri::{async_runtime::Mutex, Window};
 
 use crate::{error::BackendError, settings::Settings};
 
 use self::{
     graph::calculate_graph_layout,
+    history::map_commit,
     model::{
-        git::{
-            Commit, DiffStat, DiffStatus, FileStats, FullCommitData,
-            GitCommitStats, GitPerson, ParentReference, TimeWithOffset,
-        },
+        git::Commit,
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
         BranchInfo,
-    }, history::map_commit,
+    },
 };
 
 pub struct AppState {
-    pub git: Option<GitBackend>,    
-    pub settings: Settings
+    pub git: Option<GitBackend>,
+    pub settings: Settings,
 }
 
 pub type StateType<'a> = tauri::State<'a, Arc<Mutex<AppState>>>;
@@ -39,15 +37,14 @@ pub struct GitBackend {
 
 impl GitBackend {
     pub fn new(path: &str) -> Result<GitBackend, BackendError> {
-        Ok(Repository::open(path)
-            .map(|repo| GitBackend {
-                repo,
-                branches: vec![],
-                graph: GraphLayoutData {
-                    lines: vec![],
-                    rails: vec![],
-                },
-            })?)
+        Ok(Repository::open(path).map(|repo| GitBackend {
+            repo,
+            branches: vec![],
+            graph: GraphLayoutData {
+                lines: vec![],
+                rails: vec![],
+            },
+        })?)
     }
 
     pub fn load_branches(&mut self, window: &Window) {
@@ -123,25 +120,13 @@ impl GitBackend {
         to_parent: Option<&str>,
         pathspec: &[Option<&str>],
     ) -> Result<git2::Diff, BackendError> {
-        let oid = commit_id
-            .map(|id| Oid::from_str(id))
-            .transpose()?;
+        let oid = commit_id.map(|id| Oid::from_str(id)).transpose()?;
         let commit_tree = oid
-            .map(|coid| {
-                self.repo
-                    .find_commit(coid)
-                    .and_then(|c| c.tree())
-            })
+            .map(|coid| self.repo.find_commit(coid).and_then(|c| c.tree()))
             .transpose()?;
-        let parent_commit_oid = to_parent
-            .map(|id| Oid::from_str(id))
-            .transpose()?;
+        let parent_commit_oid = to_parent.map(|id| Oid::from_str(id)).transpose()?;
         let parent_commit_tree = parent_commit_oid
-            .map(|pid| {
-                self.repo
-                    .find_commit(pid)
-                    .and_then(|c| c.tree())
-            })
+            .map(|pid| self.repo.find_commit(pid).and_then(|c| c.tree()))
             .transpose()?;
         let mut diff_opts = DiffOptions::new();
         diff_opts.patience(true);
@@ -150,12 +135,11 @@ impl GitBackend {
                 diff_opts.pathspec(p);
             }
         });
-        Ok(self.repo
-            .diff_tree_to_tree(
-                parent_commit_tree.as_ref(),
-                commit_tree.as_ref(),
-                Some(&mut diff_opts),
-            )?)
+        Ok(self.repo.diff_tree_to_tree(
+            parent_commit_tree.as_ref(),
+            commit_tree.as_ref(),
+            Some(&mut diff_opts),
+        )?)
     }
 }
 
@@ -183,18 +167,33 @@ pub async fn get_graph_entries(
     start_idx: usize,
     end_idx: usize,
 ) -> Result<Vec<LayoutListEntry>, BackendError> {
-    with_backend(state, |backend| Ok(backend.graph.lines.clone())).await
+    with_backend(state, |backend| {
+        Ok(backend
+            .graph
+            .lines
+            .iter()
+            .skip(start_idx)
+            .take(end_idx - start_idx)
+            .cloned()
+            .collect())
+    })
+    .await
 }
 
 #[tauri::command]
-pub async fn git_open(state: StateType<'_>, window: Window, path: &str) -> Result<(), BackendError> {
+pub async fn git_open(
+    state: StateType<'_>,
+    window: Window,
+    path: &str,
+) -> Result<(), BackendError> {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
     with_state_mut(state, |s| {
         s.git = Some(GitBackend::new(path)?);
         // TODO spawn of extra thread and possibly lock inside the backend
         s.git.as_mut().unwrap().load_repo_data(&window);
         Ok(())
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
@@ -216,20 +215,26 @@ pub enum DiffSourceType {
     Stash,
 }
 
-pub async fn with_state<F: FnOnce(&AppState) -> Result<R, E>, R, E>(state: StateType<'_>, op: F) -> Result<R, E>
-{
+pub async fn with_state<F: FnOnce(&AppState) -> Result<R, E>, R, E>(
+    state: StateType<'_>,
+    op: F,
+) -> Result<R, E> {
     let state_guard = state.lock().await;
     op(&*state_guard)
 }
 
-pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(state: StateType<'_>, op: F) -> Result<R, E>
-{
+pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(
+    state: StateType<'_>,
+    op: F,
+) -> Result<R, E> {
     let mut state_guard = state.lock().await;
     op(&mut *state_guard)
 }
 
-pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(state: StateType<'_>, op: F) -> Result<R, BackendError>
-{
+pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
+    state: StateType<'_>,
+    op: F,
+) -> Result<R, BackendError> {
     let state_guard = state.lock().await;
     if let Some(git) = (*state_guard).git.as_ref() {
         op(&git)
@@ -238,8 +243,10 @@ pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
     }
 }
 
-pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> Result<R, BackendError>, R>(state: StateType<'_>, op: F) -> Result<R, BackendError>
-{
+pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> Result<R, BackendError>, R>(
+    state: StateType<'_>,
+    op: F,
+) -> Result<R, BackendError> {
     let mut state_guard = state.lock().await;
     if let Some(git) = (*state_guard).git.as_mut() {
         op(git)

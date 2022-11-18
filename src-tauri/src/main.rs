@@ -13,12 +13,12 @@ mod settings;
 
 use std::sync::Arc;
 
-use settings::{load_settings};
+use settings::load_settings;
 use git::{git_open, is_git_dir, AppState};
 use tauri::async_runtime::Mutex;
 
 use crate::{git::{
-    index::{commit, get_status, stage, unstage}, diff::get_diff, history::get_commit_stats, get_branches,
+    index::{commit, get_status, stage, unstage}, diff::get_diff, history::get_commit_stats, get_branches, get_graph_entries,
 }, settings::get_settings};
 
 // #[cfg(not(test))]
@@ -38,7 +38,8 @@ fn main() {
             get_status,
             stage,
             unstage,
-            commit
+            commit,
+            get_graph_entries
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

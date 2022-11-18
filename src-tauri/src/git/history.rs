@@ -27,7 +27,7 @@ pub async fn get_commit_stats(
         )?;
         let direct = map_diff(&direct_diff);
 
-        let incoming_diff = commit
+        let incoming = commit
             .parent(1)
             .and_then(|parent| parent.tree())
             .and_then(|tree| {
@@ -36,8 +36,9 @@ pub async fn get_commit_stats(
                     commit.tree().as_ref().ok(),
                     Some(DiffOptions::new().patience(true)),
                 )
-            })?;
-        let incoming = map_diff(&incoming_diff);
+            })
+            .and_then(|diff| Ok(map_diff(&diff)))
+            .ok();
         window.emit(
             "commitStatsChanged",
             GitCommitStats {

@@ -142,7 +142,7 @@ export const tabsStore = create<TabsState & TabsActions>()(
                 if (state.active.found) {
                     state.left = [...state.left, state.active.value];
                 }
-                openInActiveTab(state, path);
+                openInActiveTab(path);
             });
         },
         loadTabs: (tabs: readonly TabState[]): void => {
