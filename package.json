@@ -1,6 +1,6 @@
 {
     "name": "corylus",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "",
     "main": "./dist/main.js",
     "scripts": {
@@ -65,7 +65,7 @@
             "./assets/**"
         ],
         "linux": {
-            "target": [ "deb", "rpm", "AppImage" ]
+            "target": [ "deb", "rpm", "AppImage", "pacman" ]
         },
         "win": {
             "target": "nsis"
