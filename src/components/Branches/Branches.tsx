@@ -10,16 +10,14 @@ import { Stashes } from './Stashes';
 import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
 import { TypeHeader } from './TypeHeader';
-import { Maybe, map, nothing, toOptional, fromNullable, just } from '../../util/maybe';
+import { Maybe, map, nothing, toOptional, fromNullable, just, Nothing } from '../../util/maybe';
 import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree } from '../../model/actions/repo';
 import { Logger } from '../../util/logger';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
-    useBranches,
-    useCurrentBranch,
-    repoStore,
+    // useCurrentBranch,
     useRemotes,
-    useAffected,
+    useAffectedBranches,
 } from '../../model/state/repo';
 import { StyledButton } from '../util/StyledButton';
 
@@ -60,132 +58,132 @@ function openContextMenu(
     currentBranch: Maybe<BranchInfo>
 ) {
     if (branch.found) {
-    //     const menu = new Menu();
-    //     menu.append(
-    //         new MenuItem({
-    //             label: `Create new branch from ${branch.value.ref}`,
-    //             click: () => {
-    //                 dialogActions.open({
-    //                     type: 'request-new-branch',
-    //                     subType: 'branch',
-    //                     source: just(branch.value.ref),
-    //                     branchPrefix: nothing,
-    //                 });
-    //             },
-    //         })
-    //     );
-    //     if ((branch.value.upstream?.behind ?? 0) > 0) {
-    //         menu.append(
-    //             new MenuItem({
-    //                 label: `Update ${branch.value.ref} to remote tracking branch`,
-    //                 click: () => {
-    //                     if (currentBranch.found && branch.value.current) {
-    //                         pull(
-    //                             branch.value.upstream!.remoteName,
-    //                             branch.value.upstream!.ref,
-    //                             false
-    //                         );
-    //                     } else {
-    //                         fetchRemote(
-    //                             just(branch.value.upstream!.remoteName),
-    //                             just(`${branch.value.upstream?.ref}:${branch.value.ref}`),
-    //                             false,
-    //                             false
-    //                         );
-    //                     }
-    //                 },
-    //             })
-    //         );
-    //     }
-    //     if ((branch.value.upstream?.ahead ?? 0) > 0) {
-    //         menu.append(
-    //             new MenuItem({
-    //                 label: `Push ${branch.value.ref} to remote tracking branch`,
-    //                 click: () => {
-    //                     push(
-    //                         branch.value.ref,
-    //                         branch.value.upstream!.remoteName,
-    //                         branch.value.upstream!.ref
-    //                     );
-    //                 },
-    //             })
-    //         );
-    //     }
-    //     if (currentBranch.found && !branch.value.current) {
-    //         menu.append(
-    //             new MenuItem({
-    //                 label: `Delete branch ${branch.value.ref}`,
-    //                 click: () => {
-    //                     dialogActions.deleteBranchDialog(branch.value);
-    //                 },
-    //             })
-    //         );
-    //         menu.append(
-    //             new MenuItem({
-    //                 label: `Merge ${branch.value.ref} into ${currentBranch.value.ref}`,
-    //                 click: () => {
-    //                     dialogActions.open({ type: 'request-merge', source: just(branch.value.ref) });
-    //                 },
-    //             })
-    //         );
-    //         menu.append(
-    //             new MenuItem({
-    //                 label: `Rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
-    //                 click: () => {
-    //                     dialogActions.open({ type: 'rebase', target: branch.value.ref });
-    //                 },
-    //             })
-    //         );
-    //         menu.append(
-    //             new MenuItem({
-    //                 label: `Interactive rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
-    //                 click: () => {
-    //                     dialogActions.open({ type: 'interactive-rebase', target: branch.value.ref });
-    //                 },
-    //             })
-    //         );
-    //         if (branch.value.worktree) {
-    //             const openTab = getTab(branch.value.worktree);
-    //             if (openTab) {
-    //                 menu.append(
-    //                     new MenuItem({
-    //                         label: `Switch to worktree tab at ${branch.value.worktree}`,
-    //                         click: () => {
-    //                             if (branch.value.worktree && openTab) {
-    //                                 tabsStore.getState().switchTab(openTab);
-    //                             }
-    //                         },
-    //                     })
-    //                 );
-    //             } else {
-    //                 menu.append(
-    //                     new MenuItem({
-    //                         label: `Open worktree at ${branch.value.worktree}`,
-    //                         click: () => {
-    //                             if (branch.value.worktree) {
-    //                                 tabsStore.getState().openRepoInNew(branch.value.worktree);
-    //                             }
-    //                         },
-    //                     })
-    //                 );
-    //             }
-    //         } else {
-    //             menu.append(new MenuItem({
-    //                 label: `Check ${branch.value.ref} out as worktree`,
-    //                 click: async () => {
-    //                         const dir = await dialog.showOpenDialog(getCurrentWindow(), {
-    //                             properties: ['openDirectory'],
-    //                             title: 'Choose directory to create the worktree in'
-    //                         });
-    //                         if (dir.filePaths && dir.filePaths.length === 1) {
-    //                             await addWorktree(branch.value.ref, dir.filePaths[0]);
-    //                             tabsStore.getState().openRepoInNew(dir.filePaths[0]);
-    //                         }
-    //                 },
-    //             }))
-    //         }
-    //     }
-    //     menu.popup({ window: getCurrentWindow() });
+        //     const menu = new Menu();
+        //     menu.append(
+        //         new MenuItem({
+        //             label: `Create new branch from ${branch.value.ref}`,
+        //             click: () => {
+        //                 dialogActions.open({
+        //                     type: 'request-new-branch',
+        //                     subType: 'branch',
+        //                     source: just(branch.value.ref),
+        //                     branchPrefix: nothing,
+        //                 });
+        //             },
+        //         })
+        //     );
+        //     if ((branch.value.upstream?.behind ?? 0) > 0) {
+        //         menu.append(
+        //             new MenuItem({
+        //                 label: `Update ${branch.value.ref} to remote tracking branch`,
+        //                 click: () => {
+        //                     if (currentBranch.found && branch.value.current) {
+        //                         pull(
+        //                             branch.value.upstream!.remoteName,
+        //                             branch.value.upstream!.ref,
+        //                             false
+        //                         );
+        //                     } else {
+        //                         fetchRemote(
+        //                             just(branch.value.upstream!.remoteName),
+        //                             just(`${branch.value.upstream?.ref}:${branch.value.ref}`),
+        //                             false,
+        //                             false
+        //                         );
+        //                     }
+        //                 },
+        //             })
+        //         );
+        //     }
+        //     if ((branch.value.upstream?.ahead ?? 0) > 0) {
+        //         menu.append(
+        //             new MenuItem({
+        //                 label: `Push ${branch.value.ref} to remote tracking branch`,
+        //                 click: () => {
+        //                     push(
+        //                         branch.value.ref,
+        //                         branch.value.upstream!.remoteName,
+        //                         branch.value.upstream!.ref
+        //                     );
+        //                 },
+        //             })
+        //         );
+        //     }
+        //     if (currentBranch.found && !branch.value.current) {
+        //         menu.append(
+        //             new MenuItem({
+        //                 label: `Delete branch ${branch.value.ref}`,
+        //                 click: () => {
+        //                     dialogActions.deleteBranchDialog(branch.value);
+        //                 },
+        //             })
+        //         );
+        //         menu.append(
+        //             new MenuItem({
+        //                 label: `Merge ${branch.value.ref} into ${currentBranch.value.ref}`,
+        //                 click: () => {
+        //                     dialogActions.open({ type: 'request-merge', source: just(branch.value.ref) });
+        //                 },
+        //             })
+        //         );
+        //         menu.append(
+        //             new MenuItem({
+        //                 label: `Rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
+        //                 click: () => {
+        //                     dialogActions.open({ type: 'rebase', target: branch.value.ref });
+        //                 },
+        //             })
+        //         );
+        //         menu.append(
+        //             new MenuItem({
+        //                 label: `Interactive rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
+        //                 click: () => {
+        //                     dialogActions.open({ type: 'interactive-rebase', target: branch.value.ref });
+        //                 },
+        //             })
+        //         );
+        //         if (branch.value.worktree) {
+        //             const openTab = getTab(branch.value.worktree);
+        //             if (openTab) {
+        //                 menu.append(
+        //                     new MenuItem({
+        //                         label: `Switch to worktree tab at ${branch.value.worktree}`,
+        //                         click: () => {
+        //                             if (branch.value.worktree && openTab) {
+        //                                 tabsStore.getState().switchTab(openTab);
+        //                             }
+        //                         },
+        //                     })
+        //                 );
+        //             } else {
+        //                 menu.append(
+        //                     new MenuItem({
+        //                         label: `Open worktree at ${branch.value.worktree}`,
+        //                         click: () => {
+        //                             if (branch.value.worktree) {
+        //                                 tabsStore.getState().openRepoInNew(branch.value.worktree);
+        //                             }
+        //                         },
+        //                     })
+        //                 );
+        //             }
+        //         } else {
+        //             menu.append(new MenuItem({
+        //                 label: `Check ${branch.value.ref} out as worktree`,
+        //                 click: async () => {
+        //                         const dir = await dialog.showOpenDialog(getCurrentWindow(), {
+        //                             properties: ['openDirectory'],
+        //                             title: 'Choose directory to create the worktree in'
+        //                         });
+        //                         if (dir.filePaths && dir.filePaths.length === 1) {
+        //                             await addWorktree(branch.value.ref, dir.filePaths[0]);
+        //                             tabsStore.getState().openRepoInNew(dir.filePaths[0]);
+        //                         }
+        //                 },
+        //             }))
+        //         }
+        //     }
+        //     menu.popup({ window: getCurrentWindow() });
     }
 }
 
@@ -289,7 +287,7 @@ const BranchNodeDisplay: React.FC<{
                 </UpstreamMissing>
             )}
             {toOptional(props.branch)?.worktree && !toOptional(props.branch)?.current &&
-                <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`}/>
+                <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`} />
             }
         </Branch>
     );
@@ -431,12 +429,12 @@ function createBranchTreeData(
 export const Branches: React.FC = () => {
     // const branches = useBranches();
     const { isLoading, error, data } = useQuery('branches', () => invoke<BranchInfo[]>('get_branches'));
-    const currentBranch = useCurrentBranch();
+    const currentBranch = undefined;
     const remotes = useRemotes();
-    const affected = useAffected();
+    const affected = useAffectedBranches();
     const branchTree = React.useMemo(
         () =>
-            data && 
+            data &&
             currentBranch !== undefined &&
             createBranchTreeData(
                 data.filter((b) => !b.remote),
@@ -458,8 +456,8 @@ export const Branches: React.FC = () => {
             {branchTree && (
                 <BranchTree
                     root={branchTree}
-                    currentBranch={currentBranch}
-                    affected={affected.branches}
+                    currentBranch={nothing}
+                    affected={affected}
                 />
             )}
             <TagsList />

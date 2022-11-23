@@ -8,7 +8,7 @@ use super::{
         Commit, DiffStat, DiffStatus, FileStats, FullCommitData, GitCommitStats, GitPerson,
         ParentReference, TimeWithOffset,
     },
-    with_backend_mut, StateType,
+    with_backend, with_backend_mut, StateType,
 };
 
 #[tauri::command]
@@ -48,6 +48,26 @@ pub async fn get_commit_stats(
             },
         );
         Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_affected_branches(
+    state: StateType<'_>,
+    oid: String,
+) -> Result<Vec<String>, BackendError> {
+    with_backend(state, |backend| {
+        let parsed_oid = Oid::from_str(&oid)?;
+        let affected_branches = backend.branches.iter().filter(|&b| {
+            Oid::from_str(b.head.as_str()).map_or(false, |candidate_oid| {
+                backend
+                    .repo
+                    .graph_descendant_of(parsed_oid, candidate_oid)
+                    .unwrap_or(false)
+            })
+        });
+        Ok(affected_branches.map(|b| b.ref_name.clone()).collect())
     })
     .await
 }

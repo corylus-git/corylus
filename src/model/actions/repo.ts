@@ -631,9 +631,10 @@ export function selectCommit(ref: CommitStats | string | Commit) {
     }
 }
 
-function requestAffectedCommits(oid: string, branches: boolean, tags: boolean) {
+async function requestAffectedCommits(oid: string, branches: boolean, tags: boolean) {
     Logger().debug('requestAffectedCommits', 'Requesting affected commits', {oid, branches, tags});
-    invoke('get_affected_commits', { oid, branches, tags });
+    const result = await invoke('get_affected_branches', { oid });
+    console.log("Affected", result);
 }
 
 export function getDiff(options: {

@@ -18,7 +18,7 @@ use git::{git_open, is_git_dir, AppState};
 use tauri::async_runtime::Mutex;
 
 use crate::{git::{
-    index::{commit, get_status, stage, unstage}, diff::get_diff, history::get_commit_stats, get_branches, get_graph_entries,
+    index::{commit, get_status, stage, unstage}, diff::get_diff, history::{get_commit_stats, get_affected_branches}, get_branches, get_graph_entries,
 }, settings::get_settings};
 
 // #[cfg(not(test))]
@@ -39,7 +39,8 @@ fn main() {
             stage,
             unstage,
             commit,
-            get_graph_entries
+            get_graph_entries,
+            get_affected_branches
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

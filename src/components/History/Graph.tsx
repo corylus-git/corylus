@@ -11,7 +11,7 @@ import { map, Maybe, just, nothing } from '../../util/maybe';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
     useBranches,
-    useCurrentBranch,
+    // useCurrentBranch,
     useTags,
     useSelectedCommit,
     useRepo,
@@ -99,12 +99,12 @@ export const Graph: React.FC<{
     history: HistoryInfo;
 }> = (props) => {
     const dialog = useDialog();
-    const currentBranch = useCurrentBranch();
+    // const currentBranch = useCurrentBranch();
     const selectedCommit = useSelectedCommit();
     const [searchTerm, setSearchTerm] = React.useState<string>();
     const [matches, setMatches] = React.useState<number[]>([]);
     const [currentMatchIndex, setCurrentMatchIndex] = React.useState<number>(0);
-    const branches = useBranches();
+    const { data: branches } = useBranches();
     const tags = useTags();
     const listSelector = React.useRef<ListSelector>(null);
 
@@ -160,10 +160,10 @@ export const Graph: React.FC<{
                 getLine={async idx => (await invoke<LayoutListEntry[]>('get_graph_entries', { startIdx: idx, endIdx: idx + 1 }))[0]} // TODO directly request from the backend
                 totalCommits={props.history.total}
                 first={props.history.first}
-                branches={branches}
+                branches={branches ?? []}
                 tags={tags}
-                onOpenContextMenu={(commit) =>
-                    openContextMenu(dialog, commit.oid, commit.shortOid, currentBranch)
+                onOpenContextMenu={(commit) => {}
+                    // openContextMenu(dialog, commit.oid, commit.shortOid, currentBranch)
                 }
                 onCommitsSelected={(c) => selectCommit(c[0])}
                 searchTerm={searchTerm}
