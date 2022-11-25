@@ -127,7 +127,7 @@ function showScrollButtons(
         if (
             scrollRef.current &&
             scrollRef.current.scrollLeft + scrollRef.current.clientWidth <
-                scrollRef.current.scrollWidth
+            scrollRef.current.scrollWidth
         ) {
             rightRef.current.style.visibility = 'visible';
         } else {
@@ -175,39 +175,17 @@ export const Tabs: React.FC = () => {
                         &lt;
                     </NavButton>
                     <div className="tabs-header-container" ref={scrollRef}>
-                        {tabs.left.map((tab) => (
+                        {tabs.tabs.map((tab) => (
                             <Tab
+                                ref={tabs.active.found && tabs.active.value === tab.id ? activeRef : undefined}
                                 label={tab.title}
-                                active={false}
+                                active={tabs.active.found && tabs.active.value === tab.id}
                                 key={tab.id}
                                 title={(tab.path.found && tab.path.value) || undefined}
                                 onClose={() => tabs.closeTab(tab.id)}
-                                onClick={() => tabs.switchTab(tab)}
+                                onClick={tabs.active.found && tabs.active.value === tab.id ? undefined : () => tabs.switchTab(tab)}
                             />
-                        ))}
-                        {tabs.active.found && (
-                            <Tab
-                                ref={activeRef}
-                                label={tabs.active.value.title}
-                                active={true}
-                                key={tabs.active.value.id}
-                                title={
-                                    (tabs.active.value.path.found &&
-                                        tabs.active.value.path.value) ||
-                                    undefined
-                                }
-                                onClose={() => tabs.closeTab(unsafeDefinitely(tabs.active).id)}
-                            />
-                        )}
-                        {tabs.right.map((tab) => (
-                            <Tab
-                                label={tab.title}
-                                active={false}
-                                key={tab.id}
-                                title={(tab.path.found && tab.path.value) || undefined}
-                                onClose={() => tabs.closeTab(tab.id)}
-                                onClick={() => tabs.switchTab(tab)}
-                            />
+
                         ))}
                     </div>
 
@@ -233,7 +211,7 @@ export const Tabs: React.FC = () => {
             </TabHeader>
             <TabContent>
                 {tabs.active.found ? (
-                    tabs.active.value.path.found ? (
+                    tabs.tabs.find(t => tabs.active.found && t.id === tabs.active.value)?.path?.found ? (
                         <Repository />
                     ) : (
                         <NewTab />

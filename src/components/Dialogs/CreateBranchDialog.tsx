@@ -10,7 +10,7 @@ import { ButtonGroup } from '../util/ButtonGroup';
 import { preNormalize, postNormalize } from '../../util/normalizeRef';
 import { createBranch } from '../../model/actions/repo';
 import { useDialog } from '../../model/state/dialogs';
-import { useBranches, useCurrentBranch } from '../../model/state/repo';
+import { useBranches } from '../../model/state/repo';
 
 const CreateBranchDialogView = styled(StyledDialog)`
     width: 40rem;
@@ -34,11 +34,11 @@ function SourceBranchSelection(props: {
     return (
         (props.branches && (
             <select id={props.id} onChange={props.onChange} value={props.value}>
-                {props.branches
+                {/* {props.branches
                     .filter((b) => !b.remote)
                     .map((b) => (
                         <option key={b.ref}>{b.ref}</option>
-                    ))}
+                    ))} */}
             </select>
         )) || <></>
     );
@@ -83,7 +83,7 @@ const BranchNameInput: React.FC = () => {
 
 export const CreateBranchDialog: React.FC = () => {
     const branches = useBranches();
-    const currentBranch = useCurrentBranch();
+    // const currentBranch = useCurrentBranch();
     const dialog = useDialog();
 
     if (dialog.type === 'request-new-branch') {
@@ -93,8 +93,8 @@ export const CreateBranchDialog: React.FC = () => {
                     initialValues={{
                         from: dialog.source.found
                             ? dialog.source.value
-                            : currentBranch.found
-                            ? currentBranch.value.ref
+                            : '' // currentBranch.found
+                            ? '' // currentBranch.value.ref
                             : '',
                         branch: dialog.branchPrefix.found ? dialog.branchPrefix.value : '',
                         checkout: true,
@@ -122,7 +122,7 @@ export const CreateBranchDialog: React.FC = () => {
                                     <label htmlFor="from">Source</label>
                                     {dialog.subType === 'branch' ? (
                                         <SourceBranchSelection
-                                            branches={branches?.filter((b) => !b.remote)}
+                                            branches={[] /*branches?.filter((b) => !b.remote)*/}
                                             {...formik.getFieldProps('from')}
                                             id="from"
                                         />

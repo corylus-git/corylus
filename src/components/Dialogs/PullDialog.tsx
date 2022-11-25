@@ -4,14 +4,16 @@ import { StyledDialog } from '../util/StyledDialog';
 import { Formik } from 'formik';
 import { ButtonGroup } from '../util/ButtonGroup';
 import { StyledButton } from '../util/StyledButton';
-import { toOptional } from '../../util/maybe';
+import { Maybe, nothing, toOptional } from '../../util/maybe';
 import { pull } from '../../model/actions/repo';
 import { useDialog } from '../../model/state/dialogs';
-import { useCurrentBranch, useRemotes, useBranches } from '../../model/state/repo';
+import { useRemotes, useBranches } from '../../model/state/repo';
+import { BranchInfo } from '../../model/stateObjects';
 
 export const PullDialog: React.FC = () => {
     const dialog = useDialog();
-    const currentBranch = useCurrentBranch();
+    // const currentBranch = useCurrentBranch();
+    const currentBranch: Maybe<BranchInfo> = nothing;
     const remotes = useRemotes();
     const branches = useBranches();
 
@@ -25,13 +27,15 @@ export const PullDialog: React.FC = () => {
                     }}
                     onReset={() => dialog.close()}
                     initialValues={{
-                        remoteBranch: toOptional(currentBranch)?.upstream?.ref ?? '',
-                        remote: toOptional(currentBranch)?.upstream?.remoteName ?? '',
+                        // remoteBranch: toOptional(currentBranch)?.upstream?.ref ?? '',
+                        // remote: toOptional(currentBranch)?.upstream?.remoteName ?? '',
+                        remoteBranch: '',
+                        remote: '',
                         noFF: false,
                     }}>
                     {(formik) => (
                         <form onSubmit={formik.handleSubmit} onReset={formik.handleReset}>
-                            <p>Pull changes from remote into {toOptional(currentBranch)?.ref}?</p>
+                            <p>Pull changes from remote into {/*toOptional(currentBranch)?.ref*/''}?</p>
                             <p>
                                 <label>
                                     Remote:
@@ -41,9 +45,10 @@ export const PullDialog: React.FC = () => {
                                             formik.setFieldValue('remote', ev.currentTarget.value);
                                             formik.setFieldValue(
                                                 'remoteBranch',
-                                                branches?.find(
-                                                    (b) => b.remote === ev.currentTarget.value
-                                                )?.ref
+                                                // branches?.find(
+                                                //     (b) => b.remote === ev.currentTarget.value
+                                                // )?.ref
+                                                ''
                                             );
                                         }}>
                                         {remotes?.map((r) => (
@@ -56,11 +61,11 @@ export const PullDialog: React.FC = () => {
                                 <label>
                                     Remote branch:
                                     <select {...formik.getFieldProps('remoteBranch')}>
-                                        {branches
+                                        {/* {branches
                                             ?.filter((b) => b.remote === formik.values.remote)
                                             .map((b) => (
                                                 <option key={b.ref}>{b.ref}</option>
-                                            ))}
+                                            ))} */}
                                     </select>
                                 </label>
                             </p>
