@@ -1,13 +1,12 @@
-import React from 'react';
-import { Modal } from '../util/Modal';
-import { StyledDialog } from '../util/StyledDialog';
-import { ButtonGroup } from '../util/ButtonGroup';
-import { StyledButton } from '../util/StyledButton';
 import { Formik } from 'formik';
-import { toOptional } from '../../util/maybe';
+import React from 'react';
 import { merge } from '../../model/actions/repo';
 import { useDialog } from '../../model/state/dialogs';
-import { useBranches } from '../../model/state/repo';
+import { useBranches, useCurrentBranch } from '../../model/state/repo';
+import { ButtonGroup } from '../util/ButtonGroup';
+import { Modal } from '../util/Modal';
+import { StyledButton } from '../util/StyledButton';
+import { StyledDialog } from '../util/StyledDialog';
 
 /**
  * Open the merge configuration dialog
@@ -15,9 +14,9 @@ import { useBranches } from '../../model/state/repo';
  * @param props The properties of the dialog component
  */
 export const RequestMergeDialog: React.FC = () => {
-    const branches = useBranches();
+    const { data: branches } = useBranches();
     const dialog = useDialog();
-    // const targetBranch = useCurrentBranch();
+    const targetBranch = useCurrentBranch();
     if (dialog.type === 'request-merge') {
         const from = dialog.source;
         return (
@@ -40,13 +39,12 @@ export const RequestMergeDialog: React.FC = () => {
                                         <div>
                                             <label htmlFor="from">Merge from branch </label>{' '}
                                             <select id="from" value={from}>
-                                                {/* {branches
-                                                    .filter((b) => !b.current && !b.remote)
+                                                {branches?.filter((b) => !b.current && !b.remote)
                                                     .map((b) => (
-                                                        <option key={b.ref}>{b.ref}</option>
-                                                    ))} */}
+                                                        <option key={b.refName}>{b.refName}</option>
+                                                    ))}
                                             </select>{' '}
-                                            {/* into {toOptional(targetBranch)?.ref}? */}
+                                            into {targetBranch?.refName}?
                                         </div>
                                         <div>
                                             <input
@@ -65,11 +63,11 @@ export const RequestMergeDialog: React.FC = () => {
                                         <input
                                             type="hidden"
                                             id="from"
-                                            value={/*toOptional(targetBranch)?.ref*/''}
+                                            value={targetBranch?.refName}
                                         />
                                         <div>
                                             Merge from branch {from.value} into{' '}
-                                            {/*toOptional(targetBranch)?.ref*/''}?
+                                            {targetBranch?.refName}?
                                         </div>
                                         <div>
                                             <input

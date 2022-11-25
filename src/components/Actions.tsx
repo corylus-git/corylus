@@ -18,7 +18,7 @@ import { Logger } from '../util/logger';
 import { push } from '../model/actions/repo';
 import { nothing, just, fromNullable } from '../util/maybe';
 import { useDialog } from '../model/state/dialogs';
-import { useBranches } from '../model/state/repo';
+import { useBranches, useCurrentBranch } from '../model/state/repo';
 import { useWorkflows } from '../model/state/workflows';
 import { useIndex } from '../model/state';
 
@@ -154,7 +154,7 @@ const BranchButton: React.FC = () => {
 
 export const Actions: React.FC = () => {
     const branches = useBranches();
-    // const currentBranch = useCurrentBranch();
+    const currentBranch = useCurrentBranch();
     const dialog = useDialog();
     return (
         <ActionsContainer>
@@ -172,13 +172,12 @@ export const Actions: React.FC = () => {
             <BranchButton />
             <ActionButton
                 onClick={() => {
-                    // TODO
-                    // if (currentBranch.found) {
-                    //     dialog.open({
-                    //         type: 'request-merge',
-                    //         source: just(currentBranch.value.refName),
-                    //     });
-                    // }
+                    if (currentBranch) {
+                        dialog.open({
+                            type: 'request-merge',
+                            source: just(currentBranch.refName),
+                        });
+                    }
                 }}
                 title="Merge into current branch">
                 <MergeIcon viewBox="0 0 24 24" width="100%" height="100%" />
@@ -195,15 +194,13 @@ export const Actions: React.FC = () => {
             </ActionButton>
             <ActionButton
                 onClick={() => {
-                    // TODO
-                    // const currentBranch = branches?.find((b) => b.current);
-                    // if (currentBranch) {
-                    //     dialog.open({
-                    //         type: 'request-upstream',
-                    //         forBranch: currentBranch,
-                    //         currentUpstream: fromNullable(currentBranch.upstream),
-                    //     });
-                    // }
+                    if (currentBranch) {
+                        dialog.open({
+                            type: 'request-upstream',
+                            forBranch: currentBranch,
+                            currentUpstream: fromNullable(currentBranch.upstream),
+                        });
+                    }
                 }}
                 title="Push changes to remote repositories">
                 <PushIcon viewBox="0 0 24 24" width="100%" height="100%" />

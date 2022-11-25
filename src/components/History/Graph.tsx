@@ -1,27 +1,16 @@
+import { invoke } from '@tauri-apps/api';
 import * as React from 'react';
-import styled from 'styled-components';
-import { CommitInfo } from './CommitInfo';
-import { HoverableDiv } from '../StyleBase';
-import { BranchInfo, Commit } from '../../model/stateObjects';
-import { GraphNode } from './GraphNode';
-import { RailLine } from './RailLine';
-import { FixedSizeList as List } from 'react-window';
-import { SearchBox } from '../shared/SearchBox';
-import { map, Maybe, just, nothing } from '../../util/maybe';
+import { selectCommit } from '../../model/actions/repo';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
-    useBranches,
-    // useCurrentBranch,
-    useTags,
-    useSelectedCommit,
-    useRepo,
-    HistoryInfo,
+    HistoryInfo, useBranches, useSelectedCommit, useTags
 } from '../../model/state/repo';
-import { GraphLayoutData, LayoutListEntry } from '../../util/graphLayout';
-import { changeBranch, selectCommit } from '../../model/actions/repo';
-import { ListSelector, SelectableList, SelectableListEntryProps } from '../util/SelectableList';
+import { BranchInfo, Commit } from '../../model/stateObjects';
+import { LayoutListEntry } from '../../util/graphLayout';
+import { Maybe } from '../../util/maybe';
+import { SearchBox } from '../shared/SearchBox';
+import { ListSelector } from '../util/SelectableList';
 import { GraphRenderer } from './GraphRenderer';
-import { invoke } from '@tauri-apps/api';
 
 function openContextMenu(
     dialog: DialogActions,
@@ -99,7 +88,6 @@ export const Graph: React.FC<{
     history: HistoryInfo;
 }> = (props) => {
     const dialog = useDialog();
-    // const currentBranch = useCurrentBranch();
     const selectedCommit = useSelectedCommit();
     const [searchTerm, setSearchTerm] = React.useState<string>();
     const [matches, setMatches] = React.useState<number[]>([]);

@@ -15,9 +15,10 @@ import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree } from
 import { Logger } from '../../util/logger';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
-    // useCurrentBranch,
+    useCurrentBranch,
     useRemotes,
     useAffectedBranches,
+    useBranches,
 } from '../../model/state/repo';
 import { StyledButton } from '../util/StyledButton';
 
@@ -372,7 +373,7 @@ function BranchTree(props: {
     );
 }
 
-function calculateBranchTree(branches: readonly BranchInfo[], currentBranchRef: Maybe<string>) {
+function calculateBranchTree(branches: readonly BranchInfo[], currentBranchRef: string | undefined) {
     const sortedBranches = [...branches].sort((b1, b2) => b1.refName.localeCompare(b2.refName));
     const tree = sortedBranches.reduce((nodes, branch) => {
         if (branch === undefined) {
@@ -385,7 +386,7 @@ function calculateBranchTree(branches: readonly BranchInfo[], currentBranchRef: 
             branch,
             undefined,
             undefined,
-            currentBranchRef.found && currentBranchRef.value.startsWith(branch.refName)
+            currentBranchRef?.startsWith(branch.refName)
         );
     }, [] as readonly TreeNode<BranchInfo>[]);
     return tree;
@@ -395,7 +396,7 @@ function createBranchTreeData(
     local: readonly BranchInfo[],
     remote: readonly BranchInfo[],
     remotes: readonly RemoteMeta[],
-    currentBranch: Maybe<BranchInfo>
+    currentBranch: BranchInfo | undefined
 ): TreeNode<BranchInfo | RemoteMeta> {
     const remoteMap = remote.reduce((existing, b) => {
         const remote = b.remote ?? '';
@@ -410,7 +411,7 @@ function createBranchTreeData(
                 label: 'Local',
                 children: calculateBranchTree(
                     local,
-                    map(currentBranch, (branch) => branch.refName)
+                    currentBranch?.refName
                 ),
                 initialExpanded: true,
             },
@@ -419,7 +420,7 @@ function createBranchTreeData(
                 children: Array.from(remoteMap.entries()).map(([label, entries]) => ({
                     label: label,
                     meta: remotes.find((r) => r.remote === label),
-                    children: calculateBranchTree(entries, nothing),
+                    children: calculateBranchTree(entries, undefined),
                 })),
             },
         ],
@@ -427,9 +428,8 @@ function createBranchTreeData(
 }
 
 export const Branches: React.FC = () => {
-    // const branches = useBranches();
-    const { isLoading, error, data } = useQuery('branches', () => invoke<BranchInfo[]>('get_branches'));
-    const currentBranch = undefined;
+    const { isLoading, error, data } = useBranches();
+    const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
     const affected = useAffectedBranches();
     const branchTree = React.useMemo(

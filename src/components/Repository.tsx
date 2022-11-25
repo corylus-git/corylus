@@ -25,7 +25,7 @@ import { ConfigureGitFlow } from './Dialogs/ConfigureGitFlow';
 import { Logger } from '../util/logger';
 import { BranchResetDialog } from './Dialogs/BranchResetDialog';
 import { useDialog } from '../model/state/dialogs';
-import { useRepo } from '../model/state/repo';
+import { useCurrentBranch, useRepo } from '../model/state/repo';
 import { useWorkflows } from '../model/state/workflows';
 import { Gitflow } from '../util/workflows/gitflow';
 import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
@@ -82,16 +82,16 @@ const Detached = styled.span`
 `;
 
 const MainStatusBar: React.FC = () => {
-    // const currentBranch = useCurrentBranch();
+    const currentBranch = useCurrentBranch();
     const index = useIndex();
     return (
         <StatusBar>
             <CurrentBranch>
-                {/* {currentBranch.found && currentBranch.value.isDetached && (
+                {currentBranch && currentBranch.isDetached && (
                     <Detached>DETACHED HEAD: </Detached>
                 )}
                 {index.status.length > 0 && '*'}
-                {currentBranch.found && currentBranch.value.refName} */}
+                {currentBranch && currentBranch.refName}
             </CurrentBranch>
         </StatusBar>
     );

@@ -312,12 +312,6 @@ export const useHistory = (): { entries: readonly Commit[]; first: number; total
         ): { entries: readonly Commit[]; first: number; total: number } => state.history
     );
 
-// /**
-//  * Get the current branch
-//  */
-// export const useCurrentBranch = (): Maybe<BranchInfo> =>
-//     fromNullable(useBranches()?.find((b) => b.current));
-
 /**
  * Get the current available tags in the repo
  */
@@ -374,6 +368,14 @@ export function useAffectedBranches(): string[] {
  */
 export const useBranches = (): UseQueryResult<readonly BranchInfo[]> => 
     useQuery('branches', () => invoke<readonly BranchInfo[]>('get_branches', {}));
+
+/**
+ * Get the current branch
+ */
+export const useCurrentBranch = (): BranchInfo | undefined => {
+    const { data: branches  } = useBranches();
+    return branches?.find(b => b.current);
+}
 
 /**
  * get the current pending commit (e.g. after a failed merge)
