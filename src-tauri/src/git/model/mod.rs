@@ -1,6 +1,7 @@
 pub mod graph;
 pub mod git;
 pub mod index;
+pub mod remote;
 
 /**
  * Information about a single branch

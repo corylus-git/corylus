@@ -23,6 +23,7 @@ use crate::{
         get_branches, get_graph_entries,
         history::{get_affected_branches, get_commit, get_commit_stats},
         index::{commit, get_status, stage, unstage},
+        remote::get_remotes
     },
     settings::get_settings,
 };
@@ -47,7 +48,8 @@ fn main() {
             unstage,
             commit,
             get_graph_entries,
-            get_affected_branches
+            get_affected_branches,
+            get_remotes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

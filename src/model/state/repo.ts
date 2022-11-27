@@ -322,7 +322,7 @@ export const useTags = (): readonly Tag[] =>
  * Get the current available remotes in the repo
  */
 export const useRemotes = (): readonly RemoteMeta[] =>
-    useRepo((state: RepoState & RepoActions) => state.remotes);
+    useQuery('remotes', () => invoke<readonly RemoteMeta[]>('get_remotes')).data ?? [];
 
 /**
  * Get the current available stashes in the repo

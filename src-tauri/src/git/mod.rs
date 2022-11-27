@@ -3,6 +3,7 @@ pub mod graph;
 pub mod history;
 pub mod index;
 pub mod model;
+pub mod remote;
 
 use std::sync::Arc;
 

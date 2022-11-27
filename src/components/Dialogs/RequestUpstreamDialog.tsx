@@ -36,10 +36,10 @@ function selectTargetRemote(
 export const RequestUpstreamDialog: React.FC = () => {
     const dialog = useDialog();
     const remotes = useRemotes();
-    const branches = useBranches();
+    const {data: branches} = useBranches();
     if (dialog.type === 'request-upstream') {
         const upstream = selectTargetRemote(
-            fromNullable(dialog.forBranch.ref),
+            fromNullable(dialog.forBranch.refName),
             remotes,
             dialog.currentUpstream
         );
@@ -56,14 +56,14 @@ export const RequestUpstreamDialog: React.FC = () => {
                             'RequestUpstreamDialog',
                             'Pushing changes to upstream',
                             {
-                                source: dialog.forBranch.ref,
+                                source: dialog.forBranch.refName,
                                 remote: values.remote,
                                 upstream: values.upstream,
                                 pushTags: values.pushTags
                             }
                         );
                         push(
-                            dialog.forBranch.ref,
+                            dialog.forBranch.refName,
                             values.remote,
                             values.upstream,
                             !dialog.currentUpstream.found, // don't change the existing upstream, if any
@@ -89,7 +89,7 @@ export const RequestUpstreamDialog: React.FC = () => {
                                         <div>Push changes to upstream</div>
                                     ) : (
                                         <div>
-                                            Branch {dialog.forBranch.ref} does not have an upstream
+                                            Branch {dialog.forBranch.refName} does not have an upstream
                                             branch. Create?
                                         </div>
                                     )}
@@ -113,9 +113,8 @@ export const RequestUpstreamDialog: React.FC = () => {
                                             onChange={(value) => {
                                                 formik.setFieldValue('upstream', value);
                                             }}
-                                            options={branches
-                                                .filter((b) => b.remote === formik.values.remote)
-                                                .map((b) => b.ref)}
+                                            options={branches?.filter((b) => b.remote === formik.values.remote)
+                                                .map((b) => b.refName) ?? []}
                                         />
                                     </div>
                                     <div>
