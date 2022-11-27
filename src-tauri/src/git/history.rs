@@ -12,6 +12,18 @@ use super::{
 };
 
 #[tauri::command]
+pub async fn get_commit(
+    state: StateType<'_>,
+    refNameOrOid: &str
+) -> Result<Commit, BackendError> {
+    with_backend(state, |backend| {
+        let parsed_oid = Oid::from_str(refNameOrOid).or_else(|_| backend.repo.refname_to_id(refNameOrOid))?;
+        let commit = backend.repo.find_commit(parsed_oid)?;
+        Ok(map_commit(&commit))
+    }).await 
+}
+
+#[tauri::command]
 pub async fn get_commit_stats(
     state: StateType<'_>,
     window: Window,

@@ -7,32 +7,39 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod git;
 mod error;
+mod git;
 mod settings;
 
 use std::sync::Arc;
 
-use settings::load_settings;
 use git::{git_open, is_git_dir, AppState};
+use settings::load_settings;
 use tauri::async_runtime::Mutex;
 
-use crate::{git::{
-    index::{commit, get_status, stage, unstage}, diff::get_diff, history::{get_commit_stats, get_affected_branches}, get_branches, get_graph_entries,
-}, settings::get_settings};
+use crate::{
+    git::{
+        diff::get_diff,
+        get_branches, get_graph_entries,
+        history::{get_affected_branches, get_commit, get_commit_stats},
+        index::{commit, get_status, stage, unstage},
+    },
+    settings::get_settings,
+};
 
 // #[cfg(not(test))]
 fn main() {
     tauri::Builder::default()
         .manage(Arc::new(Mutex::new(AppState {
             git: None,
-            settings: load_settings()
+            settings: load_settings(),
         })))
         .invoke_handler(tauri::generate_handler![
             get_settings,
             get_branches,
             is_git_dir,
             git_open,
+            get_commit,
             get_commit_stats,
             get_diff,
             get_status,
