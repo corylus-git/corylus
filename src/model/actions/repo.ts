@@ -19,13 +19,14 @@ import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from '../../util/configVariables'
 import { invoke } from '@tauri-apps/api/tauri';
 import { FileDiff } from '../../util/diff-parser';
 import { indexStore } from '../state';
+import { queryClient } from '../../util/queryClient';
 
 export const commit = trackError(
     'commit',
     'commit',
     async (message: string, amend: boolean): Promise<void> => {
         Logger().debug('commit', 'Committing changes', { message: message, amend: amend });
-        invoke('commit', { message, amend});
+        invoke('commit', { message, amend });
         // repoStore.getState().loadHistory();
         // repoStore.getState().loadBranches();
         // repoStore.getState().getStatus();
@@ -110,7 +111,7 @@ export const push = trackError(
     ): Promise<void> => {
         try {
             progress.getState().setProgress('Pushing changes to upstream', true);
-            await repoStore.getState().backend.push({
+            await invoke('push', {
                 branch: sourceBranch,
                 remote: remote,
                 upstream: upstream,
@@ -118,8 +119,8 @@ export const push = trackError(
                 pushTags
             });
             progress.getState().setProgress('Finished pushing changes', false, 5000);
-            // // repoStore.getState().loadBranches();
-            repoStore.getState().loadRemotes();
+            queryClient.invalidateQueries('branches');
+            queryClient.invalidateQueries('remotes');
         } catch (e) {
             progress.getState().setProgress('Failed pushing changes', false, 5000);
             throw e;
@@ -362,8 +363,7 @@ export const stash = trackError(
             await repoStore.getState().loadStashes();
             // repoStore.getState().getStatus();
         } catch (e) {
-            if (e instanceof Error)
-            {
+            if (e instanceof Error) {
                 Logger().error('stash', 'Could not stash changes', { error: e.toString() });
             }
             throw e;
@@ -632,7 +632,7 @@ export function selectCommit(ref: CommitStats | string | Commit) {
 }
 
 async function requestAffectedCommits(oid: string, branches: boolean, tags: boolean) {
-    Logger().debug('requestAffectedCommits', 'Requesting affected commits', {oid, branches, tags});
+    Logger().debug('requestAffectedCommits', 'Requesting affected commits', { oid, branches, tags });
     const result = await invoke('get_affected_branches', { oid });
     console.log("Affected", result);
 }
@@ -659,7 +659,6 @@ export function getDiff(options: {
      * Indicate whether the file to be loaded is untracked. Only relevant for stashed untracked files
      */
     untracked?: boolean;
-}): Promise<FileDiff[]>
-{
+}): Promise<FileDiff[]> {
     return invoke('get_diff', options);
 }
