@@ -4,7 +4,7 @@ import { Formik, Form, Field } from 'formik';
 import mime from 'mime-types';
 
 import { Splitter } from '../util/Splitter';
-import { IndexStatus } from '../../model/stateObjects';
+import { Commit, IndexStatus } from '../../model/stateObjects';
 import { StagingArea } from './StagingArea';
 import { StyledButton } from '../util/StyledButton';
 import { StagingDiffPanel } from './StagingDiffPanel';
@@ -227,19 +227,14 @@ function CommitForm(props: { onCommit?: () => void }) {
                                             'CommitForm',
                                             'Loading parent commit message to amend commit'
                                         );
-                                        backend
-                                            .getCommit('HEAD')
-                                            .then((commit) => {
-                                                formik.setFieldValue('commitmsg', commit.message);
-                                                commitMessage = just(commit.message);
-                                            })
-                                            .catch((e) =>
-                                                Logger().error(
-                                                    'CommitForm',
-                                                    'Could not retrieve parent commit message.',
-                                                    { error: e }
-                                                )
-                                            );
+                                        getLastCommitMessage()
+                                            .then((msg) => {
+                                                formik.setFieldValue('commitmsg', msg);
+                                                commitMessage = just(msg);
+                                            });
+                                    }
+                                    else {
+                                        formik.setFieldValue('commitmsg', '');
                                     }
                                 }}
                             />
@@ -255,4 +250,20 @@ function CommitForm(props: { onCommit?: () => void }) {
             </Formik>
         </div>
     );
+}
+
+async function getLastCommitMessage(): Promise<string> {
+    try {
+        Logger().debug('getLastCommitMessage', 'Trying to retrieve the last commit message');
+        const commit = await invoke<Commit>('get_commit', { refNameOrOid: "HEAD" });
+        return commit.message;
+    }
+    catch (e) {
+        Logger().error(
+            'CommitForm',
+            'Could not retrieve parent commit message.',
+            { error: e }
+        )
+    }
+    return "";
 }
