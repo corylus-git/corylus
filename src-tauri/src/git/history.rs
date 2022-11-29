@@ -6,7 +6,7 @@ use crate::error::BackendError;
 use super::{
     model::git::{
         Commit, DiffStat, DiffStatus, FileStats, FullCommitData, GitCommitStats, GitPerson,
-        ParentReference, TimeWithOffset,
+        ParentReference, TimeWithOffset, StashData,
     },
     with_backend, with_backend_mut, StateType,
 };
@@ -19,7 +19,7 @@ pub async fn get_commit(
     with_backend(state, |backend| {
         let parsed_oid = Oid::from_str(refNameOrOid).or_else(|_| backend.repo.refname_to_id(refNameOrOid))?;
         let commit = backend.repo.find_commit(parsed_oid)?;
-        Ok(map_commit(&commit))
+        map_commit(&commit, false)
     }).await 
 }
 
@@ -28,6 +28,7 @@ pub async fn get_commit_stats(
     state: StateType<'_>,
     window: Window,
     oid: &str,
+    is_stash: bool
 ) -> Result<(), BackendError> {
     with_backend_mut(state, |backend| {
         let commit =
@@ -54,7 +55,7 @@ pub async fn get_commit_stats(
         window.emit(
             "commitStatsChanged",
             GitCommitStats {
-                commit: map_commit(&commit),
+                commit: map_commit(&commit, is_stash)?,
                 direct,
                 incoming,
             },
@@ -118,47 +119,52 @@ fn map_diff(diff: &git2::Diff) -> Vec<DiffStat> {
         .collect()
 }
 
-pub fn map_commit(commit: &git2::Commit) -> Commit {
-    // TODO this ignores too many errors
-    Commit::Commit(FullCommitData {
-        oid: commit.as_object().id().to_string(),
-        short_oid: commit
-            .as_object()
-            .short_id()
-            .unwrap()
-            .as_str()
-            .unwrap()
-            .to_owned(),
-        message: commit.message_raw().unwrap().to_owned(),
-        parents: commit
-            .parents()
-            .into_iter()
-            .map(|p| ParentReference {
-                oid: p.id().to_string(),
-                short_oid: p
-                    .as_object()
-                    .short_id()
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_owned(),
-            })
-            .collect(),
-        author: GitPerson {
-            name: commit.author().name().unwrap().to_owned(),
-            email: commit.author().email().unwrap().to_owned(),
-            timestamp: TimeWithOffset {
-                utc_seconds: commit.time().seconds(),
-                offset_seconds: commit.time().offset_minutes() * 60,
+pub fn map_commit(commit: &git2::Commit, is_stash: bool) -> Result<Commit, BackendError> {
+    if is_stash {
+        Ok(Commit::Stash(StashData::try_from(commit)?))
+    }
+    else {
+        // TODO this ignores too many errors
+        Ok(Commit::Commit(FullCommitData {
+            oid: commit.as_object().id().to_string(),
+            short_oid: commit
+                .as_object()
+                .short_id()
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned(),
+            message: commit.message_raw().unwrap().to_owned(),
+            parents: commit
+                .parents()
+                .into_iter()
+                .map(|p| ParentReference {
+                    oid: p.id().to_string(),
+                    short_oid: p
+                        .as_object()
+                        .short_id()
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        .to_owned(),
+                })
+                .collect(),
+            author: GitPerson {
+                name: commit.author().name().unwrap().to_owned(),
+                email: commit.author().email().unwrap().to_owned(),
+                timestamp: TimeWithOffset {
+                    utc_seconds: commit.time().seconds(),
+                    offset_seconds: commit.time().offset_minutes() * 60,
+                },
             },
-        },
-        committer: GitPerson {
-            name: commit.committer().name().unwrap().to_owned(),
-            email: commit.committer().email().unwrap().to_owned(),
-            timestamp: TimeWithOffset {
-                utc_seconds: commit.time().seconds(),
-                offset_seconds: commit.time().offset_minutes() * 60,
+            committer: GitPerson {
+                name: commit.committer().name().unwrap().to_owned(),
+                email: commit.committer().email().unwrap().to_owned(),
+                timestamp: TimeWithOffset {
+                    utc_seconds: commit.time().seconds(),
+                    offset_seconds: commit.time().offset_minutes() * 60,
+                },
             },
-        },
-    })
+        }))
+    }
 }

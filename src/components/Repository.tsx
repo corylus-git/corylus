@@ -36,6 +36,7 @@ import { Rebase } from './Dialogs/Rebase';
 import { AutoStashDialog } from './Dialogs/AutoStashDialog';
 import { useAutoFetcher } from '../util/AutoFetcher';
 import { useIndex } from '../model/state';
+import { queryClient } from '../util/queryClient';
 
 export const MainView = styled.div`
     display: grid;
@@ -111,6 +112,7 @@ export const Repository: React.FC = () => {
         if (repo.active) {
             Logger().debug('Repository', 'Path changed', { path: path });
             repo.loadHistory();
+            queryClient.invalidateQueries();
             // repo.loadRepo().then(() => {
             //     workflows.registerGitWorkflows([new Gitflow(dialog)]);
             // });
@@ -118,7 +120,7 @@ export const Repository: React.FC = () => {
     }, [path]);
     React.useEffect(() => {
         if (repo.active) {
-            index.loadStatus();
+            queryClient.invalidateQueries('index');
         }
     }, [location]);
     return (

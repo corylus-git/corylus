@@ -75,7 +75,7 @@ export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
 export const CommitHeader: React.FC<{ commit: Commit }> = (props) => {
     return (
         <CommitHeaderFrame>
-            {props.commit.type === 'stash' && <h3>{props.commit.ref}</h3>}
+            {props.commit.type === 'stash' && <h3>{props.commit.refName}</h3>}
             <CommitMetaData commit={props.commit} />
         </CommitHeaderFrame>
     );

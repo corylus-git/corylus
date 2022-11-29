@@ -327,8 +327,8 @@ export const useRemotes = (): readonly RemoteMeta[] =>
 /**
  * Get the current available stashes in the repo
  */
-export const useStashes = (): readonly Stash[] =>
-    useRepo((state: RepoState & RepoActions) => state.stashes);
+export const useStashes = (): UseQueryResult<readonly Stash[]> =>
+    useQuery('stashes', () => invoke<readonly Stash[]>('get_stashes'));
 
 /**
  * Get the current state of the index
@@ -406,6 +406,6 @@ listen<HistoryInfo>('historyChanged', ev => {
 })
 
 listen<CommitStats>('commitStatsChanged', ev => {
-    console.log('Commit stats changed', ev.payload);
+    console.log("Got new commit stats", ev.payload);
     repoStore.getState().setSelectedCommit(just(ev.payload));
 });

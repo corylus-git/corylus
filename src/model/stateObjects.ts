@@ -148,7 +148,7 @@ export interface ParentReference {
  */
 export interface Stash {
     type: 'stash';
-    readonly ref: string;
+    readonly refName: string;
     readonly oid: string;
     readonly shortOid: string;
     readonly message: string;

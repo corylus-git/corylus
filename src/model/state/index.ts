@@ -1,11 +1,8 @@
-import create from 'zustand/vanilla';
-import createHook from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import { IndexStatus } from '../stateObjects';
-import { castDraft } from 'immer';
+import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/tauri';
-import { Logger } from '../../util/logger';
-import { Event, listen } from '@tauri-apps/api/event';
+import { useQuery, UseQueryResult } from 'react-query';
+import { queryClient } from '../../util/queryClient';
+import { IndexStatus } from '../stateObjects';
 
 export type IndexActions = {
     loadStatus: () => Promise<void>;
@@ -18,24 +15,12 @@ export type IndexState = {
     status: readonly IndexStatus[];
 };
 
-export const indexStore = create<IndexState & IndexActions>()(
-    immer((set, _) => ({
-        status: [],
-        loadStatus: async () => {
-            try {
-                const status = await invoke<IndexStatus[]>('get_status');
-                set((state) => {
-                    state.status = castDraft(status);
-                });
-            }
-            catch (error) {
-                Logger().error('indexStore#loadStatus', 'Could not load status', { error });
-            }
-        }
-    })),
-);
+export const INDEX_QUERY = 'index';
+export const INDEX_QUERY_FN = () => invoke<IndexStatus[]>('get_status');
 
-export const useIndex = createHook(indexStore);
+export function useIndex(): UseQueryResult<IndexStatus[]> {
+    return useQuery(INDEX_QUERY, INDEX_QUERY_FN);
+}
 
 /**
  * Get the current conflicts in the repository
@@ -43,8 +28,6 @@ export const useIndex = createHook(indexStore);
  * @returns true if there are conflicts, false otherwise
  */
 export const useConflicts = (): boolean =>
-    useIndex(
-        (state: IndexState & IndexActions) => state.status.find((s) => s.isConflicted) !== undefined
-    );
+    useIndex().data?.find((s) => s.isConflicted) !== undefined;
 
-listen('status-changed', () => indexStore.getState().loadStatus());
+listen('status-changed', () => queryClient.invalidateQueries('index'));

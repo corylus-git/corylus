@@ -1,3 +1,4 @@
+use git2::Signature;
 use serde::Serialize;
 
 use crate::error::BackendError;
@@ -19,12 +20,32 @@ pub struct TimeWithOffset {
     pub offset_seconds: i32,
 }
 
+impl From<git2::Time> for TimeWithOffset {
+    fn from(time: git2::Time) -> Self {
+        Self {
+            utc_seconds: time.seconds(),
+            offset_seconds: time.offset_minutes()*60,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, PartialEq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GitPerson {
     pub name: String,
     pub email: String,
     pub timestamp: TimeWithOffset,
+}
+
+impl From<Signature<'_>> for GitPerson
+{
+    fn from(sig: Signature) -> Self {
+        Self {
+            name: sig.name().unwrap_or("").to_owned(),
+            email: sig.name().unwrap_or("").to_owned(),
+            timestamp: sig.when().into(),
+        }
+    }
 }
 
 pub trait GraphNodeData {
@@ -56,16 +77,47 @@ impl GraphNodeData for FullCommitData {
     }
 }
 
+/**
+ * Detailed information about a Stash
+ */
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct StashData {
+    pub ref_name: String,
+    pub oid: String,
+    pub short_oid: String,
+    pub message: String,
+    pub parents: Vec<ParentReference>,
+    pub author: GitPerson,
+}
+
+impl TryFrom<&git2::Commit<'_>> for StashData {
+    type Error = BackendError;
+
+    fn try_from(value: &git2::Commit) -> Result<Self, Self::Error> {
+        Ok(Self {
+            ref_name: "".to_owned(),
+            oid: value.id().to_string(),
+            short_oid: value.as_object().short_id().unwrap_or_default().as_str().unwrap_or_default().to_string(),
+            message: value.message().unwrap_or("").to_owned(),
+            parents: vec![],
+            author: value.author().into(),
+        })
+    }
+}
+
 #[derive(Clone, Serialize, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Commit {
     Commit(FullCommitData),
+    Stash(StashData)
 }
 
 impl Commit {
     pub fn as_graph_node(&self) -> &dyn GraphNodeData {
         match self {
             Commit::Commit(data) => data,
+            Commit::Stash(_) => todo!()
         }
     }
 }

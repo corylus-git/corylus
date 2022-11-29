@@ -77,7 +77,7 @@ const DiffDisplayPanel: React.FC = () => {
 
 export const IndexPanel: React.FC = () => {
     const stagingArea = useStagingArea();
-    const index = useIndex();
+    const { data: index } = useIndex();
     Logger().debug('IndexPanel', 'Received new index status', { index: index });
 
     function showDiff(file: IndexStatus, source: 'workdir' | 'index') {
@@ -94,8 +94,8 @@ export const IndexPanel: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateRows: '1fr 10rem', marginLeft: '5px' }}>
             <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
                 <StagingArea
-                    workdir={index.status.filter((s) => s.workdirStatus !== 'unmodified')}
-                    staged={index.status.filter(
+                    workdir={index?.filter((s) => s.workdirStatus !== 'unmodified')}
+                    staged={index?.filter(
                         (s) =>
                             s.indexStatus !== 'untracked' &&
                             s.indexStatus !== 'unmodified' &&

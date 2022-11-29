@@ -18,8 +18,8 @@ import { IGitConfig } from '../IGitConfig';
 import { AUTOFETCHENABLED, AUTOFETCHINTERVAL } from '../../util/configVariables';
 import { invoke } from '@tauri-apps/api/tauri';
 import { FileDiff } from '../../util/diff-parser';
-import { indexStore } from '../state';
 import { queryClient } from '../../util/queryClient';
+import { INDEX_QUERY, INDEX_QUERY_FN } from '../state';
 
 export const commit = trackError(
     'commit',
@@ -37,8 +37,8 @@ export const changeBranch = trackError(
     'change branch',
     'changeBranch',
     async (ref: string, ignoreChanges = false, autoStashConfirmed = false): Promise<void> => {
-        // await repoStore.getState().getStatus();
-        if (indexStore.getState().status.length !== 0 && !ignoreChanges) {
+        const index = await queryClient.fetchQuery(INDEX_QUERY, INDEX_QUERY_FN)
+        if (index.length !== 0 && !ignoreChanges) {
             if (!autoStashConfirmed) {
                 dialogStore.getState().open({ type: 'auto-stash', target: ref });
             } else {
@@ -119,8 +119,11 @@ export const push = trackError(
                 pushTags
             });
             progress.getState().setProgress('Finished pushing changes', false, 5000);
+            // TODO this does not seem to cause an immediate reload
+            console.log('Invalidating branches and remotes query');
             queryClient.invalidateQueries('branches');
             queryClient.invalidateQueries('remotes');
+            queryClient.invalidateQueries('graphLine');
         } catch (e) {
             progress.getState().setProgress('Failed pushing changes', false, 5000);
             throw e;
@@ -622,8 +625,8 @@ export function selectCommit(ref: CommitStats | string | Commit) {
             typeof ref === 'string'
                 ? ref
                 : (ref as Commit).oid;
-        Logger().debug('selectCommit', 'Requesting commit details', { oid });
-        invoke('get_commit_stats', { oid });
+        Logger().debug('selectCommit', 'Requesting commit details', { oid});
+        invoke('get_commit_stats', { oid, isStash: false  });
         requestAffectedCommits(oid, true, true);
     } else {
         requestAffectedCommits((ref as CommitStats).commit.oid, true, true);

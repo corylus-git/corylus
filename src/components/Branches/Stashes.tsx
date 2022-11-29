@@ -6,6 +6,7 @@ import { Tree, TreeNode } from '../util/Tree/Tree';
 import { TypeHeader } from './TypeHeader';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import { useStashes, repoStore } from '../../model/state/repo';
+import { invoke } from '@tauri-apps/api';
 
 const StashDisplay = styled(HoverableDiv)`
     border-bottom: 1px dotted var(--border);
@@ -40,30 +41,39 @@ function openContextMenu(dialog: DialogActions, stash: Stash) {
 }
 
 export const Stashes: React.FC = () => {
-    const stashes = useStashes();
+    const { isLoading, error, data: stashes } = useStashes();
     const dialog = useDialog();
-    return (
-        <Tree
-            label={(l, p, o, m) =>
-                p.length === 0 ? (
-                    <TypeHeader>{`${l}${o ? '' : ` (${stashes?.length ?? 0})`}`}</TypeHeader>
-                ) : (
-                    <StashDisplay
-                        onClick={() => repoStore.getState().selectStash(m!)}
-                        onContextMenu={() => openContextMenu(dialog, m!)}>
-                        <RefDisplay>{m!.ref}</RefDisplay> {m!.message}
-                    </StashDisplay>
-                )
-            }
-            root={{
-                label: 'Stashes',
-                children: stashes.map<TreeNode<Stash>>((entry) => ({
-                    key: entry.oid,
-                    label: entry.message,
-                    children: [],
-                    meta: entry,
-                })),
-            }}
-        />
-    );
+    if (isLoading) {
+        return <>Loading stashes...</>
+    }
+    if (error) {
+        return <>Could not load stashes</>
+    }
+    if (stashes) {
+        return (
+            <Tree
+                label={(l, p, o, m) =>
+                    p.length === 0 ? (
+                        <TypeHeader>{`${l}${o ? '' : ` (${stashes.length ?? 0})`}`}</TypeHeader>
+                    ) : (
+                        <StashDisplay
+                            onClick={() => invoke('get_commit_stats', { oid: m!.oid, isStash: true })}
+                            onContextMenu={() => openContextMenu(dialog, m!)}>
+                            <RefDisplay>{m!.refName}</RefDisplay> {m!.message}
+                        </StashDisplay>
+                    )
+                }
+                root={{
+                    label: 'Stashes',
+                    children: stashes.map<TreeNode<Stash>>((entry) => ({
+                        key: entry.oid,
+                        label: entry.message,
+                        children: [],
+                        meta: entry,
+                    })),
+                }}
+            />
+        );
+    }
+    return <>Internal error...</>
 };

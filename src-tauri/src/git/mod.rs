@@ -17,7 +17,7 @@ use self::{
     graph::calculate_graph_layout,
     history::map_commit,
     model::{
-        git::Commit,
+        git::{Commit, StashData, GitPerson, TimeWithOffset},
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
         BranchInfo,
     },
@@ -93,7 +93,7 @@ impl GitBackend {
                     self.repo
                         .find_commit(oid)
                         .ok()
-                        .map(|commit| map_commit(&commit)) // TODO this should not reference into the child
+                        .map(|commit| map_commit(&commit, false).unwrap()) // TODO this should not reference into the child
                 })
             })
             .map(|e| e.unwrap())
@@ -205,6 +205,29 @@ pub fn is_git_dir(name: &str) -> bool {
 #[tauri::command]
 pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
     with_backend(state, |backend| Ok(backend.branches.clone())).await
+}
+
+#[tauri::command]
+pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendError> {
+    with_backend_mut(state, |backend| {
+        let mut stashes_data = vec![];
+        backend.repo.stash_foreach(|idx, message, oid| {
+            stashes_data.push((idx, message.to_owned(), oid.to_owned()));
+            true
+        });
+        stashes_data.iter().map(|(idx, message, oid)| {
+            let commit = backend.repo.find_commit(*oid)?;
+            Ok(Commit::Stash(StashData {
+                ref_name: format!("stash{{{}}}", idx).to_owned(),
+                oid: oid.to_string(),
+                short_oid: "".to_owned(),
+                message: commit.message().unwrap_or("").to_owned(),
+                parents: vec![],
+                author: commit.author().into()
+            }))
+        })
+        .collect()
+    }).await
 }
 
 #[derive(Deserialize, Serialize, PartialEq)]

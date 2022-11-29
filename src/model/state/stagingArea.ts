@@ -9,13 +9,13 @@ import { log } from './log';
 import { repoStore } from './repo';
 import { Logger } from '../../util/logger';
 import { IConflictedFile, parseConflictFile } from '../../util/conflict-parser';
-// import fs from 'fs';
 import * as path from '@tauri-apps/api/path';
 import { splice } from '../../util/ImmutableArrayUtils';
 import { immer } from 'zustand/middleware/immer';
-import { indexStore } from '.';
 import { FileDiff } from '../../util/diff-parser';
 import { invoke } from '@tauri-apps/api';
+import { UseQueryResult } from 'react-query';
+import { useIndex } from '.';
 
 export interface SelectedFile {
     path: string;
@@ -66,7 +66,7 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
         loadDiff: async (source: 'workdir' | 'index', p: string): Promise<void> => {
 
             const isNewFile =
-                indexStore.getState().status.find((f) => f.path === p)?.workdirStatus ===
+                useIndex().data?.find((f) => f.path === p)?.workdirStatus ===
                 'untracked';
             if (source === 'workdir' && isNewFile) {
                 await repoStore.getState().lock.acquire('git', async () => {

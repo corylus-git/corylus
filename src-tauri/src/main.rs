@@ -23,7 +23,7 @@ use crate::{
         get_branches, get_graph_entries,
         history::{get_affected_branches, get_commit, get_commit_stats},
         index::{commit, get_status, stage, unstage},
-        remote::{get_remotes, push}
+        remote::{get_remotes, push}, get_stashes
     },
     settings::get_settings,
 };
@@ -42,6 +42,7 @@ fn main() {
             git_open,
             get_commit,
             get_commit_stats,
+            get_stashes,
             get_diff,
             get_status,
             stage,
