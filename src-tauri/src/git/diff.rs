@@ -55,7 +55,17 @@ pub async fn get_diff(
             let diff = backend.repo.diff_tree_to_index(Some(&head), None, Some(&mut opts))?;
             Ok(Diff::try_from(diff)?.0)
         },
-        _ => Err(BackendError::new("Unknown type")),
+        DiffSourceType::Stash => {
+            if let Some(cid) = commit_id {
+                let parent = backend.repo.find_commit(Oid::from_str(cid)?)?.parent(0)?.id().to_string();
+                let diff = backend.load_diff(commit_id, Some(&parent), &[path])?;
+                Ok(Diff::try_from(diff)?.0)
+            }
+            else {
+                Err(BackendError::new("Cannot load diff of unidentified stash"))
+            }
+        },
+        _ => Err(BackendError::new("Unknown diff source type")),
     })
     .await
 }
