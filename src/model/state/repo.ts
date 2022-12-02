@@ -355,7 +355,7 @@ export function useAffectedBranches(): string[] {
     const selectedCommit = useSelectedCommit();
     const { data } = useQuery(['affected_branches', selectedCommit],
         async () => {
-            if (selectedCommit.found) {
+            if (selectedCommit.found && selectedCommit.value.type === 'commit') {
                 return await invoke<string[]>('get_affected_branches', { oid: selectedCommit.value.commit.oid });
             }
             return [];

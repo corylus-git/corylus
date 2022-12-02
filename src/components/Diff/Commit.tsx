@@ -152,36 +152,76 @@ export type CommitDetailsViewProps = {
     stats: Maybe<CommitStats>;
 };
 
+// TODO this needs cleaning up and split into two components
 export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
     const { stats } = props
 
     if (stats.found) {
-        return (
-            <div
-            style={{
-                height: '100%',
-                overflow: 'auto',
-            }}>
-                <CommitHeader commit={stats.value.commit} />
-                {stats.value.incoming && stats.value.direct.length > 0 && <h2>Conflicts</h2>}
-                <DiffView
-                    commit={stats.value.commit.oid}
-                    diffs={stats.value.direct}
-                    source={stats.value.commit.type}
+        if (stats.value.type === 'commit') {
+            return (
+                <div
+                    style={{
+                        height: '100%',
+                        overflow: 'auto',
+                    }}>
+                    <CommitHeader commit={stats.value.commit} />
+                    {stats.value.incoming && stats.value.direct.length > 0 && <h2>Conflicts</h2>}
+                    <DiffView
+                        commit={stats.value.commit.oid}
+                        diffs={stats.value.direct}
+                        source="commit"
                     />
-                {stats.value.incoming && (
-                    <>
-                        <h2>Incoming</h2>
-                        <DiffView
-                            commit={stats.value.commit.oid}
-                            diffs={stats.value.incoming}
-                            source={stats.value.commit.type}
-                            toParent={`${stats.value.commit.oid}^`}
-                        />
-                    </>
-                )}
-            </div>
-        );
+                    {stats.value.incoming && (
+                        <>
+                            <h2>Incoming</h2>
+                            <DiffView
+                                commit={stats.value.commit.oid}
+                                diffs={stats.value.incoming}
+                                source="commit"
+                                toParent={`${stats.value.commit.oid}^`}
+                            />
+                        </>
+                    )}
+                </div>
+            );
+        } else {
+            return (
+                <div
+                    style={{
+                        height: '100%',
+                        overflow: 'auto',
+                    }}>
+                    <CommitHeader commit={stats.value.stash} />
+                    <h2>Changes</h2>
+                    <DiffView
+                        commit={stats.value.stash.oid}
+                        diffs={stats.value.changes}
+                        source="stash"
+                    />
+                    {stats.value.index && stats.value.index.length > 0 && (
+                        <>
+                            <h2>Index</h2>
+                            <DiffView
+                                commit={stats.value.stash.oid}
+                                diffs={stats.value.index}
+                                source="stash"
+                                toParent={`${stats.value.stash.oid}^`} // TODO this breaks when loading the actual diff -> need to figure out how to track the actual diff info
+                            />
+                        </>
+                    )}
+                    {stats.value.untracked && stats.value.untracked.length > 0 && (
+                        <>
+                            <h2>Untracked Files</h2>
+                            <DiffView
+                                commit={stats.value.stash.oid}
+                                diffs={stats.value.untracked}
+                                source="stash"
+                            />
+                        </>
+                    )}
+                </div>
+            );
+        }
     }
     return <div></div>;
 };

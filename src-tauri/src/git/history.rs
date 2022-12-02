@@ -5,30 +5,28 @@ use crate::error::BackendError;
 
 use super::{
     model::git::{
-        Commit, DiffStat, DiffStatus, FileStats, FullCommitData, GitCommitStats, GitPerson,
-        ParentReference, TimeWithOffset, StashData,
+        Commit, DiffStat, DiffStatus, FileStats, FullCommitData, GitPerson,
+        ParentReference, StashData, TimeWithOffset, CommitStats, StashStatsData, CommitStatsData,
     },
     with_backend, with_backend_mut, StateType,
 };
 
 #[tauri::command]
-pub async fn get_commit(
-    state: StateType<'_>,
-    refNameOrOid: &str
-) -> Result<Commit, BackendError> {
+pub async fn get_commit(state: StateType<'_>, refNameOrOid: &str) -> Result<Commit, BackendError> {
     with_backend(state, |backend| {
-        let parsed_oid = Oid::from_str(refNameOrOid).or_else(|_| backend.repo.refname_to_id(refNameOrOid))?;
+        let parsed_oid =
+            Oid::from_str(refNameOrOid).or_else(|_| backend.repo.refname_to_id(refNameOrOid))?;
         let commit = backend.repo.find_commit(parsed_oid)?;
         map_commit(&commit, false)
-    }).await 
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn get_commit_stats(
     state: StateType<'_>,
     window: Window,
-    oid: &str,
-    is_stash: bool
+    oid: &str
 ) -> Result<(), BackendError> {
     with_backend_mut(state, |backend| {
         let commit =
@@ -52,13 +50,67 @@ pub async fn get_commit_stats(
             })
             .and_then(|diff| Ok(map_diff(&diff)))
             .ok();
+
         window.emit(
             "commitStatsChanged",
-            GitCommitStats {
-                commit: map_commit(&commit, is_stash)?,
+            CommitStats::Commit(CommitStatsData {
+                commit: FullCommitData::try_from(&commit)?,
                 direct,
                 incoming,
-            },
+            }),
+        );
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_stash_stats(
+    state: StateType<'_>,
+    window: Window,
+    oid: &str,
+) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        let stash_commit =
+            Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
+        let direct_diff = backend.repo.diff_tree_to_tree(
+            stash_commit.parent(0)?.tree().ok().as_ref(),
+            stash_commit.tree().ok().as_ref(),
+            Some(DiffOptions::new().patience(true)),
+        )?;
+        let direct = map_diff(&direct_diff);
+        let index_stats = stash_commit
+            .parent(1)
+            .and_then(|commit| commit.tree())
+            .and_then(|index_tree| {
+                backend.repo.diff_tree_to_tree(
+                    stash_commit.parent(0).unwrap().tree().ok().as_ref(), // we know the tree must be there
+                    Some(&index_tree),
+                    Some(DiffOptions::new().patience(true)),
+                )
+            })
+            .ok()
+            .and_then(|diff| Some(map_diff(&diff)));
+        let untracked_stats = stash_commit
+            .parent(2)
+            .and_then(|commit| commit.tree())
+            .and_then(|untracked_tree| {
+                backend.repo.diff_tree_to_tree(
+                    None, // the untracked stash parent has no parent commits
+                    Some(&untracked_tree),
+                    Some(DiffOptions::new().patience(true)),
+                )
+            })
+            .ok()
+            .and_then(|diff| Some(map_diff(&diff)));
+        window.emit(
+            "commitStatsChanged",
+            CommitStats::Stash(StashStatsData {
+                stash: StashData::try_from(&stash_commit)?,
+                changes: direct,
+                index: index_stats,
+                untracked: untracked_stats
+            }),
         );
         Ok(())
     })
@@ -122,49 +174,7 @@ fn map_diff(diff: &git2::Diff) -> Vec<DiffStat> {
 pub fn map_commit(commit: &git2::Commit, is_stash: bool) -> Result<Commit, BackendError> {
     if is_stash {
         Ok(Commit::Stash(StashData::try_from(commit)?))
-    }
-    else {
-        // TODO this ignores too many errors
-        Ok(Commit::Commit(FullCommitData {
-            oid: commit.as_object().id().to_string(),
-            short_oid: commit
-                .as_object()
-                .short_id()
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_owned(),
-            message: commit.message_raw().unwrap().to_owned(),
-            parents: commit
-                .parents()
-                .into_iter()
-                .map(|p| ParentReference {
-                    oid: p.id().to_string(),
-                    short_oid: p
-                        .as_object()
-                        .short_id()
-                        .unwrap()
-                        .as_str()
-                        .unwrap()
-                        .to_owned(),
-                })
-                .collect(),
-            author: GitPerson {
-                name: commit.author().name().unwrap().to_owned(),
-                email: commit.author().email().unwrap().to_owned(),
-                timestamp: TimeWithOffset {
-                    utc_seconds: commit.time().seconds(),
-                    offset_seconds: commit.time().offset_minutes() * 60,
-                },
-            },
-            committer: GitPerson {
-                name: commit.committer().name().unwrap().to_owned(),
-                email: commit.committer().email().unwrap().to_owned(),
-                timestamp: TimeWithOffset {
-                    utc_seconds: commit.time().seconds(),
-                    offset_seconds: commit.time().offset_minutes() * 60,
-                },
-            },
-        }))
+    } else {
+        Ok(Commit::Commit(FullCommitData::try_from(commit)?))
     }
 }

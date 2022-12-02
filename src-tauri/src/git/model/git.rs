@@ -77,6 +77,55 @@ impl GraphNodeData for FullCommitData {
     }
 }
 
+impl TryFrom<&git2::Commit<'_>> for FullCommitData {
+    type Error = BackendError;
+
+    fn try_from(commit: &git2::Commit<'_>) -> Result<Self, Self::Error> {
+        // TODO this ignores too many errors
+        Ok(FullCommitData {
+            oid: commit.as_object().id().to_string(),
+            short_oid: commit
+                .as_object()
+                .short_id()
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned(),
+            message: commit.message_raw().unwrap().to_owned(),
+            parents: commit
+                .parents()
+                .into_iter()
+                .map(|p| ParentReference {
+                    oid: p.id().to_string(),
+                    short_oid: p
+                        .as_object()
+                        .short_id()
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        .to_owned(),
+                })
+                .collect(),
+            author: GitPerson {
+                name: commit.author().name().unwrap().to_owned(),
+                email: commit.author().email().unwrap().to_owned(),
+                timestamp: TimeWithOffset {
+                    utc_seconds: commit.time().seconds(),
+                    offset_seconds: commit.time().offset_minutes() * 60,
+                },
+            },
+            committer: GitPerson {
+                name: commit.committer().name().unwrap().to_owned(),
+                email: commit.committer().email().unwrap().to_owned(),
+                timestamp: TimeWithOffset {
+                    utc_seconds: commit.time().seconds(),
+                    offset_seconds: commit.time().offset_minutes() * 60,
+                },
+            },
+        })
+    }
+}
+
 /**
  * Detailed information about a Stash
  */
@@ -191,13 +240,22 @@ pub struct DiffStat {
     pub deletions: usize,
 }
 
+
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum CommitStats
+{
+    Commit(CommitStatsData),
+    Stash(StashStatsData)
+}
+
 #[derive(Clone, Serialize, PartialEq, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GitCommitStats {
+pub struct CommitStatsData {
     /**
      * The commit these stats belong to
      */
-    pub commit: Commit,
+    pub commit: FullCommitData,
 
     /**
      * The changes directly in this commit
@@ -209,6 +267,31 @@ pub struct GitCommitStats {
      * Only valid filled for merge commits
      */
     pub incoming: Option<Vec<DiffStat>>,
+}
+
+
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct StashStatsData {
+    /**
+     * The commit these stats belong to
+     */
+    pub stash: StashData,
+
+    /**
+     * The changes in the working directory
+     */
+    pub changes: Vec<DiffStat>,
+
+    /**
+     * Changes in the index
+     */
+    pub index: Option<Vec<DiffStat>>,
+
+    /**
+     * Changes to untracked files, if any
+     */
+    pub untracked: Option<Vec<DiffStat>>
 }
 
 /**

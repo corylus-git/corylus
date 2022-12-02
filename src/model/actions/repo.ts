@@ -1,5 +1,5 @@
 import { Logger } from '../../util/logger';
-import { Tag, BranchInfo, Stash, IndexStatus, Commit, CommitStats } from '../stateObjects';
+import { Tag, BranchInfo, Stash, IndexStatus, Commit, CommitStats, CommitStatsData } from '../stateObjects';
 import { just, Maybe } from '../../util/maybe';
 import { toast } from 'react-toastify';
 import { structuredToast } from '../../util/structuredToast';
@@ -619,17 +619,17 @@ export const syncConfig = trackError(
     }
 );
 
-export function selectCommit(ref: CommitStats | string | Commit) {
-    if (!(ref as CommitStats).direct) {
+export function selectCommit(ref: CommitStatsData | string | Commit) {
+    if (!(ref as CommitStatsData).direct) {
         const oid =
             typeof ref === 'string'
                 ? ref
                 : (ref as Commit).oid;
         Logger().debug('selectCommit', 'Requesting commit details', { oid});
-        invoke('get_commit_stats', { oid, isStash: false  });
+        invoke('get_commit_stats', { oid });
         requestAffectedCommits(oid, true, true);
     } else {
-        requestAffectedCommits((ref as CommitStats).commit.oid, true, true);
+        requestAffectedCommits((ref as CommitStatsData).commit.oid, true, true);
         repoStore.getState().setSelectedCommit(just(ref as CommitStats));
     }
 }

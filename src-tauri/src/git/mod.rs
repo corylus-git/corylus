@@ -218,7 +218,7 @@ pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendErr
         stashes_data.iter().map(|(idx, message, oid)| {
             let commit = backend.repo.find_commit(*oid)?;
             Ok(Commit::Stash(StashData {
-                ref_name: format!("stash{{{}}}", idx).to_owned(),
+                ref_name: format!("stash@{{{}}}", idx).to_owned(),
                 oid: oid.to_string(),
                 short_oid: "".to_owned(),
                 message: commit.message().unwrap_or("").to_owned(),

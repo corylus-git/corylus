@@ -57,7 +57,7 @@ export const Stashes: React.FC = () => {
                         <TypeHeader>{`${l}${o ? '' : ` (${stashes.length ?? 0})`}`}</TypeHeader>
                     ) : (
                         <StashDisplay
-                            onClick={() => invoke('get_commit_stats', { oid: m!.oid, isStash: true })}
+                            onClick={() => invoke('get_stash_stats', { oid: m!.oid })}
                             onContextMenu={() => openContextMenu(dialog, m!)}>
                             <RefDisplay>{m!.refName}</RefDisplay> {m!.message}
                         </StashDisplay>

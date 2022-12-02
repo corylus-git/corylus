@@ -115,7 +115,7 @@ export interface Person {
 }
 
 export interface Timestamp {
-    utcSeconds: number; 
+    utcSeconds: number;
     offsetSeconds: number;
 }
 
@@ -124,7 +124,7 @@ export interface GitPerson extends Person {
 }
 // TODO check whether this works if a commit is from a different timezone
 export function formatTimestamp(timestamp: Timestamp) {
-    return new Date((timestamp.utcSeconds)*1000).toLocaleString();
+    return new Date((timestamp.utcSeconds) * 1000).toLocaleString();
 }
 
 /**
@@ -249,13 +249,17 @@ export interface DiffStat {
 }
 
 /**
- * A more detailled version of the commit including the diff
+ * A more detailled version of the commit including the diff stats
  */
-export interface CommitStats {
+export interface CommitStatsData {
+    /**
+     * The type as delivered from the backend
+     */
+    type: 'commit';
     /**
      * The commit these stats belong to
      */
-    readonly commit: Commit;
+    readonly commit: FullCommit;
 
     /**
      * The changes directly in this commit
@@ -268,6 +272,25 @@ export interface CommitStats {
      */
     readonly incoming?: readonly DiffStat[];
 }
+
+export interface StashStatsData {
+    /**
+     * The type as delivered from the backend
+     */
+    type: 'stash';
+    /**
+    * The stash these stats belong to
+    */
+    readonly stash: Stash;
+
+    readonly changes: readonly DiffStat[];
+
+    readonly index?: readonly DiffStat[];
+    
+    readonly untracked?: readonly DiffStat[];
+}
+
+export type CommitStats = CommitStatsData | StashStatsData;
 
 /**
  * Blame info about a file

@@ -111,23 +111,23 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
             } catch {
                 // generate pseudo commit with changes from the marge index
                 set((state) => {
-                    state.selectedConflict = castDraft(just({
-                        ours,
-                        theirs: {
-                            type: 'stash',
-                            author: {
-                                name: '',
-                                email: '',
-                                timestamp: new Date(),
-                            },
-                            message: '',
-                            oid: '',
-                            parents: [],
-                            ref: 'stash',
-                            shortOid: 'stash',
-                        },
-                        file: file,
-                    }));
+                    // state.selectedConflict = castDraft(just({
+                    //     ours,
+                    //     theirs: {
+                    //         type: 'stash',
+                    //         author: {
+                    //             name: '',
+                    //             email: '',
+                    //             timestamp: new Date(),
+                    //         },
+                    //         message: '',
+                    //         oid: '',
+                    //         parents: [],
+                    //         ref: 'stash',
+                    //         shortOid: 'stash',
+                    //     },
+                    //     file: file,
+                    // }));
                 });
             }
         },
