@@ -361,10 +361,8 @@ export const stash = trackError(
                 message: message,
                 untracked: untracked,
             });
-            await repoStore.getState().backend.stash(message, untracked);
+            await invoke('stash', {message, untracked});
             Logger().debug('stash', 'Success');
-            await repoStore.getState().loadStashes();
-            // repoStore.getState().getStatus();
         } catch (e) {
             if (e instanceof Error) {
                 Logger().error('stash', 'Could not stash changes', { error: e.toString() });

@@ -65,59 +65,6 @@ pub async fn get_commit_stats(
 }
 
 #[tauri::command]
-pub async fn get_stash_stats(
-    state: StateType<'_>,
-    window: Window,
-    oid: &str,
-) -> Result<(), BackendError> {
-    with_backend(state, |backend| {
-        let stash_commit =
-            Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
-        let direct_diff = backend.repo.diff_tree_to_tree(
-            stash_commit.parent(0)?.tree().ok().as_ref(),
-            stash_commit.tree().ok().as_ref(),
-            Some(DiffOptions::new().patience(true)),
-        )?;
-        let direct = map_diff(&direct_diff);
-        let index_stats = stash_commit
-            .parent(1)
-            .and_then(|commit| commit.tree())
-            .and_then(|index_tree| {
-                backend.repo.diff_tree_to_tree(
-                    stash_commit.parent(0).unwrap().tree().ok().as_ref(), // we know the tree must be there
-                    Some(&index_tree),
-                    Some(DiffOptions::new().patience(true)),
-                )
-            })
-            .ok()
-            .and_then(|diff| Some(map_diff(&diff)));
-        let untracked_stats = stash_commit
-            .parent(2)
-            .and_then(|commit| commit.tree())
-            .and_then(|untracked_tree| {
-                backend.repo.diff_tree_to_tree(
-                    None, // the untracked stash parent has no parent commits
-                    Some(&untracked_tree),
-                    Some(DiffOptions::new().patience(true)),
-                )
-            })
-            .ok()
-            .and_then(|diff| Some(map_diff(&diff)));
-        window.emit(
-            "commitStatsChanged",
-            CommitStats::Stash(StashStatsData {
-                stash: StashData::try_from(&stash_commit)?,
-                changes: direct,
-                index: index_stats,
-                untracked: untracked_stats
-            }),
-        );
-        Ok(())
-    })
-    .await
-}
-
-#[tauri::command]
 pub async fn get_affected_branches(
     state: StateType<'_>,
     oid: String,
@@ -137,7 +84,7 @@ pub async fn get_affected_branches(
     .await
 }
 
-fn map_diff(diff: &git2::Diff) -> Vec<DiffStat> {
+pub fn map_diff(diff: &git2::Diff) -> Vec<DiffStat> {
     diff.deltas()
         .enumerate()
         .map(|(idx, delta)| {

@@ -21,9 +21,9 @@ use crate::{
     git::{
         diff::get_diff,
         get_branches, get_graph_entries,
-        history::{get_affected_branches, get_commit, get_commit_stats, get_stash_stats},
+        history::{get_affected_branches, get_commit, get_commit_stats},
         index::{commit, get_status, stage, unstage},
-        remote::{get_remotes, push}, get_stashes
+        remote::{get_remotes, push}, stash::{get_stashes, stash, get_stash_stats}
     },
     settings::get_settings,
 };
@@ -44,6 +44,7 @@ fn main() {
             get_commit_stats,
             get_stash_stats,
             get_stashes,
+            stash,
             get_diff,
             get_status,
             stage,
