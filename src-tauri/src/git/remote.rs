@@ -1,4 +1,6 @@
 use git2::{Direction, PushOptions};
+use log::debug;
+use tauri::Window;
 
 use crate::error::BackendError;
 
@@ -36,6 +38,7 @@ pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>, Backen
 #[tauri::command]
 pub async fn push(
     state: StateType<'_>,
+    window: Window,
     remote: String,
     branch: Option<String>,
     upstream: Option<String>,
@@ -55,10 +58,13 @@ pub async fn push(
         } else {
             vec![]
         };
+        debug!("Pushing to {} {:?}", remote.name().unwrap_or("<invalid>"), refspecs);
         remote.push(
             &refspecs,
             Some(&mut options),
-        );
+        )?;
+        debug!("Success");
+        window.emit("branches_changed", {});
         Ok(())
     })
     .await
