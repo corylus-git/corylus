@@ -1,3 +1,4 @@
+use log::{error, info, debug};
 use tauri::Window;
 
 use crate::error::BackendError;
@@ -53,18 +54,35 @@ pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: 
             let tree = backend.repo.find_tree(tree_id)?;
             let head = backend.repo.head().and_then(|h| h.peel_to_commit())?;
             let signature = backend.repo.signature()?;
-            let oid = backend.repo.commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                message,
-                &tree,
-                &[&head],
-            )?;
+            if amend {
+                let amended = head.amend(
+                    Some("HEAD"),
+                    None,
+                    None,
+                    None,
+                    Some(message),
+                    Some(&tree))?;
+                debug!("Amended commit {:?}->{:?}", head, amended);
+            } else {
+                let oid = backend.repo.commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    message,
+                    &tree,
+                    &[&head],
+                )?;
+                debug!("Committed {}", oid);
+            }
         }
         backend.load_history(&window);
         window.emit("status-changed", {});
         Ok(())
     })
     .await
+    .map_err(|e| {
+        // TODO replace this with .inspect_err() as it becomes stable
+        error!("Could not commit. {}", e); 
+        e
+    })
 }
