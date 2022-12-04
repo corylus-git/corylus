@@ -22,6 +22,7 @@ lazy_static = { version = "1.4.0"}
 directories = "4.0.1"
 config = {version = "0.13.2", features = ["serde_json"] }
 log = "0.4.17"
+simple_logger = "4.0.0"
 
 [features]
 # by default Tauri runs in production mode
