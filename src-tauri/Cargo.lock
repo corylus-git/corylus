@@ -2948,6 +2948,7 @@ dependencies = [
  "directories",
  "git2",
  "lazy_static",
+ "log",
  "serde",
  "serde_json",
  "tauri",

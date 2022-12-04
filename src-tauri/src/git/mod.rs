@@ -9,6 +9,7 @@ pub mod stash;
 use std::sync::Arc;
 
 use git2::{DiffOptions, Oid, Repository, Sort};
+use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
 
@@ -193,6 +194,7 @@ pub async fn git_open(
         s.git = Some(GitBackend::new(path)?);
         // TODO spawn of extra thread and possibly lock inside the backend
         s.git.as_mut().unwrap().load_repo_data(&window);
+        info!("Successfully opened repo at {}", path);
         Ok(())
     })
     .await

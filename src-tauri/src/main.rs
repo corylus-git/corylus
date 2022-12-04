@@ -10,6 +10,7 @@ extern crate lazy_static;
 mod error;
 mod git;
 mod settings;
+mod log;
 
 use std::sync::Arc;
 
@@ -25,7 +26,7 @@ use crate::{
         index::{commit, get_status, stage, unstage},
         remote::{get_remotes, push}, stash::{get_stashes, stash, get_stash_stats}
     },
-    settings::get_settings,
+    settings::get_settings, log::send_log,
 };
 
 // #[cfg(not(test))]
@@ -36,6 +37,7 @@ fn main() {
             settings: load_settings(),
         })))
         .invoke_handler(tauri::generate_handler![
+            send_log,
             get_settings,
             get_branches,
             is_git_dir,
