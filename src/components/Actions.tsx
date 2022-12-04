@@ -107,9 +107,9 @@ const ModificationIcon = styled.div`
 `;
 
 function ModifificationCounter() {
-    const index = useIndex();
-    Logger().debug('ModificationCounter', 'Status', { status: index.status });
-    return index.status.length !== 0 ? <ModificationIcon>{index.status.length}</ModificationIcon> : <></>;
+    const { data: index }  = useIndex();
+    Logger().silly('ModificationCounter', 'Status', { status: index });
+    return index !== undefined && index.length ? <ModificationIcon>{index?.length}</ModificationIcon> : <></>;
 }
 
 const BranchButtonContainer = styled.div`
