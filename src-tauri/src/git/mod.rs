@@ -82,7 +82,7 @@ impl GitBackend {
             branch_data
         });
         self.branches = branches_result.unwrap_or_default();
-        window.emit("branchesChanged", &self.branches);
+        window.emit("branches-changed", {});
     }
 
     pub fn load_history(&mut self, window: &Window) {

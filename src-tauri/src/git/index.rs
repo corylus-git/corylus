@@ -77,6 +77,7 @@ pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: 
         }
         backend.load_history(&window);
         window.emit("status-changed", {});
+        window.emit("branches-changed", {});
         Ok(())
     })
     .await

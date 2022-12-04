@@ -371,6 +371,11 @@ export function useAffectedBranches(): string[] {
 export const useBranches = (): UseQueryResult<readonly BranchInfo[]> => 
     useQuery('branches', () => invoke<readonly BranchInfo[]>('get_branches', {}));
 
+listen('branches-changed', _ => {
+    queryClient.invalidateQueries('branches');
+});
+    
+
 /**
  * Get the current branch
  */
@@ -399,10 +404,6 @@ export const loadCommitStats = (commit: Commit): Promise<CommitStats> => repoSto
  * handlers for events from the backend
  * =================================================
  */
-listen<BranchInfo[]>('branchesChanged', ev => {
-    queryClient.invalidateQueries('branches');
-});
-
 listen<HistoryInfo>('historyChanged', ev => {
     repoStore.getState().setHistory(ev.payload);
 })
