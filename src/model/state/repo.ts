@@ -27,6 +27,7 @@ import { listen } from '@tauri-apps/api/event';
 import { castDraft } from 'immer';
 import { queryClient } from '../../util/queryClient';
 import { useQuery, UseQueryResult } from 'react-query';
+import { getDiff } from '../actions/repo';
 
 /**
  * Information about the git history
@@ -368,19 +369,19 @@ export function useAffectedBranches(): string[] {
 /**
  * Get the current available branches in the repo (local and remote)
  */
-export const useBranches = (): UseQueryResult<readonly BranchInfo[]> => 
+export const useBranches = (): UseQueryResult<readonly BranchInfo[]> =>
     useQuery('branches', () => invoke<readonly BranchInfo[]>('get_branches', {}));
 
 listen('branches-changed', _ => {
     queryClient.invalidateQueries('branches');
 });
-    
+
 
 /**
  * Get the current branch
  */
 export const useCurrentBranch = (): BranchInfo | undefined => {
-    const { data: branches  } = useBranches();
+    const { data: branches } = useBranches();
     return branches?.find(b => b.current);
 }
 
@@ -398,6 +399,18 @@ export const useRebaseStatus = (): Maybe<RebaseStatusInfo> =>
  */
 export const loadCommitStats = (commit: Commit): Promise<CommitStats> => repoStore.getState().backend.getCommitStats(commit);
 
+/**
+ * Query the diff of a specific file
+ */
+export function useDiff(source: 'commit' | 'stash' | 'index' | 'workdir', path: string, commit?: string, parent?: string, untracked?: boolean) {
+    return useQuery(['diff', commit, path, source, parent, untracked], () => getDiff({
+        source,
+        commitId: commit,
+        toParent: parent,
+        path,
+        untracked
+    }));
+}
 
 /**
  * =================================================

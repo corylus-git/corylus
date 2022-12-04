@@ -18,7 +18,7 @@ import {
     repoStore,
     useRebaseStatus,
 } from '../../model/state/repo';
-import { useStagingArea } from '../../model/state/stagingArea';
+import { SelectedFile, useStagingArea } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../util/filetypes';
 import { invoke } from '@tauri-apps/api';
@@ -26,23 +26,22 @@ import { useIndex } from '../../model/state';
 
 let splitterX: string | undefined = undefined;
 
-const DiffDisplayPanel: React.FC = () => {
-    const stagingArea = useStagingArea();
-    if (stagingArea.selectedFile.found) {
-        const source = stagingArea.selectedFile.value.source;
+const DiffDisplayPanel: React.FC<{selectedFile: SelectedFile | undefined}> = (props) => {
+    if (props.selectedFile) {
+        const source = props.selectedFile.source;
         // const fileType = mime.lookup(stagingArea.selectedFile.value.path) || 'text/plain';
         const fileType = 'text/plain';
         if (isSupportedImageType(fileType)) {
             return (
                 <div>
                     <h1 style={{ fontSize: '150%' }}>
-                        {stagingArea.selectedFile.value.path} @
+                        {props.selectedFile.path} @
                         {source === 'workdir' ? 'Working directory' : 'Index'}
                     </h1>
                     <ImageDiff
-                        newPath={stagingArea.selectedFile.value.path}
+                        newPath={props.selectedFile.path}
                         newRef={source}
-                        oldPath={stagingArea.selectedFile.value.path}
+                        oldPath={props.selectedFile.path}
                         oldRef="HEAD"
                     />
                 </div>
@@ -51,8 +50,7 @@ const DiffDisplayPanel: React.FC = () => {
         return (
             <div>
                 <StagingDiffPanel
-                    file={stagingArea.selectedFile.value}
-                    diff={stagingArea.selectedDiff}
+                    file={props.selectedFile}
                     onAddDiff={(diff, path, source, isIndex) =>
                         addDiff(diff, path, source, isIndex)
                     }
@@ -60,34 +58,30 @@ const DiffDisplayPanel: React.FC = () => {
             </div>
         );
     }
-    if (stagingArea.selectedConflict.found) {
-        return (
-            <div>
-                <ConflictResolutionPanel
-                    conflict={stagingArea.selectedConflict.value}
-                    onClose={() => {
-                        stagingArea.deselectConflictedFile();
-                    }}
-                />
-            </div>
-        );
-    }
+    // TODO
+    // if (stagingArea.selectedConflict.found) {
+    //     return (
+    //         <div>
+    //             <ConflictResolutionPanel
+    //                 conflict={stagingArea.selectedConflict.value}
+    //                 onClose={() => {
+    //                     stagingArea.deselectConflictedFile();
+    //                 }}
+    //             />
+    //         </div>
+    //     );
+    // }
     return <></>;
 };
 
 export const IndexPanel: React.FC = () => {
-    const stagingArea = useStagingArea();
     const { data: index } = useIndex();
+    const [selectedFile, setSelectedFile] = React.useState<SelectedFile>();
     Logger().debug('IndexPanel', 'Received new index status', { index: index });
 
-    function showDiff(file: IndexStatus, source: 'workdir' | 'index') {
-        stagingArea.deselectConflictedFile();
-        stagingArea.loadDiff(source, file.path);
-    }
-
     function showMergeResolutionPanel(file: IndexStatus) {
-        stagingArea.deselectDiff();
-        stagingArea.selectConflictedFile(file);
+        // stagingArea.deselectDiff();
+        // stagingArea.selectConflictedFile(file);
     }
 
     return (
@@ -106,7 +100,7 @@ export const IndexPanel: React.FC = () => {
                     onSelectWorkdirEntry={(entry) => {
                         if (!entry.isConflicted) {
                             if (entry.type !== 'dir') {
-                                showDiff(entry, 'workdir');
+                                setSelectedFile({path: entry.path, source: 'workdir'});
                             }
                         } else {
                             showMergeResolutionPanel(entry);
@@ -114,17 +108,16 @@ export const IndexPanel: React.FC = () => {
                     }}
                     onSelectIndexEntry={(entry) => {
                         if (!entry.isConflicted && entry.type !== 'dir') {
-                            showDiff(entry, 'index');
+                            setSelectedFile({path: entry.path, source: 'index'});
                         }
                     }}
                 />
-                <DiffDisplayPanel />
+                <DiffDisplayPanel selectedFile={selectedFile}/>
             </Splitter>
             <CommitForm
                 onCommit={() => {
                     // reset everything on index change
-                    stagingArea.deselectDiff();
-                    stagingArea.deselectConflictedFile();
+                    setSelectedFile(undefined);
                 }}
             />
         </div>

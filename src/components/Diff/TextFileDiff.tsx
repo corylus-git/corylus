@@ -1,8 +1,7 @@
 import React from 'react';
-import { useQuery } from 'react-query';
-import { getDiff } from '../../model/actions/repo';
+import { useDiff } from '../../model/state/repo';
 import { DiffStat } from '../../model/stateObjects';
-import { DiffViewer, StringDiffViewer } from './DiffViewer';
+import { DiffViewer } from './DiffViewer';
 
 export type TextFileDiffProps = {
     source: 'commit' | 'stash';
@@ -12,14 +11,8 @@ export type TextFileDiffProps = {
 };
 
 export const TextFileDiff: React.FC<TextFileDiffProps> = (props) => {
-    const { isLoading, error, data } = useQuery(['diff', props.commit, props.diff.file.path], () => getDiff({
-            source: props.source,
-            commitId: props.commit,
-            toParent: props.toParent,
-            path: props.diff.file.path,
-            untracked: props.diff.file.status === 'untracked'
-        })
-    );
+    const { isLoading, error, data } = useDiff(props.source, props.diff.file.path, props.commit, props.toParent, props.diff.file.status === 'untracked');
+    
     if (isLoading) {
         return <>Loading diff...</>
     }
