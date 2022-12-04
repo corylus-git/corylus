@@ -26,6 +26,7 @@ pub async fn stash(
                 None
             },
         )?;
+        window.emit("stashed_changed", {});
         Ok(())
     })
     .await

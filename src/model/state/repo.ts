@@ -330,6 +330,8 @@ export const useRemotes = (): readonly RemoteMeta[] =>
 export const useStashes = (): UseQueryResult<readonly Stash[]> =>
     useQuery('stashes', () => invoke<readonly Stash[]>('get_stashes'));
 
+listen('stashed_changed', (_) => queryClient.invalidateQueries('get_stashes'));
+
 /**
  * Get the current state of the index
  */
