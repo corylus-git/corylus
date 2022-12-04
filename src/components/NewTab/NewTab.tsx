@@ -8,14 +8,13 @@ import { Modal } from '../util/Modal';
 import { StyledButton } from '../util/StyledButton';
 import { RepositoryHistory } from './RepositoryHistory';
 import { init } from '../../model/actions/repo';
-import { useTabs, TabsActions } from '../../model/state/tabs';
+import { TabsActions, useTabs } from '../../model/state/tabs';
 
 import { toast } from 'react-toastify';
 import { Logger } from '../../util/logger';
 import { structuredToast } from '../../util/structuredToast';
 import { CloneDialog } from './CloneDialog';
 import { invoke } from '@tauri-apps/api';
-import { useQuery } from 'react-query';
 import { useSettings } from '../../model/settings';
 
 const NewTabView = styled.div<{ hasHistory: boolean }>`

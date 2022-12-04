@@ -38,7 +38,7 @@ export type TabsState = {
     active: Maybe<string>;
 };
 
-type TabsActions = {
+export type TabsActions = {
     addTab: () => void;
     closeTab: (id: string) => void;
     switchTab: (tab: TabState) => void;
@@ -101,7 +101,11 @@ export const tabsStore = create<TabsState & TabsActions>()(
             });
         },
         openRepoInActive: (path: string): void => {
-            set((state) => openInActiveTab(state, path));
+            set((state) => {
+                const tabs = [...state.tabs];
+                openInActiveTab(tabs, state.active, path);
+                state.tabs = tabs;
+            });
         },
         openRepoInNew: (path: string): void => {
             set((state) => {
@@ -112,7 +116,7 @@ export const tabsStore = create<TabsState & TabsActions>()(
                     title: '(New Tab)',
                 }];
                 state.active = just(id);
-                openInActiveTab(state, path);
+                openInActiveTab(state.tabs, state.active, path);
             });
         },
         loadTabs: (tabs: readonly TabState[]): void => {
@@ -131,13 +135,13 @@ export const tabsStore = create<TabsState & TabsActions>()(
     }))
 );
 
-async function openInActiveTab(state: TabsState, path: string) {
-    const active = state.tabs.find(t => state.active.found && t.id === state.active.value);
-    if (!active) {
+async function openInActiveTab(tabs: TabState[], active: Maybe<string>, path: string) {
+    const activeTab = tabs.find(t => active.found && t.id === active.value);
+    if (!activeTab) {
         Logger().error('openInActiveTab', 'Could not find active tab to open path in');
     } else {
-        active.path = just(path);
-        active.title = await basename(path);
+        activeTab.path = just(path);
+        activeTab.title = await basename(path);
         Logger().debug('openInActiveTab', 'Re-loading repository', {
             path,
         });
