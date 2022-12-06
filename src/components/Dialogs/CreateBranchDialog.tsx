@@ -37,7 +37,7 @@ function SourceBranchSelection(props: {
                 {/* {props.branches
                     .filter((b) => !b.remote)
                     .map((b) => (
-                        <option key={b.ref}>{b.ref}</option>
+                        <option key={b.refName}>{b.refName}</option>
                     ))} */}
             </select>
         )) || <></>

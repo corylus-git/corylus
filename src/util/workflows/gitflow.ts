@@ -90,7 +90,7 @@ export class Gitflow implements IGitWorkflow {
     // private getAdditionalEntries() {
     //     const repo = repoStore.getState();
     //     const entries = this.possibleSources.flatMap(({ type, base, prefix }) => {
-    //         if (repo.branches.find((b) => b.current)?.ref.startsWith(prefix)) {
+    //         if (repo.branches.find((b) => b.current)?.refName.startsWith(prefix)) {
     //             return [
     //                 {
     //                     label: `Finish ${type}`,
@@ -140,13 +140,13 @@ export const configure = async (config: IGitFlowConfigValues): Promise<void> => 
     }
     // create the two long-lived branches first, if necessary
     const branches = await backend.getBranches();
-    if (branches.findIndex((b) => b.ref === config.branch.master) === -1) {
+    if (branches.findIndex((b) => b.refName === config.branch.master) === -1) {
         Logger().info('Gitflow', 'Creating master branch');
         backend.branch(config.branch.master, 'HEAD', true);
     } else {
         Logger().debug('Gitflow', 'Master branch already exists. Not recreating.');
     }
-    if (branches.findIndex((b) => b.ref === config.branch.develop) === -1) {
+    if (branches.findIndex((b) => b.refName === config.branch.develop) === -1) {
         Logger().info('Gitflow', 'Creating develop branch');
         backend.branch(config.branch.develop, 'HEAD', false);
     } else {
@@ -165,7 +165,7 @@ export const startBranch = async (
 ): Promise<void> => {
     Logger().debug('GitFlow', `Starting new ${type} branch`);
     const repo = repoStore.getState();
-    const sourceBranch = repo.branches.find((b) => b.ref === source);
+    const sourceBranch = repo.branches.find((b) => b.refName === source);
     const sourceBehind = sourceBranch?.upstream?.behind ?? 0;
     if (
         sourceBehind > 0 &&
@@ -173,7 +173,7 @@ export const startBranch = async (
     ) {
         await repo.backend.fetch({
             remote: fromNullable(sourceBranch!.upstream?.remoteName),
-            branch: just(`${sourceBranch?.upstream?.ref}:${sourceBranch?.ref}`),
+            branch: just(`${sourceBranch?.upstream?.ref}:${sourceBranch?.refName}`),
             prune: false,
             fetchTags: false,
         });
@@ -189,7 +189,8 @@ export const startBranch = async (
 export const finishBranch = async (type: GitflowBranchType, target: string): Promise<void> => {
     const r = repoStore.getState();
     Logger().debug('GitFlow', `Finishing ${type} branch`);
-    if (r.status.length !== 0) {
+    // if (r.status.length !== 0) {
+    if (true) {
         Logger().error('GitFlow', `Refusing to finish ${type} with uncommitted changes`);
         toast(
             `Cannot finish ${type} with uncommitted changes. Please either commit or stash them before continuing.`,
@@ -199,34 +200,34 @@ export const finishBranch = async (type: GitflowBranchType, target: string): Pro
             }
         );
     } else {
-        try {
-            const targetBranch = r.branches.find((b) => !b.remote && b.ref === target);
-            if (targetBranch && targetBranch.upstream && targetBranch.upstream.behind > 0) {
-                Logger().error('GitFlow', 'Target branch is ahead of source. Refusing to merge.');
-                toast(
-                    `Cannot finish ${type}. The target branch is not up-to-date with its remote, which increases the chances of producing merge conflicts.`
-                );
-            } else {
-                const current = r.branches.find((b) => b.current);
-                Logger().silly('GitFlow', 'Attempting to merge', {
-                    sourceBranch: current,
-                    targeBranch: target,
-                });
-                Logger().silly('GitFlow', 'Switching to target branch');
-                await repoStore.getState().backend.checkout(target);
-                Logger().silly('GitFlow', `Merging ${type} into target branch`);
-                await repoStore.getState().backend.merge(current!.ref, true);
-                Logger().silly('GitFlow', `Deleting ${type} branch`, { source: current });
-                await repoStore.getState().backend.deleteBranch(current!, false, true);
-                Logger().debug('GitFlow', `Finished ${type}`);
-                toast.success(`Finished ${type}.`);
-                repoStore.getState().loadBranches();
-                repoStore.getState().loadHistory();
-                repoStore.getState().getStatus();
-            }
-        } catch (e) {
-            Logger().error('GitFlow', `Failed to finish ${type}`, { error: e });
-            toast.error(`Could not finish ${type}. ${e}`, { autoClose: false });
-        }
+        // try {
+        //     const targetBranch = r.branches.find((b) => !b.remote && b.refName === target);
+        //     if (targetBranch && targetBranch.upstream && targetBranch.upstream.behind > 0) {
+        //         Logger().error('GitFlow', 'Target branch is ahead of source. Refusing to merge.');
+        //         toast(
+        //             `Cannot finish ${type}. The target branch is not up-to-date with its remote, which increases the chances of producing merge conflicts.`
+        //         );
+        //     } else {
+        //         const current = r.branches.find((b) => b.current);
+        //         Logger().silly('GitFlow', 'Attempting to merge', {
+        //             sourceBranch: current,
+        //             targeBranch: target,
+        //         });
+        //         Logger().silly('GitFlow', 'Switching to target branch');
+        //         await repoStore.getState().backend.checkout(target);
+        //         Logger().silly('GitFlow', `Merging ${type} into target branch`);
+        //         await repoStore.getState().backend.merge(current!.refName, true);
+        //         Logger().silly('GitFlow', `Deleting ${type} branch`, { source: current });
+        //         await repoStore.getState().backend.deleteBranch(current!, false, true);
+        //         Logger().debug('GitFlow', `Finished ${type}`);
+        //         toast.success(`Finished ${type}.`);
+        //         // repoStore.getState().loadBranches();
+        //         repoStore.getState().loadHistory();
+        //         // repoStore.getState().getStatus();
+        //     }
+        // } catch (e) {
+        //     Logger().error('GitFlow', `Failed to finish ${type}`, { error: e });
+        //     toast.error(`Could not finish ${type}. ${e}`, { autoClose: false });
+        // }
     }
 };

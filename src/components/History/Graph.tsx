@@ -31,7 +31,7 @@ function openContextMenu(
     //             }),
     //     },
     //     {
-    //         label: `Merge ${shortRef} into ${currentBranch.found && currentBranch.value.ref}`,
+    //         label: `Merge ${shortRef} into ${currentBranch.found && currentBranch.value.refName}`,
     //         click: () => dialog.open({ type: 'request-merge', source: just(ref) }),
     //     },
     //     {
@@ -59,11 +59,11 @@ function openContextMenu(
     // if (currentBranch.found) {
     //     menu.append(
     //         new MenuItem({
-    //             label: `Reset ${currentBranch.found && currentBranch.value.ref} to ${shortRef}`,
+    //             label: `Reset ${currentBranch.found && currentBranch.value.refName} to ${shortRef}`,
     //             click: () =>
     //                 dialog.open({
     //                     type: 'request-branch-reset',
-    //                     branch: currentBranch.value.ref,
+    //                     branch: currentBranch.value.refName,
     //                     toRef: ref,
     //                 }),
     //         })

@@ -1,6 +1,5 @@
 import create from 'zustand/vanilla';
 import createHook from 'zustand';
-import { log } from './log';
 
 export type ProgressState = {
     message: string;
@@ -12,7 +11,7 @@ export type ProgressActions = {
 };
 
 export const progress = create<ProgressState & ProgressActions>(
-    log((set, get) => ({
+    (set, get) => ({
         message: '',
         animate: false,
         setProgress: (message: string, animate: boolean, timeout?: number): void => {
@@ -21,7 +20,7 @@ export const progress = create<ProgressState & ProgressActions>(
             }
             set((_) => ({ message, animate }));
         },
-    }))
+    })
 );
 
 export const useProgress = createHook(progress);

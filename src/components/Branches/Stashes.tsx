@@ -23,13 +23,13 @@ function openContextMenu(dialog: DialogActions, stash: Stash) {
     // const menu = new Menu();
     // menu.append(
     //     new MenuItem({
-    //         label: `Apply ${stash.ref} to working copy`,
+    //         label: `Apply ${stash.refName} to working copy`,
     //         click: () => dialog.open({ type: 'request-stash-apply', stash: stash }),
     //     })
     // );
     // menu.append(
     //     new MenuItem({
-    //         label: `Delete ${stash.ref}`,
+    //         label: `Delete ${stash.refName}`,
     //         click: () =>
     //             dialog.open({
     //                 type: 'request-stash-drop',

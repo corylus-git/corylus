@@ -82,13 +82,12 @@ export const FileHistory: React.FC = () => {
                         <GraphRenderer
                             width={dimensions.width - 10}
                             height={dimensions.height}
-                            lines={graph.lines}
-                            rails={graph.rails}
                             totalCommits={graph.lines.length}
                             first={0}
                             tags={tags}
-                            branches={branches}
+                            branches={branches.data ?? []}
                             onCommitsSelected={(commit) => setSelectedCommit(commit[0])}
+                            getLine={(idx) => Promise.reject()}
                         />
                     </NoScrollPanel>
                     <SplitterPanel>

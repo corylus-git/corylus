@@ -37,11 +37,11 @@ function exploreNode(root: IndexedNode, history: IndexedNode[], nextIndex: numbe
  */
 export function topologicalSort(history: Commit[]): Commit[] {
     const topoNodes: IndexedNode[] = history.map((entry) => ({ index: -1, entry }));
-    topoNodes.sort((e1, e2) =>
-        e2.entry.type === 'commit' && e1.entry.type === 'commit'
-            ? e2.entry.committer.timestamp.getTime() - e1.entry.committer.timestamp.getTime()
-            : e2.entry.author.timestamp.getTime() - e1.entry.author.timestamp.getTime()
-    );
+    // topoNodes.sort((e1, e2) =>
+    //     e2.entry.type === 'commit' && e1.entry.type === 'commit'
+    //         ? e2.entry.committer.timestamp.getTime() - e1.entry.committer.timestamp.getTime()
+    //         : e2.entry.author.timestamp.getTime() - e1.entry.author.timestamp.getTime()
+    // );
     let nextIndex = 0;
     for (const node of topoNodes) {
         nextIndex = exploreNode(node, topoNodes, nextIndex);

@@ -575,12 +575,12 @@ export interface GitBackend {
 //                 let stats = { ahead: 0, behind: 0 };
 //                 if (upstream) {
 //                     stats = await this.getTrackingDifference(
-//                         branchInfo.ref,
+//                         branchInfo.refName,
 //                         `${branchInfo.remote}/${branchInfo.upstream}`
 //                     );
 //                 }
 //                 return {
-//                     ref: branchInfo.ref,
+//                     ref: branchInfo.refName,
 //                     stats: {
 //                         ...stats,
 //                         upstreamMissing: !upstream,
@@ -600,10 +600,10 @@ export interface GitBackend {
 //                         ? branch.name.replace(/^remotes\/([^/]+)\/.*/, '$1')
 //                         : undefined,
 //                     current: branch.current,
-//                     upstream: stats.find((stat) => stat.ref === branch.name)?.stats,
+//                     upstream: stats.find((stat) => stat.refName === branch.name)?.stats,
 //                     trackedBy: trackedBranches?.find(
 //                         (bi) => `remotes/${bi.remote}/${bi.upstream}` === branch.name
-//                     )?.ref,
+//                     )?.refName,
 //                     isDetached: branch.current && isDetached,
 //                     worktree: branch.worktree
 //                 } as BranchInfo;
@@ -649,7 +649,7 @@ export interface GitBackend {
 //                     (remote) =>
 //                     ({
 //                         remote: remote.name,
-//                         url: remote.refs.fetch, // our model currently supports only one URL
+//                         url: remote.refNames.fetch, // our model currently supports only one URL
 //                     } as RemoteMeta)
 //                 ) || []
 //             );
@@ -1102,14 +1102,14 @@ export interface GitBackend {
 //     ): Promise<void> => {
 //         try {
 //             if (!branch.remote) {
-//                 await this._git.raw(['branch', force ? '-D' : '-d', branch.ref]);
+//                 await this._git.raw(['branch', force ? '-D' : '-d', branch.refName]);
 //                 if (removeRemote) {
-//                     await this._git.push(branch.upstream?.remoteName, branch.upstream?.ref, [
+//                     await this._git.push(branch.upstream?.remoteName, branch.upstream?.refName, [
 //                         '--delete',
 //                     ]);
 //                 }
 //             } else {
-//                 await this._git.push(branch.remote, branch.ref, ['--delete']);
+//                 await this._git.push(branch.remote, branch.refName, ['--delete']);
 //             }
 //         } catch (e) {
 //             Logger().error('SimpleGitBackend', 'Deleting branch failed', { error: e });
@@ -1263,11 +1263,11 @@ export interface GitBackend {
 //     };
 
 //     applyStash = async (stash: Stash, deleteAfterApply: boolean): Promise<void> => {
-//         await this._git.raw(['stash', deleteAfterApply ? 'pop' : 'apply', stash.ref]);
+//         await this._git.raw(['stash', deleteAfterApply ? 'pop' : 'apply', stash.refName]);
 //     };
 
 //     dropStash = async (stash: Stash): Promise<void> => {
-//         await this._git.raw(['stash', 'drop', stash.ref]);
+//         await this._git.raw(['stash', 'drop', stash.refName]);
 //     };
 
 //     reset = async (branch: string, toRef: string, mode: string): Promise<void> => {

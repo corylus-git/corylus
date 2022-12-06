@@ -1,16 +1,14 @@
-import create from 'zustand/vanilla';
-import createHook from 'zustand';
-import produce, { castDraft } from 'immer';
-import { nothing, just, fromNullable, Maybe } from '../../util/maybe';
-import { Middleware } from './types';
-import { nanoid } from 'nanoid';
-import { Logger } from '../../util/logger';
-import { log } from './log';
-import { repoStore } from './repo';
-import { settingsStore } from '../settings';
-import { stagingArea } from './stagingArea';
-import { immer } from 'zustand/middleware/immer';
 import { basename } from '@tauri-apps/api/path';
+import { castDraft } from 'immer';
+import { nanoid } from 'nanoid';
+import createHook from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+import create from 'zustand/vanilla';
+import { Logger } from '../../util/logger';
+import { just, Maybe, nothing } from '../../util/maybe';
+import { settingsStore } from '../settings';
+import { repoStore } from './repo';
+import { stagingArea } from './stagingArea';
 
 export interface TabState {
     /**

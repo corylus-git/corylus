@@ -1,12 +1,10 @@
-import { RequestInitializeGitflow } from '../../util/workflows/gitflow';
-import { Middleware } from './types';
-import produce from 'immer';
-import { Maybe, nothing } from '../../util/maybe';
-import create from 'zustand/vanilla';
 import createHook from 'zustand';
-import { log } from './log';
-import { BranchInfo, Stash, RemoteMeta, UpstreamInfo } from '../stateObjects';
+import { immer } from 'zustand/middleware/immer';
+import create from 'zustand/vanilla';
 import { Logger } from '../../util/logger';
+import { Maybe, nothing } from '../../util/maybe';
+import { RequestInitializeGitflow } from '../../util/workflows/gitflow';
+import { BranchInfo, RemoteMeta, Stash, UpstreamInfo } from '../stateObjects';
 import { repoStore } from './repo';
 
 export type RequestFetch = {
@@ -136,43 +134,37 @@ export type DialogActions = {
     deleteBranchDialog: (branch: BranchInfo) => Promise<void>;
 };
 
-// Turn the set method into an immer proxy
-const immer: Middleware<DialogState & DialogActions> = (config) => (set, get, api) =>
-    config((fn: any) => set(produce(fn)), get, api);
-
-export const dialogStore = create(
-    log(
-        immer((set, get) => ({
-            type: 'no-dialog',
-            open: (dialog: DialogState): void => {
-                set((state) => ({ ...state, ...dialog }));
-            },
-            close: (): void => {
-                set((_) => ({
-                    type: 'no-dialog',
-                }));
-            },
-            deleteBranchDialog: async (branch: BranchInfo): Promise<void> => {
-                Logger().info('requestDeleteBranch', 'Requesting branch deletion', {
-                    ref: branch.ref,
-                });
-                const r = repoStore.getState();
-                Logger().debug(
-                    'requestDeleteBranch',
-                    'Checking whether branch has unmerged changes'
-                );
-                const unmergedBranches = await r.backend.getUnmergedBranches(nothing);
-                const isUnmerged =
-                    unmergedBranches.found &&
-                    !!unmergedBranches.value.find((u) => u === branch.ref);
-                get().open({
-                    type: 'request-delete-branch',
-                    branch: branch,
-                    isUnmerged: isUnmerged,
-                });
-            },
-        }))
-    )
+export const dialogStore = create<DialogState & DialogActions>()(
+    immer((set, get) => ({
+        type: 'no-dialog',
+        open: (dialog: DialogState): void => {
+            set((state) => ({ ...state, ...dialog }));
+        },
+        close: (): void => {
+            set((_) => ({
+                type: 'no-dialog',
+            }));
+        },
+        deleteBranchDialog: async (branch: BranchInfo): Promise<void> => {
+            Logger().info('requestDeleteBranch', 'Requesting branch deletion', {
+                ref: branch.refName,
+            });
+            const r = repoStore.getState();
+            Logger().debug(
+                'requestDeleteBranch',
+                'Checking whether branch has unmerged changes'
+            );
+            const unmergedBranches = await r.backend.getUnmergedBranches(nothing);
+            const isUnmerged =
+                unmergedBranches.found &&
+                !!unmergedBranches.value.find((u) => u === branch.refName);
+            get().open({
+                type: 'request-delete-branch',
+                branch: branch,
+                isUnmerged: isUnmerged,
+            });
+        },
+    }))
 );
 
 export const useDialog = createHook(dialogStore);

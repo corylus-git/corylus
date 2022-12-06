@@ -1,4 +1,3 @@
-import React, { Props } from 'react';
 import styled from 'styled-components';
 
 const ModalView = styled.div`

@@ -1,4 +1,3 @@
-import { log } from './log';
 import createHook from 'zustand';
 import create from 'zustand/vanilla';
 
@@ -12,19 +11,21 @@ type UiStore = {
 };
 
 export const uiStore = create<UiStore & UiActions>(
-    log((set) => ({
+    (set) => ({
         inProgress: [],
         startProgress: (name: string): void => {
             set((state) => {
                 state.inProgress = [...state.inProgress, name];
+                return state;
             });
         },
         stopProgress: (name: string): void => {
             set((state) => {
                 state.inProgress = state.inProgress.filter((n) => n !== name);
+                return state;
             });
         },
-    }))
+    })
 );
 
 export const useUiState = createHook(uiStore);

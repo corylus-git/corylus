@@ -1,33 +1,21 @@
-import { GitBackend } from '../../util/GitBackend';
-import {
-    Commit,
-    BranchInfo,
-    RemoteMeta,
-    Tag,
-    IndexStatus,
-    PendingCommit,
-    Stash,
-    CommitStats,
-    RebaseStatusInfo,
-} from '../stateObjects';
-import { Maybe, nothing, just, fromNullable } from '../../util/maybe';
-import { IGitConfig } from '../IGitConfig';
-import { Middleware } from './types';
-import create from 'zustand/vanilla';
+import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/tauri';
+import AsyncLock from 'async-lock';
+import { castDraft } from 'immer';
+import { useQuery, UseQueryResult } from 'react-query';
 import createHook from 'zustand';
 // import produce from 'immer';
 import { immer } from 'zustand/middleware/immer';
-import { log } from './log';
+import create from 'zustand/vanilla';
+import { GitBackend } from '../../util/GitBackend';
 import { Logger } from '../../util/logger';
-// import fs from 'fs';
-import * as path from '@tauri-apps/api/path';
-import AsyncLock from 'async-lock';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
-import { castDraft } from 'immer';
+import { just, Maybe, nothing } from '../../util/maybe';
 import { queryClient } from '../../util/queryClient';
-import { useQuery, UseQueryResult } from 'react-query';
 import { getDiff } from '../actions/repo';
+import { IGitConfig } from '../IGitConfig';
+import {
+    BranchInfo, Commit, CommitStats, PendingCommit, RebaseStatusInfo, RemoteMeta, Stash, Tag
+} from '../stateObjects';
 
 /**
  * Information about the git history

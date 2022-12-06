@@ -1,21 +1,16 @@
-import { IndexStatus, Commit, Stash } from '../stateObjects';
-import { IConflictBlock, calculateBlocks } from '../../components/Merging/util/blocks';
-import { Maybe, nothing, just } from '../../util/maybe';
-import create from 'zustand/vanilla';
-import createHook from 'zustand';
-import { Middleware } from './types';
-import produce, { castDraft } from 'immer';
-import { log } from './log';
-import { repoStore } from './repo';
-import { Logger } from '../../util/logger';
-import { IConflictedFile, parseConflictFile } from '../../util/conflict-parser';
 import * as path from '@tauri-apps/api/path';
-import { splice } from '../../util/ImmutableArrayUtils';
+import { castDraft } from 'immer';
+import createHook from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import create from 'zustand/vanilla';
+import { calculateBlocks, IConflictBlock } from '../../components/Merging/util/blocks';
+import { IConflictedFile } from '../../util/conflict-parser';
 import { FileDiff } from '../../util/diff-parser';
-import { invoke } from '@tauri-apps/api';
-import { UseQueryResult } from 'react-query';
-import { useIndex } from '.';
+import { splice } from '../../util/ImmutableArrayUtils';
+import { Logger } from '../../util/logger';
+import { just, Maybe, nothing } from '../../util/maybe';
+import { Commit, IndexStatus } from '../stateObjects';
+import { repoStore } from './repo';
 
 export interface SelectedFile {
     path: string;
@@ -65,38 +60,38 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
         },
         loadDiff: async (source: 'workdir' | 'index', p: string): Promise<void> => {
 
-            const isNewFile =
-                useIndex().data?.find((f) => f.path === p)?.workdirStatus ===
-                'untracked';
-            if (source === 'workdir' && isNewFile) {
-                await repoStore.getState().lock.acquire('git', async () => {
-                    // this is a completely new file -> load it as a pseudo diff as if the file was added completely
-                    await repoStore.getState().backend.addPath(p, true);
-                    const diff = await invoke<FileDiff[]>('get_diff', { source: 'workdir', path: p });
-                    await repoStore.getState().backend.resetPath(p);
-                    set((state) => {
-                        state.selectedDiff = castDraft(just(diff[0]));
-                        // state.selectedDiff = just(diff);
-                        state.selectedFile = just({
-                            path: p,
-                            source: source,
-                        });
-                    });
-                });
-            } else {
-                const result = await invoke<FileDiff[]>('get_diff', { source: source, path: p });
-                if (result) {
-                    set((state) => {
-                        state.selectedDiff = castDraft(just(result[0]));
-                        state.selectedFile = just({
-                            path: p,
-                            source: source,
-                        });
-                    });
-                } else {
-                    get().deselectDiff();
-                }
-            }
+            // const isNewFile =
+            //     useIndex().data?.find((f) => f.path === p)?.workdirStatus ===
+            //     'untracked';
+            // if (source === 'workdir' && isNewFile) {
+            //     await repoStore.getState().lock.acquire('git', async () => {
+            //         // this is a completely new file -> load it as a pseudo diff as if the file was added completely
+            //         await repoStore.getState().backend.addPath(p, true);
+            //         const diff = await invoke<FileDiff[]>('get_diff', { source: 'workdir', path: p });
+            //         await repoStore.getState().backend.resetPath(p);
+            //         set((state) => {
+            //             state.selectedDiff = castDraft(just(diff[0]));
+            //             // state.selectedDiff = just(diff);
+            //             state.selectedFile = just({
+            //                 path: p,
+            //                 source: source,
+            //             });
+            //         });
+            //     });
+            // } else {
+            //     const result = await invoke<FileDiff[]>('get_diff', { source: source, path: p });
+            //     if (result) {
+            //         set((state) => {
+            //             state.selectedDiff = castDraft(just(result[0]));
+            //             state.selectedFile = just({
+            //                 path: p,
+            //                 source: source,
+            //             });
+            //         });
+            //     } else {
+            //         get().deselectDiff();
+            //     }
+            // }
         },
         selectConflictedFile: async (file: IndexStatus): Promise<void> => {
             Logger().debug('selectConflictedFile', 'Selecting conflicted file for display', {
@@ -220,3 +215,4 @@ async function loadConflict(path: string): Promise<IConflictedFile> {
 }
 
 export const useStagingArea = createHook(stagingArea);
+

@@ -38,8 +38,8 @@ export const DeleteBranchDialog: React.FC = () => {
                                 <div>
                                     Really delete branch{' '}
                                     {dialog.branch.remote
-                                        ? `${dialog.branch.remote}/${dialog.branch.ref}`
-                                        : dialog.branch.ref}{' '}
+                                        ? `${dialog.branch.remote}/${dialog.branch.refName}`
+                                        : dialog.branch.refName}{' '}
                                     ?
                                 </div>
                                 {dialog.isUnmerged ? (

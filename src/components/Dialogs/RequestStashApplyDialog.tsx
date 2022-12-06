@@ -42,7 +42,7 @@ export const RequestStashApplyDialog: React.FC = () => {
                                 {...formik.getFieldProps('deleteAfterApplication')}
                             />
                             <label htmlFor="stashUntracked">
-                                Delete {dialog.stash.ref} after successful application
+                                Delete {dialog.stash.refName} after successful application
                             </label>
                             <ButtonGroup>
                                 <StyledButton type="submit">Apply</StyledButton>

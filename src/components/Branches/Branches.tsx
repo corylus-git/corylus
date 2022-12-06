@@ -62,12 +62,12 @@ function openContextMenu(
         //     const menu = new Menu();
         //     menu.append(
         //         new MenuItem({
-        //             label: `Create new branch from ${branch.value.ref}`,
+        //             label: `Create new branch from ${branch.value.refName}`,
         //             click: () => {
         //                 dialogActions.open({
         //                     type: 'request-new-branch',
         //                     subType: 'branch',
-        //                     source: just(branch.value.ref),
+        //                     source: just(branch.value.refName),
         //                     branchPrefix: nothing,
         //                 });
         //             },
@@ -76,18 +76,18 @@ function openContextMenu(
         //     if ((branch.value.upstream?.behind ?? 0) > 0) {
         //         menu.append(
         //             new MenuItem({
-        //                 label: `Update ${branch.value.ref} to remote tracking branch`,
+        //                 label: `Update ${branch.value.refName} to remote tracking branch`,
         //                 click: () => {
         //                     if (currentBranch.found && branch.value.current) {
         //                         pull(
         //                             branch.value.upstream!.remoteName,
-        //                             branch.value.upstream!.ref,
+        //                             branch.value.upstream!.refName,
         //                             false
         //                         );
         //                     } else {
         //                         fetchRemote(
         //                             just(branch.value.upstream!.remoteName),
-        //                             just(`${branch.value.upstream?.ref}:${branch.value.ref}`),
+        //                             just(`${branch.value.upstream?.refName}:${branch.value.refName}`),
         //                             false,
         //                             false
         //                         );
@@ -99,10 +99,10 @@ function openContextMenu(
         //     if ((branch.value.upstream?.ahead ?? 0) > 0) {
         //         menu.append(
         //             new MenuItem({
-        //                 label: `Push ${branch.value.ref} to remote tracking branch`,
+        //                 label: `Push ${branch.value.refName} to remote tracking branch`,
         //                 click: () => {
         //                     push(
-        //                         branch.value.ref,
+        //                         branch.value.refName,
         //                         branch.value.upstream!.remoteName,
         //                         branch.value.upstream!.ref
         //                     );
@@ -113,7 +113,7 @@ function openContextMenu(
         //     if (currentBranch.found && !branch.value.current) {
         //         menu.append(
         //             new MenuItem({
-        //                 label: `Delete branch ${branch.value.ref}`,
+        //                 label: `Delete branch ${branch.value.refName}`,
         //                 click: () => {
         //                     dialogActions.deleteBranchDialog(branch.value);
         //                 },
@@ -121,25 +121,25 @@ function openContextMenu(
         //         );
         //         menu.append(
         //             new MenuItem({
-        //                 label: `Merge ${branch.value.ref} into ${currentBranch.value.ref}`,
+        //                 label: `Merge ${branch.value.refName} into ${currentBranch.value.refName}`,
         //                 click: () => {
-        //                     dialogActions.open({ type: 'request-merge', source: just(branch.value.ref) });
+        //                     dialogActions.open({ type: 'request-merge', source: just(branch.value.refName) });
         //                 },
         //             })
         //         );
         //         menu.append(
         //             new MenuItem({
-        //                 label: `Rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
+        //                 label: `Rebase ${currentBranch.value.refName} on ${branch.value.refName}`,
         //                 click: () => {
-        //                     dialogActions.open({ type: 'rebase', target: branch.value.ref });
+        //                     dialogActions.open({ type: 'rebase', target: branch.value.refName });
         //                 },
         //             })
         //         );
         //         menu.append(
         //             new MenuItem({
-        //                 label: `Interactive rebase ${currentBranch.value.ref} on ${branch.value.ref}`,
+        //                 label: `Interactive rebase ${currentBranch.value.refName} on ${branch.value.refName}`,
         //                 click: () => {
-        //                     dialogActions.open({ type: 'interactive-rebase', target: branch.value.ref });
+        //                     dialogActions.open({ type: 'interactive-rebase', target: branch.value.refName });
         //                 },
         //             })
         //         );
@@ -170,14 +170,14 @@ function openContextMenu(
         //             }
         //         } else {
         //             menu.append(new MenuItem({
-        //                 label: `Check ${branch.value.ref} out as worktree`,
+        //                 label: `Check ${branch.value.refName} out as worktree`,
         //                 click: async () => {
         //                         const dir = await dialog.showOpenDialog(getCurrentWindow(), {
         //                             properties: ['openDirectory'],
         //                             title: 'Choose directory to create the worktree in'
         //                         });
         //                         if (dir.filePaths && dir.filePaths.length === 1) {
-        //                             await addWorktree(branch.value.ref, dir.filePaths[0]);
+        //                             await addWorktree(branch.value.refName, dir.filePaths[0]);
         //                             tabsStore.getState().openRepoInNew(dir.filePaths[0]);
         //                         }
         //                 },

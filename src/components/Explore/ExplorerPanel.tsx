@@ -1,16 +1,15 @@
 import React from 'react';
-import { Logger } from '../../util/logger';
 import styled from 'styled-components';
+import { explorer, useFiles } from '../../model/state/explorer';
+import { repoStore } from '../../model/state/repo';
 import { Commit, FileStats } from '../../model/stateObjects';
-import { Tree, TreeNode } from '../util/Tree/Tree';
-import { RunningIndicator } from '../util/RunningIndicator';
-import { insertPath } from '../util/Tree/utils';
 import { FileStatus } from '../shared/FileStatus';
+import { SearchBox } from '../shared/SearchBox';
+import { RunningIndicator } from '../util/RunningIndicator';
+import { Tree, TreeNode } from '../util/Tree/Tree';
+import { insertPath } from '../util/Tree/utils';
 // import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
 import { FileHistory } from './FileHistory';
-import { useFiles, explorer } from '../../model/state/explorer';
-import { SearchBox } from '../shared/SearchBox';
-import { repoStore, useRepo } from '../../model/state/repo';
 
 const ExplorerPanelView = styled.div`
     > div {
@@ -101,7 +100,7 @@ export const ExplorerPanel: React.FC<{ commit?: Commit }> = (props) => {
             <div>
                 <h1>
                     Files in
-                    {props.commit ? ` commit ${props.commit.short_oid}` : ' the working directory'}
+                    {props.commit ? ` commit ${props.commit.shortOid}` : ' the working directory'}
                 </h1>
                 <SearchBox onTermChange={setSearchTerm} isFirst={true} isLast={true} />
                 {files.found ? (

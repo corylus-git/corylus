@@ -89,7 +89,8 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
     };
 
     const CommitPickerEntry: React.FC<SelectableListEntryProps> = (props) => {
-        const isMerge = !!graph.lines[props.index].outgoing;
+        // const isMerge = !!graph.lines[props.index].outgoing;
+        const isMerge = false;
         return (
             <CommitPickerLine
                 style={props.style}
@@ -115,7 +116,7 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
                     }
                 </div>
                 <div>
-                    <GraphLine
+                    {/* <GraphLine
                         branches={branches}
                         tags={tags}
                         data={props.data}
@@ -124,7 +125,7 @@ const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) 
                         lines={graph.lines}
                         style={{}}
                         reverse
-                    />
+                    /> */}
                 </div>
             </CommitPickerLine>
         );

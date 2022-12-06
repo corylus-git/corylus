@@ -1,4 +1,4 @@
-import { SelectedLines } from '../renderer/components/Diff/DiffViewer';
+import { SelectedLines } from '../components/Diff/DiffViewer';
 import { FileDiff, DiffChunk, DiffLine } from './diff-parser';
 import { Logger } from './logger';
 
@@ -50,7 +50,7 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
             // only take lines in the selection
             const chunk: DiffChunk = { ...file.chunks[i] };
             chunk.lines = chunk.lines.reduce((newLines, l, index) => {
-                if (l.type === 'pseudo-context') {
+                if (l.type === 'pseudoContext') {
                     return newLines.concat(l); // pseudo-context lines must be left untouched
                 }
                 if (
@@ -81,7 +81,7 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
             // only take lines in the selection
             const chunk: DiffChunk = { ...file.chunks[i] };
             chunk.lines = chunk.lines.reduce((newLines, l, index) => {
-                if (l.type === 'pseudo-context') {
+                if (l.type === 'pseudoContext') {
                     return newLines.concat(l); // pseudo-context lines must be left untouched
                 }
                 if (index > lines.last.lineIndex) {
@@ -148,7 +148,7 @@ export function serializeDiff(diffHeader: string[], diff: FileDiff): string {
                     return `-${l.content}`;
                 case 'insert':
                     return `+${l.content}`;
-                case 'pseudo-context':
+                case 'pseudoContext':
                     return ` ${l.content}`;
                 default:
                     return "";

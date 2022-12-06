@@ -85,10 +85,10 @@ export const RequestMergeDialog: React.FC = () => {
                                         <input
                                             type="hidden"
                                             id="from"
-                                            value={/*toOptional(targetBranch)?.ref*/''}
+                                            value={/*toOptional(targetBranch)?.refName*/''}
                                         />
                                         <>Merge from commit {from} into{' '}
-                                        {/* {toOptional(targetBranch)?.ref}? */}</>
+                                        {/* {toOptional(targetBranch)?.refName}? */}</>
                                     </div>
                                 )}
                                 <ButtonGroup>

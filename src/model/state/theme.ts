@@ -1,4 +1,3 @@
-import { log } from './log';
 import createHook from 'zustand';
 import create from 'zustand/vanilla';
 import { Theme } from '../../style/theme';
@@ -28,7 +27,7 @@ export const allThemes = [
 ];
 
 export const themeStore = create<ThemeStore & ThemeActions>(
-    log((set) => ({
+    (set) => ({
         current: darkTheme,
         switchTheme: (name: string): void => {
             const newTheme = allThemes.find((t) => t.name === name) ?? darkTheme;
@@ -38,7 +37,7 @@ export const themeStore = create<ThemeStore & ThemeActions>(
                 return state;
             });
         },
-    }))
+    })
 );
 
 export const useTheme = createHook(themeStore);

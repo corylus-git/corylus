@@ -17,7 +17,7 @@ export const CheckoutRemoteDialog: React.FC = () => {
                 <div>
                     Check out{' '}
                     <code>
-                        {dialog.remote.remote}/{dialog.remote.ref}
+                        {dialog.remote.remote}/{dialog.remote.refName}
                     </code>
                     ?
                 </div>
@@ -30,7 +30,7 @@ export const CheckoutRemoteDialog: React.FC = () => {
                         Logger().silly('CheckoutRemoteDialog', 'Canceled remote checkout');
                         dialog.close();
                     }}
-                    initialValues={{ local: dialog.remote.ref }}>
+                    initialValues={{ local: dialog.remote.refName }}>
                     <Form>
                         <label>
                             Local tracking branch: <Field as={StyledInput} name="local" />

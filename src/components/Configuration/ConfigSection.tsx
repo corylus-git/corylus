@@ -22,7 +22,7 @@ const ConfigSectionTitle = styled.span`
     left: 1rem;
 `;
 
-export const ConfigSection: React.FC<{ title?: string }> = (props) => {
+export const ConfigSection: React.FC<{ title?: string, children?: React.ReactNode[]}> = (props) => {
     return (
         <ConfigSectionContainer>
             {props.title && <ConfigSectionTitle>{props.title}</ConfigSectionTitle>}
