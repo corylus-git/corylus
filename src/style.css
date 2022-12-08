@@ -23,6 +23,7 @@
 }
 
 #root {
+  font-size: 16px;
   min-block-size: 100vh;
 }
 
