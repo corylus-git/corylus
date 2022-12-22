@@ -5,6 +5,7 @@ pub mod index;
 pub mod model;
 pub mod remote;
 pub mod stash;
+pub mod branches;
 
 use std::sync::Arc;
 
@@ -19,9 +20,8 @@ use self::{
     graph::calculate_graph_layout,
     history::map_commit,
     model::{
-        git::{Commit},
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
-        BranchInfo,
+        BranchInfo, git::Commit,
     },
 };
 

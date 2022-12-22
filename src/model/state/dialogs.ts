@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api';
 import createHook from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
@@ -149,15 +150,12 @@ export const dialogStore = create<DialogState & DialogActions>()(
             Logger().info('requestDeleteBranch', 'Requesting branch deletion', {
                 ref: branch.refName,
             });
-            const r = repoStore.getState();
             Logger().debug(
                 'requestDeleteBranch',
                 'Checking whether branch has unmerged changes'
             );
-            const unmergedBranches = await r.backend.getUnmergedBranches(nothing);
-            const isUnmerged =
-                unmergedBranches.found &&
-                !!unmergedBranches.value.find((u) => u === branch.refName);
+            const unmergedBranches = await invoke<string[]>('get_unmerged_branches', undefined);
+            const isUnmerged = !!unmergedBranches.find((u) => u === branch.refName);
             get().open({
                 type: 'request-delete-branch',
                 branch: branch,

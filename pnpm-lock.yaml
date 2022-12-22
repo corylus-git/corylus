@@ -2,6 +2,7 @@ lockfileVersion: 5.3
 
 specifiers:
   '@babel/core': ^7.19.3
+  '@szhsin/react-menu': ^3.3.0
   '@tauri-apps/api': ^1.2.0
   '@tauri-apps/cli': ^1.1.0
   '@types/async-lock': ^1.3.0
@@ -46,6 +47,7 @@ specifiers:
   zustand: 4.1.2
 
 dependencies:
+  '@szhsin/react-menu': 3.3.0_react-dom@18.2.0+react@18.2.0
   '@tauri-apps/api': 1.2.0
   async-lock: 1.3.2
   date-fns: 2.29.3
@@ -649,6 +651,18 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /@szhsin/react-menu/3.3.0_react-dom@18.2.0+react@18.2.0:
+    resolution: {integrity: sha512-GZfPLey2ZSVDaRtALuqH611cSM8QBujztYqLDqrqbWkTCwXrdob9G8PaBapBR/5hyW6dqDKJzFfcthZE3/iMpg==}
+    peerDependencies:
+      react: '>=16.14.0'
+      react-dom: '>=16.14.0'
+    dependencies:
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-dom: 18.2.0_react@18.2.0
+      react-transition-state: 1.1.5_react-dom@18.2.0+react@18.2.0
+    dev: false
 
   /@tauri-apps/api/1.2.0:
     resolution: {integrity: sha512-lsI54KI6HGf7VImuf/T9pnoejfgkNoXveP14pVV7XarrQ46rOejIVJLFqHI9sRReJMGdh2YuCoI3cc/yCWCsrw==}
@@ -1852,6 +1866,16 @@ packages:
       react-dom: '>=16'
     dependencies:
       clsx: 1.2.1
+      react: 18.2.0
+      react-dom: 18.2.0_react@18.2.0
+    dev: false
+
+  /react-transition-state/1.1.5_react-dom@18.2.0+react@18.2.0:
+    resolution: {integrity: sha512-ITY2mZqc2dWG2eitJkYNdcSFW8aKeOlkL2A/vowRrLL8GH3J6Re/SpD/BLvQzrVOTqjsP0b5S9N10vgNNzwMUQ==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+    dependencies:
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
     dev: false

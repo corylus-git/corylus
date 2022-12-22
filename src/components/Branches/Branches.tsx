@@ -33,6 +33,7 @@ import { SectionHeader } from './SectionHeader';
 import { getTab, tabsStore, TabState } from '../../model/state/tabs';
 import { invoke } from '@tauri-apps/api';
 import { useQuery } from 'react-query';
+import { ControlledMenu, ControlledMenuProps, MenuCloseEvent, MenuGroup, MenuItem, useMenuState } from '@szhsin/react-menu';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -53,63 +54,71 @@ const Branch = styled.span<{ current: boolean, worktree: boolean } & React.HTMLP
     padding-left: 0.35rem;
 `;
 
-function openContextMenu(
+const ContextMenu: React.FC<{
     dialogActions: DialogActions,
-    branch: Maybe<BranchInfo>,
-    currentBranch: Maybe<BranchInfo>
-) {
-    if (branch.found) {
-        //     const menu = new Menu();
-        //     menu.append(
-        //         new MenuItem({
-        //             label: `Create new branch from ${branch.value.refName}`,
-        //             click: () => {
-        //                 dialogActions.open({
-        //                     type: 'request-new-branch',
-        //                     subType: 'branch',
-        //                     source: just(branch.value.refName),
-        //                     branchPrefix: nothing,
-        //                 });
-        //             },
-        //         })
-        //     );
-        //     if ((branch.value.upstream?.behind ?? 0) > 0) {
-        //         menu.append(
-        //             new MenuItem({
-        //                 label: `Update ${branch.value.refName} to remote tracking branch`,
-        //                 click: () => {
-        //                     if (currentBranch.found && branch.value.current) {
-        //                         pull(
-        //                             branch.value.upstream!.remoteName,
-        //                             branch.value.upstream!.refName,
-        //                             false
-        //                         );
-        //                     } else {
-        //                         fetchRemote(
-        //                             just(branch.value.upstream!.remoteName),
-        //                             just(`${branch.value.upstream?.refName}:${branch.value.refName}`),
-        //                             false,
-        //                             false
-        //                         );
-        //                     }
-        //                 },
-        //             })
-        //         );
-        //     }
-        //     if ((branch.value.upstream?.ahead ?? 0) > 0) {
-        //         menu.append(
-        //             new MenuItem({
-        //                 label: `Push ${branch.value.refName} to remote tracking branch`,
-        //                 click: () => {
-        //                     push(
-        //                         branch.value.refName,
-        //                         branch.value.upstream!.remoteName,
-        //                         branch.value.upstream!.ref
-        //                     );
-        //                 },
-        //             })
-        //         );
-        //     }
+    branch: BranchInfo,
+    currentBranch: Maybe<BranchInfo>,
+} & ControlledMenuProps> = (props) => {
+
+    if (props.branch) {
+        return (<ControlledMenu {...props} portal>
+            {
+                props.branch &&
+                <MenuItem onClick={() => {
+                    props.branch && props.dialogActions.open({
+                        type: 'request-new-branch',
+                        subType: 'branch',
+                        source: just(props.branch.refName),
+                        branchPrefix: nothing,
+                    });
+                }}>Create new branch from {props.branch.refName}</MenuItem>
+            }
+            {
+                (props.branch.upstream?.behind ?? 0) > 0 &&
+                <MenuItem onClick={() => {
+                    if (props.branch) {
+                        if (props.currentBranch.found && props.branch.current) {
+                            pull(
+                                props.branch.upstream!.remoteName,
+                                props.branch.upstream!.ref,
+                                false
+                            );
+                        } else {
+                            fetchRemote(
+                                just(props.branch.upstream!.remoteName),
+                                just(`${props.branch.upstream?.ref}:${props.branch.refName}`),
+                                false,
+                                false
+                            );
+                        }
+                    }
+                }}>Update ${props.branch.refName} to remote tracking branch</MenuItem>
+            }
+            {
+                (props.branch.upstream?.ahead ?? 0) > 0 &&
+                <MenuItem onClick={() => {
+                    props.branch && push(
+                        props.branch.refName,
+                        props.branch.upstream!.remoteName,
+                        props.branch.upstream!.ref
+                    );
+                }}>Push {props.branch.refName} to remote tracking branch</MenuItem>
+            }
+            {
+                 props.currentBranch.found && !props.branch.current && <MenuGroup>
+                    <MenuItem onClick={() => props.dialogActions.deleteBranchDialog(props.branch)}>Delete branch {props.branch.refName}</MenuItem>
+                    <MenuItem>Merge {props.branch.refName} into {props.currentBranch.value.refName}</MenuItem>
+                    <MenuItem>Rebase {props.currentBranch.value.refName} on {props.branch.refName}</MenuItem>
+                    <MenuItem>Interactive rebase {props.currentBranch!.value.refName} on {props.branch.refName}</MenuItem>
+                    {
+                        props.branch.worktree && getTab(props.branch.worktree) && <MenuItem>Switch to worktree tab at {props.branch.worktree}</MenuItem>
+                    }
+                    {
+                        props.branch.worktree && !getTab(props.branch.worktree) && <MenuItem>Open worktree at {props.branch.worktree}</MenuItem>
+                    }
+                </MenuGroup>
+            }
+        </ControlledMenu>);
         //     if (currentBranch.found && !branch.value.current) {
         //         menu.append(
         //             new MenuItem({
@@ -186,6 +195,7 @@ function openContextMenu(
         //     }
         //     menu.popup({ window: getCurrentWindow() });
     }
+    return <></>;
 }
 
 function doChangeBranch(dialog: DialogActions, branch: BranchInfo | undefined) {
@@ -213,6 +223,8 @@ const BranchNodeDisplay: React.FC<{
     affected: boolean;
 }> = (props) => {
     const dialog = useDialog();
+    const [menuProps, toggleMenu] = useMenuState();
+    const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
     const inProgress = isInProgress(props.branch.found ? props.branch.value.refName : '');
     if (props.path.length === 0) {
         return <TypeHeader>Branches</TypeHeader>;
@@ -246,51 +258,66 @@ const BranchNodeDisplay: React.FC<{
         `↓ ${toOptional(props.branch)?.upstream?.behind}`,
     ].filter((part) => part);
     return (
-        <Branch
-            className={inProgress ? 'in-progress' : undefined}
-            title={
-                toOptional(props.branch)?.upstream?.upstreamMissing
-                    ? ` Warning: the upstream branch for this branch (${toOptional(props.branch)?.upstream?.remoteName
-                    }/${toOptional(props.branch)?.upstream?.ref}) no longer exists.`
-                    : ''
-            }
-            current={!!toOptional(props.branch)?.current}
-            worktree={!!toOptional(props.branch)?.worktree}
-            onContextMenu={() => openContextMenu(dialog, props.branch, props.currentBranch)}>
-            <span
-                style={{
-                    userSelect: 'text',
-                    cursor: 'pointer',
+        <>
+            { props.branch.found && <ContextMenu {...menuProps}
+                onClose={() => toggleMenu(false)}
+                branch={props.branch.value}
+                dialogActions={dialog}
+                currentBranch={props.currentBranch}
+                anchorPoint={anchorPoint}
+            /> }
+
+            <Branch
+                className={inProgress ? 'in-progress' : undefined}
+                title={
+                    toOptional(props.branch)?.upstream?.upstreamMissing
+                        ? ` Warning: the upstream branch for this branch (${toOptional(props.branch)?.upstream?.remoteName
+                        }/${toOptional(props.branch)?.upstream?.ref}) no longer exists.`
+                        : ''
+                }
+                current={!!toOptional(props.branch)?.current}
+                worktree={!!toOptional(props.branch)?.worktree}
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    setAnchorPoint({ x: e.clientX, y: e.clientY });
+                    toggleMenu(true);
+                    console.log("Hi there!");
                 }}>
-                {props.label}
-            </span>
-            {statsParts.length > 0 && (
-                <span style={{ fontSize: '80%', marginLeft: '1rem' }}>
-                    ({statsParts.join(', ')})
+                <span
+                    style={{
+                        userSelect: 'text',
+                        cursor: 'pointer',
+                    }}>
+                    {props.label}
                 </span>
-            )}
-            {props.branch.found && props.branch.value.isDetached && (
-                <span style={{ fontSize: '80%', marginLeft: '1rem' }}>[detached HEAD]</span>
-            )}
-            {props.affected && (
-                <Affected title="The branch contains the currently selected commit in its history">
-                    <MergeIconSmall
-                        viewBox="0 0 24 24"
-                        width="0.75em"
-                        height="0.75em"
-                        fill="var(--background)"
-                    />
-                </Affected>
-            )}
-            {toOptional(props.branch)?.upstream?.upstreamMissing && (
-                <UpstreamMissing title="Configured upstream branch no longer available">
-                    x
-                </UpstreamMissing>
-            )}
-            {toOptional(props.branch)?.worktree && !toOptional(props.branch)?.current &&
-                <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`} />
-            }
-        </Branch>
+                {statsParts.length > 0 && (
+                    <span style={{ fontSize: '80%', marginLeft: '1rem' }}>
+                        ({statsParts.join(', ')})
+                    </span>
+                )}
+                {props.branch.found && props.branch.value.isDetached && (
+                    <span style={{ fontSize: '80%', marginLeft: '1rem' }}>[detached HEAD]</span>
+                )}
+                {props.affected && (
+                    <Affected title="The branch contains the currently selected commit in its history">
+                        <MergeIconSmall
+                            viewBox="0 0 24 24"
+                            width="0.75em"
+                            height="0.75em"
+                            fill="var(--background)"
+                        />
+                    </Affected>
+                )}
+                {toOptional(props.branch)?.upstream?.upstreamMissing && (
+                    <UpstreamMissing title="Configured upstream branch no longer available">
+                        x
+                    </UpstreamMissing>
+                )}
+                {toOptional(props.branch)?.worktree && !toOptional(props.branch)?.current &&
+                    <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`} />
+                }
+            </Branch>
+        </>
     );
 };
 
@@ -319,9 +346,19 @@ function remoteContextMenu(remoteRepo: RemoteMeta, dialog: DialogActions) {
 }
 
 const RemoteNameDisplay: React.FC<{ remote: RemoteMeta }> = (props) => {
+    const [menuProps, toggleMenu] = useMenuState();
+    const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
     const dialog = useDialog();
     return (
-        <span onContextMenu={() => remoteContextMenu(props.remote, dialog)}>
+        <span onContextMenu={(e) => {
+            e.preventDefault();
+            setAnchorPoint({ x: e.clientX, y: e.clientY });
+            toggleMenu(true);
+        }}>
+            <ControlledMenu {...menuProps} anchorPoint={anchorPoint} onClose={() => toggleMenu(false)}>
+                <MenuItem onClick={() => dialog.open({ type: 'remote-configuration', remote: just(props.remote) })}>Configure remote</MenuItem>
+                <MenuItem>Delete remote</MenuItem>
+            </ControlledMenu>
             <RemoteIcon height="1em" viewBox="0 0 24 20" />
             {props.remote.remote}
         </span>
@@ -456,7 +493,7 @@ export const Branches: React.FC = () => {
             {branchTree && (
                 <BranchTree
                     root={branchTree}
-                    currentBranch={nothing}
+                    currentBranch={fromNullable(currentBranch)}
                     affected={affected}
                 />
             )}
