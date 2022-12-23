@@ -61,7 +61,7 @@ export const changeBranch = trackError(
             uiStore.getState().startProgress(ref);
             try {
                 Logger().debug('changeBranch', 'Changing branch');
-                await repoStore.getState().backend.checkout(ref);
+                await invoke('change_branch', {name: ref, remote: false });
                 // repoStore.getState().loadBranches();
             } finally {
                 uiStore.getState().stopProgress(ref);

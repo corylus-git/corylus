@@ -464,7 +464,7 @@ function createBranchTreeData(
 }
 
 export const Branches: React.FC = () => {
-    const { isLoading, isFetching, error, data } = useBranches();
+    const { isLoading, error, data } = useBranches();
     const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
     const affected = useAffectedBranches();
@@ -480,9 +480,8 @@ export const Branches: React.FC = () => {
             ),
         [data, currentBranch, remotes]
     );
-    console.error("Re-rendering Branches component", data);
 
-    if (isLoading || isFetching) {
+    if (isLoading) {
         return <div>Loading branches...</div>
     }
     if (error) {

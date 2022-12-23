@@ -1,4 +1,4 @@
-use git2::{Oid, build::CheckoutBuilder};
+use git2::{Oid, build::CheckoutBuilder, BranchType};
 use tauri::Window;
 
 use crate::error::BackendError;
@@ -74,4 +74,19 @@ pub async fn create_branch(
         Ok(())
     })
     .await
+}
+
+#[tauri::command]
+pub async fn change_branch(
+    state: StateType<'_>,
+    window: Window,
+    name: &str,
+    remote: bool) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        let reference = backend.repo.find_branch(name, if remote { BranchType::Remote } else { BranchType::Local })?.into_reference();
+        backend.repo.checkout_tree(reference.peel_to_commit()?.tree()?.as_object(), Some(CheckoutBuilder::new().safe()))?;
+        backend.repo.set_head(reference.name().ok_or(BackendError { message: "Cannot get reference name of the branch. Not updating HEAD".to_owned() })?)?;
+        window.emit("branches-changed", {});
+        Ok(())
+    }).await
 }
