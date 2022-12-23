@@ -50,41 +50,6 @@ impl GitBackend {
         })?)
     }
 
-    pub fn load_branches(&mut self, window: &Window) {
-        let branches_result = self.repo.branches(None).map(|branches| {
-            let branch_data: Vec<BranchInfo> = branches
-                .filter_map(|b| {
-                    if let Ok(branch) = b {
-                        if let Some((remote, branch_name)) = split_branch_name(&branch) {
-                            Some(BranchInfo {
-                                ref_name: branch_name,
-                                current: (&branch.0).is_head(),
-                                head: branch
-                                    .0
-                                    .into_reference()
-                                    .peel_to_commit()
-                                    .unwrap()
-                                    .id()
-                                    .to_string(),
-                                remote,
-                                tracked_by: None,
-                                is_detached: false,
-                                worktree: None,
-                            })
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            branch_data
-        });
-        self.branches = branches_result.unwrap_or_default();
-        window.emit("branches-changed", {});
-    }
-
     pub fn load_history(&mut self, window: &Window) {
         let mut revwalk = self.repo.revwalk().unwrap(); // TODO
         revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME);
@@ -113,7 +78,6 @@ impl GitBackend {
     }
 
     pub fn load_repo_data(&mut self, window: &Window) {
-        self.load_branches(window);
         self.load_history(window);
     }
 
@@ -203,11 +167,6 @@ pub async fn git_open(
 #[tauri::command]
 pub fn is_git_dir(name: &str) -> bool {
     Repository::open(name).is_ok()
-}
-
-#[tauri::command]
-pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
-    with_backend(state, |backend| Ok(backend.branches.clone())).await
 }
 
 #[derive(Deserialize, Serialize, PartialEq)]

@@ -1,8 +1,19 @@
 use git2::Oid;
+use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{with_backend, StateType};
+use super::{model::BranchInfo, with_backend, StateType};
+
+#[tauri::command]
+pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
+    with_backend(state, |backend| {
+        let branches = backend.repo.branches(None)?;
+        let result = branches.filter_map(|branch| branch.ok().map(|b| BranchInfo::try_from(b).ok()).flatten());
+        Ok(result.collect())
+    })
+    .await
+}
 
 #[tauri::command]
 pub async fn get_unmerged_branches(state: StateType<'_>) -> Result<Vec<String>, BackendError> {
@@ -20,6 +31,25 @@ pub async fn get_unmerged_branches(state: StateType<'_>) -> Result<Vec<String>, 
                 }
             })
             .collect())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_branch(
+    state: StateType<'_>,
+    window: Window,
+    branch: &str,
+    remove_remote: bool,
+) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        let mut branch = backend.repo.find_branch(branch, git2::BranchType::Local)?;
+        if remove_remote {
+            branch.upstream().map(|mut u| u.delete())?;
+        };
+        branch.delete()?;
+        window.emit("branches-changed", {});
+        Ok(())
     })
     .await
 }

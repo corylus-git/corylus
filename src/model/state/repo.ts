@@ -173,42 +173,42 @@ export const repoStore = create<RepoState & RepoActions>()(
             performance.measure('loaders', 'loadersStart', 'loadersEnd');
         },
         loadHistory: async (skip?: number, limit?: number): Promise<void> => {
-            Logger().debug('loadHistory', 'Getting total history size');
-            const size = await get().backend.getHistorySize();
-            Logger().debug('loadHistory', 'Loading history');
-            let index = 0;
-            let history: readonly Commit[] = [];
-            if (get().historyLoader) {
-                (window as any).cancelIdleCallback(get().historyLoader);
-            }
-            const batchSize = 20;
-            const partLoader = async () => {
-                const historyPart = await get().backend.getHistory(undefined, index, batchSize);
-                if (historyPart.length > 0) {
-                    Logger().debug('loadHistory', 'Received partial history from backend', {
-                        items: historyPart.length,
-                    });
-                    history = [...history, ...historyPart];
-                    set((state) => {
-                        Logger().silly('loadHistory', 'Setting history state');
-                        state.history = {
-                            entries: castDraft(history),
-                            first: 0,
-                            total: size,
-                        };
-                        return state;
-                    });
-                    index += batchSize;
-                }
-                if (historyPart.length === batchSize) {
-                    const handle = (window as any).requestIdleCallback(partLoader);
-                    set((state) => {
-                        state.historyLoader = handle;
-                        return state;
-                    });
-                }
-            };
-            partLoader();
+            // Logger().debug('loadHistory', 'Getting total history size');
+            // const size = await get().backend.getHistorySize();
+            // Logger().debug('loadHistory', 'Loading history');
+            // let index = 0;
+            // let history: readonly Commit[] = [];
+            // if (get().historyLoader) {
+            //     (window as any).cancelIdleCallback(get().historyLoader);
+            // }
+            // const batchSize = 20;
+            // const partLoader = async () => {
+            //     const historyPart = await get().backend.getHistory(undefined, index, batchSize);
+            //     if (historyPart.length > 0) {
+            //         Logger().debug('loadHistory', 'Received partial history from backend', {
+            //             items: historyPart.length,
+            //         });
+            //         history = [...history, ...historyPart];
+            //         set((state) => {
+            //             Logger().silly('loadHistory', 'Setting history state');
+            //             state.history = {
+            //                 entries: castDraft(history),
+            //                 first: 0,
+            //                 total: size,
+            //             };
+            //             return state;
+            //         });
+            //         index += batchSize;
+            //     }
+            //     if (historyPart.length === batchSize) {
+            //         const handle = (window as any).requestIdleCallback(partLoader);
+            //         set((state) => {
+            //             state.historyLoader = handle;
+            //             return state;
+            //         });
+            //     }
+            // };
+            // partLoader();
         },
         setBranches: (branches: BranchInfo[]): void => {
             Logger().debug('setBranches', 'Setting branches');
@@ -358,9 +358,13 @@ export function useAffectedBranches(): string[] {
  * Get the current available branches in the repo (local and remote)
  */
 export const useBranches = (): UseQueryResult<readonly BranchInfo[]> =>
-    useQuery('branches', () => invoke<readonly BranchInfo[]>('get_branches', {}));
+    useQuery('branches', () => {
+        console.log("Fetching branches from the backend");
+        return invoke<readonly BranchInfo[]>('get_branches', {})
+    });
 
 listen('branches-changed', _ => {
+    Logger().debug('branches-changed', 'Invalidating branches query');
     queryClient.invalidateQueries('branches');
 });
 

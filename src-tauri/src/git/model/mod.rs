@@ -1,13 +1,15 @@
-pub mod graph;
 pub mod git;
+pub mod graph;
 pub mod index;
 pub mod remote;
+
+use crate::error::BackendError;
 
 /**
  * Information about a single branch
  */
 #[derive(Clone, serde::Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct BranchInfo {
     /**
      * The ref name of the branch
@@ -40,5 +42,52 @@ pub struct BranchInfo {
     /**
      * the worktree directory this branch is checked out at
      */
-    pub worktree: Option<String>
+    pub worktree: Option<String>,
 }
+
+
+impl TryFrom<(git2::Branch<'_>, git2::BranchType)> for BranchInfo
+{
+    type Error = BackendError;
+    fn try_from(branch: (git2::Branch, git2::BranchType)) -> Result<Self, Self::Error> {
+        if let Some((remote, branch_name)) = split_branch_name(&branch) {
+            Ok(BranchInfo {
+                                ref_name: branch_name,
+                                current: (&branch.0).is_head(),
+                                head: branch
+                                    .0
+                                    .into_reference()
+                                    .peel_to_commit()
+                                    .unwrap()
+                                    .id()
+                                    .to_string(),
+                                remote,
+                                tracked_by: None,
+                                is_detached: false,
+                                worktree: None,
+                            })
+                        } else {
+                            Err(BackendError { message: "Could not tranform branch".to_owned() })
+                        }
+    }
+}
+
+fn split_branch_name(
+    branch: &(git2::Branch, git2::BranchType),
+) -> Option<(Option<String>, String)> {
+    if let Ok(Some(branch_name)) = branch.0.name() {
+        if branch.1 == git2::BranchType::Remote {
+            if let Some((remote, suffix)) = branch_name.split_once("/") {
+                Some((Some(remote.to_owned()), suffix.to_owned()))
+            } else {
+                None
+            }
+        } else {
+            Some((None, branch_name.to_owned()))
+        }
+    } else {
+        None
+    }
+}
+
+

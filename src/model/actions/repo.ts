@@ -167,9 +167,8 @@ export const deleteBranch = trackError(
             force: force,
             remoteRemote: removeRemote,
         });
-        await repoStore.getState().backend.deleteBranch(branch, force, removeRemote);
+        await invoke('delete_branch', { branch: branch.refName, force, removeRemote });
         Logger().info('deleteBranch', 'Success');
-        // // repoStore.getState().loadBranches();
     }
 );
 
@@ -634,8 +633,7 @@ export function selectCommit(ref: CommitStatsData | string | Commit) {
 
 async function requestAffectedCommits(oid: string, branches: boolean, tags: boolean) {
     Logger().debug('requestAffectedCommits', 'Requesting affected commits', { oid, branches, tags });
-    const result = await invoke('get_affected_branches', { oid });
-    console.log("Affected", result);
+    return await invoke('get_affected_branches', { oid });
 }
 
 export function getDiff(options: {

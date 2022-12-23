@@ -10,7 +10,7 @@ import { Stashes } from './Stashes';
 import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
 import { TypeHeader } from './TypeHeader';
-import { Maybe, map, nothing, toOptional, fromNullable, just, Nothing } from '../../util/maybe';
+import { Maybe, nothing, toOptional, fromNullable, just} from '../../util/maybe';
 import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree } from '../../model/actions/repo';
 import { Logger } from '../../util/logger';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
@@ -281,7 +281,6 @@ const BranchNodeDisplay: React.FC<{
                     e.preventDefault();
                     setAnchorPoint({ x: e.clientX, y: e.clientY });
                     toggleMenu(true);
-                    console.log("Hi there!");
                 }}>
                 <span
                     style={{
@@ -465,7 +464,7 @@ function createBranchTreeData(
 }
 
 export const Branches: React.FC = () => {
-    const { isLoading, error, data } = useBranches();
+    const { isLoading, isFetching, error, data } = useBranches();
     const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
     const affected = useAffectedBranches();
@@ -479,10 +478,11 @@ export const Branches: React.FC = () => {
                 remotes,
                 currentBranch
             ),
-        [data, currentBranch]
+        [data, currentBranch, remotes]
     );
+    console.error("Re-rendering Branches component", data);
 
-    if (isLoading) {
+    if (isLoading || isFetching) {
         return <div>Loading branches...</div>
     }
     if (error) {
