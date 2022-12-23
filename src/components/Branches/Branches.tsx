@@ -10,7 +10,7 @@ import { Stashes } from './Stashes';
 import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
 import { TypeHeader } from './TypeHeader';
-import { Maybe, nothing, toOptional, fromNullable, just} from '../../util/maybe';
+import { Maybe, nothing, toOptional, fromNullable, just } from '../../util/maybe';
 import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree } from '../../model/actions/repo';
 import { Logger } from '../../util/logger';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
@@ -30,10 +30,8 @@ import { Hoverable } from '../StyleBase';
 import { WorkTree } from './WorkTree';
 import { UpstreamMissing } from './UpstreamMissing';
 import { SectionHeader } from './SectionHeader';
-import { getTab, tabsStore, TabState } from '../../model/state/tabs';
-import { invoke } from '@tauri-apps/api';
-import { useQuery } from 'react-query';
-import { ControlledMenu, ControlledMenuProps, MenuCloseEvent, MenuGroup, MenuItem, useMenuState } from '@szhsin/react-menu';
+import { getTab } from '../../model/state/tabs';
+import { ControlledMenu, ControlledMenuProps, MenuGroup, MenuItem, useMenuState } from '@szhsin/react-menu';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -105,7 +103,7 @@ const ContextMenu: React.FC<{
                 }}>Push {props.branch.refName} to remote tracking branch</MenuItem>
             }
             {
-                 props.currentBranch.found && !props.branch.current && <MenuGroup>
+                props.currentBranch.found && !props.branch.current && <MenuGroup>
                     <MenuItem onClick={() => props.dialogActions.deleteBranchDialog(props.branch)}>Delete branch {props.branch.refName}</MenuItem>
                     <MenuItem>Merge {props.branch.refName} into {props.currentBranch.value.refName}</MenuItem>
                     <MenuItem>Rebase {props.currentBranch.value.refName} on {props.branch.refName}</MenuItem>
@@ -115,6 +113,9 @@ const ContextMenu: React.FC<{
                     }
                     {
                         props.branch.worktree && !getTab(props.branch.worktree) && <MenuItem>Open worktree at {props.branch.worktree}</MenuItem>
+                    }
+                    {
+                        !props.branch.worktree && <MenuItem>Check {props.branch.refName} out as worktree</MenuItem>
                     }
                 </MenuGroup>
             }
@@ -259,13 +260,13 @@ const BranchNodeDisplay: React.FC<{
     ].filter((part) => part);
     return (
         <>
-            { props.branch.found && <ContextMenu {...menuProps}
+            {props.branch.found && <ContextMenu {...menuProps}
                 onClose={() => toggleMenu(false)}
                 branch={props.branch.value}
                 dialogActions={dialog}
                 currentBranch={props.currentBranch}
                 anchorPoint={anchorPoint}
-            /> }
+            />}
 
             <Branch
                 className={inProgress ? 'in-progress' : undefined}
@@ -312,8 +313,8 @@ const BranchNodeDisplay: React.FC<{
                         x
                     </UpstreamMissing>
                 )}
-                {toOptional(props.branch)?.worktree && !toOptional(props.branch)?.current &&
-                    <WorkTree title={`This branch is checked out as a work tree at ${toOptional(props.branch)?.worktree}`} />
+                {props.branch.found && !props.branch.value.current && props.branch.value.worktree &&
+                    <WorkTree title={`This branch is checked out as a work tree at ${props.branch.value.worktree}`} />
                 }
             </Branch>
         </>

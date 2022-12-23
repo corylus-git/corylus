@@ -359,7 +359,6 @@ export function useAffectedBranches(): string[] {
  */
 export const useBranches = (): UseQueryResult<readonly BranchInfo[]> =>
     useQuery('branches', () => {
-        console.log("Fetching branches from the backend");
         return invoke<readonly BranchInfo[]>('get_branches', {})
     });
 

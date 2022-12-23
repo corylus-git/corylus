@@ -24,7 +24,7 @@ impl From<git2::Time> for TimeWithOffset {
     fn from(time: git2::Time) -> Self {
         Self {
             utc_seconds: time.seconds(),
-            offset_seconds: time.offset_minutes()*60,
+            offset_seconds: time.offset_minutes() * 60,
         }
     }
 }
@@ -37,8 +37,7 @@ pub struct GitPerson {
     pub timestamp: TimeWithOffset,
 }
 
-impl From<Signature<'_>> for GitPerson
-{
+impl From<Signature<'_>> for GitPerson {
     fn from(sig: Signature) -> Self {
         Self {
             name: sig.name().unwrap_or("").to_owned(),
@@ -147,7 +146,13 @@ impl TryFrom<&git2::Commit<'_>> for StashData {
         Ok(Self {
             ref_name: "".to_owned(),
             oid: value.id().to_string(),
-            short_oid: value.as_object().short_id().unwrap_or_default().as_str().unwrap_or_default().to_string(),
+            short_oid: value
+                .as_object()
+                .short_id()
+                .unwrap_or_default()
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
             message: value.message().unwrap_or("").to_owned(),
             parents: vec![],
             author: value.author().into(),
@@ -159,14 +164,14 @@ impl TryFrom<&git2::Commit<'_>> for StashData {
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Commit {
     Commit(FullCommitData),
-    Stash(StashData)
+    Stash(StashData),
 }
 
 impl Commit {
     pub fn as_graph_node(&self) -> &dyn GraphNodeData {
         match self {
             Commit::Commit(data) => data,
-            Commit::Stash(_) => todo!()
+            Commit::Stash(_) => todo!(),
         }
     }
 }
@@ -240,13 +245,11 @@ pub struct DiffStat {
     pub deletions: usize,
 }
 
-
 #[derive(Clone, Serialize, PartialEq, Debug)]
 #[serde(rename_all = "camelCase", tag = "type")]
-pub enum CommitStats
-{
+pub enum CommitStats {
     Commit(CommitStatsData),
-    Stash(StashStatsData)
+    Stash(StashStatsData),
 }
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
@@ -269,7 +272,6 @@ pub struct CommitStatsData {
     pub incoming: Option<Vec<DiffStat>>,
 }
 
-
 #[derive(Clone, Serialize, PartialEq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct StashStatsData {
@@ -291,7 +293,7 @@ pub struct StashStatsData {
     /**
      * Changes to untracked files, if any
      */
-    pub untracked: Option<Vec<DiffStat>>
+    pub untracked: Option<Vec<DiffStat>>,
 }
 
 /**
@@ -341,7 +343,10 @@ impl TryFrom<git2::DiffHunk<'_>> for DiffChunk {
     type Error = String;
     fn try_from(hunk: git2::DiffHunk) -> Result<Self, Self::Error> {
         Ok(Self {
-            header: String::from_utf8_lossy(hunk.header()).to_string().split("\n").collect(),
+            header: String::from_utf8_lossy(hunk.header())
+                .to_string()
+                .split("\n")
+                .collect(),
             lines: vec![],
         })
     }
@@ -454,14 +459,28 @@ fn handle_line(
             })
             .unwrap_or(false),
         git2::DiffLineType::Binary => false,
-        _ => push_line(line, diffs)
+        _ => push_line(line, diffs),
     }
 }
 
 fn push_line(line: git2::DiffLine<'_>, diffs: &mut Vec<FileDiff>) -> bool {
-    diffs.last_mut().and_then(|diff| diff.chunks.last_mut()).and_then(|chunk| {
-        chunk.lines.push(line.try_into().ok()?);
-        Some(true)
-    })
-    .unwrap_or(false)
+    diffs
+        .last_mut()
+        .and_then(|diff| diff.chunks.last_mut())
+        .and_then(|chunk| {
+            chunk.lines.push(line.try_into().ok()?);
+            Some(true)
+        })
+        .unwrap_or(false)
+}
+
+
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Worktree {
+    pub name: String,
+    pub path: String,
+    pub branch: Option<String>,
+    pub oid: Option<String>,
+    pub is_valid: bool
 }

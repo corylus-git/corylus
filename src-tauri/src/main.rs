@@ -26,7 +26,8 @@ use crate::{
         history::{get_affected_branches, get_commit, get_commit_stats},
         index::{commit, get_status, stage, unstage},
         remote::{get_remotes, push}, stash::{get_stashes, stash, get_stash_stats},
-        branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch}
+        branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch},
+        worktree::get_worktrees
     },
     settings::get_settings, log::send_log,
 };
@@ -64,7 +65,8 @@ fn main() {
             get_unmerged_branches,
             create_branch,
             delete_branch,
-            change_branch
+            change_branch,
+            get_worktrees
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
