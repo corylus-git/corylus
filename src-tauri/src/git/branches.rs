@@ -1,4 +1,4 @@
-use git2::Oid;
+use git2::{Oid, build::CheckoutBuilder};
 use tauri::Window;
 
 use crate::error::BackendError;
@@ -48,6 +48,28 @@ pub async fn delete_branch(
             branch.upstream().map(|mut u| u.delete())?;
         };
         branch.delete()?;
+        window.emit("branches-changed", {});
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn create_branch(
+    state: StateType<'_>,
+    window: Window,
+    name: &str,
+    source: &str,
+    checkout: bool
+) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        let source_commit = backend.repo.find_branch(source, git2::BranchType::Local)?.into_reference().peel_to_commit()?;
+        let branch = backend.repo.branch(name, &source_commit, false)?;
+        if checkout {
+            let reference = branch.into_reference();
+            backend.repo.checkout_tree(reference.peel_to_commit()?.tree()?.as_object(), Some(CheckoutBuilder::new().safe()))?;
+            backend.repo.set_head(reference.name().ok_or(BackendError { message: "Could not get ref name of new branch. Cannot check out after creation".to_owned() })?)?;
+        };
         window.emit("branches-changed", {});
         Ok(())
     })

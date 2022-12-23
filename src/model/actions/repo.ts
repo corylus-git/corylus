@@ -140,9 +140,8 @@ export const createBranch = trackError(
             source: source,
             checkout: checkout,
         });
-        await repoStore.getState().backend.branch(name, source, !checkout);
+        await await invoke('create_branch', { name, source, checkout });
         Logger().info('createBranch', 'Success');
-        // // repoStore.getState().loadBranches();
     }
 );
 

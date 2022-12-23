@@ -26,7 +26,7 @@ use crate::{
         history::{get_affected_branches, get_commit, get_commit_stats},
         index::{commit, get_status, stage, unstage},
         remote::{get_remotes, push}, stash::{get_stashes, stash, get_stash_stats},
-        branches::{get_branches, get_unmerged_branches, delete_branch}
+        branches::{get_branches, get_unmerged_branches, create_branch, delete_branch}
     },
     settings::get_settings, log::send_log,
 };
@@ -62,6 +62,7 @@ fn main() {
             push,
             get_branches,
             get_unmerged_branches,
+            create_branch,
             delete_branch
         ])
         .run(tauri::generate_context!())

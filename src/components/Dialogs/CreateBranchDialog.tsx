@@ -34,11 +34,11 @@ function SourceBranchSelection(props: {
     return (
         (props.branches && (
             <select id={props.id} onChange={props.onChange} value={props.value}>
-                {/* {props.branches
+                {props.branches
                     .filter((b) => !b.remote)
                     .map((b) => (
                         <option key={b.refName}>{b.refName}</option>
-                    ))} */}
+                    ))}
             </select>
         )) || <></>
     );
