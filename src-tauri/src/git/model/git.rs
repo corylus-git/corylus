@@ -484,3 +484,27 @@ pub struct Worktree {
     pub oid: Option<String>,
     pub is_valid: bool
 }
+
+/**
+ * information about a tag in the repository
+ */
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Tag {
+    /**
+     * The name of the tag
+     */
+    pub name: String,
+
+    /**
+     * The OID of the tag itself
+     */
+    pub oid: Option<String>,
+
+    /**
+     * The OID of the commit this tag refers to
+     */
+    pub tagged_oid: String
+}
+
+

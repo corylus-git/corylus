@@ -305,7 +305,9 @@ export const useHistory = (): { entries: readonly Commit[]; first: number; total
  * Get the current available tags in the repo
  */
 export const useTags = (): readonly Tag[] =>
-    useRepo((state: RepoState & RepoActions) => state.tags);
+    useQuery('tags', () => invoke<readonly Tag[]>('get_tags')).data ?? [];
+
+listen('tags_changed', (_) => queryClient.invalidateQueries('tags'));
 
 /**
  * Get the current available remotes in the repo

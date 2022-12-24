@@ -7,6 +7,7 @@ pub mod remote;
 pub mod stash;
 pub mod branches;
 pub mod worktree;
+pub mod tags;
 
 use std::sync::Arc;
 
