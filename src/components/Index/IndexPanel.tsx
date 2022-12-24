@@ -100,7 +100,7 @@ export const IndexPanel: React.FC = () => {
                     onSelectWorkdirEntry={(entry) => {
                         if (!entry.isConflicted) {
                             if (entry.type !== 'dir') {
-                                setSelectedFile({path: entry.path, source: 'workdir'});
+                                setSelectedFile({path: entry.path, source: 'workdir', untracked: entry.workdirStatus === 'untracked'});
                             }
                         } else {
                             showMergeResolutionPanel(entry);
@@ -108,7 +108,7 @@ export const IndexPanel: React.FC = () => {
                     }}
                     onSelectIndexEntry={(entry) => {
                         if (!entry.isConflicted && entry.type !== 'dir') {
-                            setSelectedFile({path: entry.path, source: 'index'});
+                            setSelectedFile({path: entry.path, source: 'index', untracked: false});
                         }
                     }}
                 />

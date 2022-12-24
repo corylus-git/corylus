@@ -15,6 +15,7 @@ import { repoStore } from './repo';
 export interface SelectedFile {
     path: string;
     source: 'workdir' | 'index';
+    untracked: boolean;
 }
 
 export interface SelectedConflict {
