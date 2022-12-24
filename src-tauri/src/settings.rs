@@ -9,7 +9,12 @@ use crate::{
     git::{with_state, StateType},
 };
 
-
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryEntry {
+    pub path: String,
+    pub date: u64
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -25,7 +30,7 @@ pub struct Settings{
      * key: the path of the repository
      * value: the last time this repo was open
      */
-    repository_history: Vec<HashMap<String, String>>, // TODO perhaps use a map type from serde?
+    repository_history: Vec<HistoryEntry>, // TODO perhaps use a map type from serde?
 
     /**
      * The name of the theme currently in use by the app
@@ -54,6 +59,9 @@ pub fn load_settings() -> Settings {
         let config_file = config::File::with_name(&config_file_path);
         let settings = Config::builder().add_source(config_file).build();
         let settings_result = settings.map(|config| config.try_deserialize::<Settings>());
+        if let Err(e) = &settings_result {
+            log::error!("Could not load settings. {}", e.to_string()); 
+        }
 
         settings_result
             .map(|r| r.unwrap_or_default())

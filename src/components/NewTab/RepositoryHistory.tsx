@@ -2,11 +2,11 @@ import React from 'react';
 import { isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns';
 import { StyledButton } from '../util/StyledButton';
 import styled from 'styled-components';
-import { basename } from '@tauri-apps/api/path';
 import { useTabs } from '../../model/state/tabs';
 import { toast } from 'react-toastify';
 import { Logger } from '../../util/logger';
 import { structuredToast } from '../../util/structuredToast';
+import { HistoryEntry } from '../../model/settings';
 
 const HistoryEntryButton = styled(StyledButton)`
     display: block;
@@ -18,7 +18,7 @@ const HistoryEntryButton = styled(StyledButton)`
 
 interface HistoryBlockComponentProps {
     title: string;
-    block: { path: string; date: Date }[];
+    block: HistoryEntry[];
 }
 
 const HistoryBlock: React.FC<HistoryBlockComponentProps> = (props) => {
@@ -54,46 +54,42 @@ const HistoryBlock: React.FC<HistoryBlockComponentProps> = (props) => {
                         }
                     }}
                     title={e.path}>
-                    {e.path}
+                    <>{e.title} - {e.date.toLocaleDateString()}</>
                 </HistoryEntryButton>
             ))}
         </>
     );
 };
 
-export const RepositoryHistory: React.FC<{ history: Map<string, Date>; alreadyOpen: string[] }> = (
+export const RepositoryHistory: React.FC<{ history: HistoryEntry[]; alreadyOpen: string[] }> = (
     props
 ) => {
     const groupedHistory = React.useMemo(() => {
-        const h = Array.from(props.history.entries()).filter(
-            ([path, _]) => !props.alreadyOpen.find((c) => c === path)
+        const h = Array.from(props.history).filter(
+            (entry) => !props.alreadyOpen.find((c) => c === entry.path)
         );
         return {
-            today: h.filter(([_, date]) => isToday(date)).map(([path, date]) => ({ path, date })),
+            today: h.filter((entry) => isToday(entry.date)),
             yesterday: h
-                .filter(([_, date]) => isYesterday(date))
-                .map(([path, date]) => ({ path, date })),
+                .filter((entry) => isYesterday(entry.date)),
             thisWeek: h
-                .filter(([_, date]) => isThisWeek(date) && !isToday(date) && !isYesterday(date))
-                .map(([path, date]) => ({ path, date })),
+                .filter((entry) => isThisWeek(entry.date) && !isToday(entry.date) && !isYesterday(entry.date)),
             thisMonth: h
                 .filter(
-                    ([_, date]) =>
-                        isThisMonth(date) &&
-                        !isThisWeek(date) &&
-                        !isToday(date) &&
-                        !isYesterday(date)
-                )
-                .map(([path, date]) => ({ path, date })),
+                    (entry) =>
+                        isThisMonth(entry.date) &&
+                        !isThisWeek(entry.date) &&
+                        !isToday(entry.date) &&
+                        !isYesterday(entry.date)
+                ),
             older: h
                 .filter(
-                    ([_, date]) =>
-                        !isThisMonth(date) &&
-                        !isThisWeek(date) &&
-                        !isToday(date) &&
-                        !isYesterday(date)
-                )
-                .map(([path, date]) => ({ path, date })),
+                    (entry) =>
+                        !isThisMonth(entry.date) &&
+                        !isThisWeek(entry.date) &&
+                        !isToday(entry.date) &&
+                        !isYesterday(entry.date)
+                ),
         };
     }, [props.history]);
     return (

@@ -8,6 +8,14 @@ import { Logger } from '../util/logger';
 import { Theme } from '../style/theme';
 import { invoke } from '@tauri-apps/api';
 import { immer } from 'zustand/middleware/immer';
+import { basename } from '@tauri-apps/api/path';
+import { castDraft } from 'immer';
+
+export interface HistoryEntry {
+    path: string; 
+    title: string; 
+    date: Date;
+}
 
 /**
  * The settings known to the program
@@ -24,7 +32,7 @@ export interface SettingsState {
      * key: the path of the repository
      * value: the last time this repo was open
      */
-    repositoryHistory: Map<string, Date>;
+    repositoryHistory: HistoryEntry[];
 
     /**
      * The name of the theme currently in use by the app
@@ -40,14 +48,14 @@ export interface SettingsActions {
      *
      * @param path The path to add to the history
      */
-     updateHistory(path: string): void;
+    updateHistory(path: string): void;
 
-     load(): Promise<void>;
+    load(): Promise<void>;
 }
 
 // class SettingsImpl implements ISettings {
 //     async load() {
-        
+
 //     }
 
 //     updateHistory(path: string) {
@@ -67,19 +75,22 @@ export const settingsStore = create<SettingsState & SettingsActions>()(
     immer((set, get) => ({
         openTabs: [],
         theme: "dark",
-        repositoryHistory: new Map<string, Date>(),
+        repositoryHistory: [],
         updateHistory: (path: string) => {
-            
+
         },
         load: async () => {
             const data = await invoke<any>('get_settings');
+            const s = data.repositoryHistory as { path: string; date: number }[];
+            const history = await Promise.all(s.map(async ({ path, date }) => ({
+                path,
+                date: new Date(date),
+                title: await basename(path)
+            })));
             set(state => {
                 state.openTabs = data.openTabs;
                 state.theme = data.theme;
-                const s = data.repositoryHistory as { path: string; date: number }[];
-                const map = new Map<string, Date>();
-                s?.forEach((e) => map.set(e.path, new Date(e.date)));
-                state.repositoryHistory = map;
+                state.repositoryHistory = castDraft(history);
             })
         }
     })),
