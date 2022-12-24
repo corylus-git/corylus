@@ -90,7 +90,7 @@ impl TryFrom<&git2::Commit<'_>> for FullCommitData {
                 .as_str()
                 .unwrap()
                 .to_owned(),
-            message: commit.message_raw().unwrap().to_owned(),
+            message: commit.message_raw().unwrap_or("<invalid message>").to_owned(),
             parents: commit
                 .parents()
                 .into_iter()
@@ -106,16 +106,16 @@ impl TryFrom<&git2::Commit<'_>> for FullCommitData {
                 })
                 .collect(),
             author: GitPerson {
-                name: commit.author().name().unwrap().to_owned(),
-                email: commit.author().email().unwrap().to_owned(),
+                name: commit.author().name().unwrap_or("<invalid author>").to_owned(),
+                email: commit.author().email().unwrap_or("<invalid email>").to_owned(),
                 timestamp: TimeWithOffset {
                     utc_seconds: commit.time().seconds(),
                     offset_seconds: commit.time().offset_minutes() * 60,
                 },
             },
             committer: GitPerson {
-                name: commit.committer().name().unwrap().to_owned(),
-                email: commit.committer().email().unwrap().to_owned(),
+                name: commit.committer().name().unwrap_or("<invalid committer>").to_owned(),
+                email: commit.committer().email().unwrap_or("<invalid email>").to_owned(),
                 timestamp: TimeWithOffset {
                     utc_seconds: commit.time().seconds(),
                     offset_seconds: commit.time().offset_minutes() * 60,
