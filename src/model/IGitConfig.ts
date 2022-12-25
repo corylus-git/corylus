@@ -1,45 +1,46 @@
 import { Person } from './stateObjects';
-import { Logger } from '../util/logger';
 
-/**
- * Retrieve the effective git configuration, i.e. local values overriding global ones
- *
- * @param IGitConfig The git config as retrieved from the system
- */
-export function effective(config?: IGitConfig): IEffectiveConfig | undefined {
-    const conf = config && {
-        ...config.global,
-        ...config.local,
-    };
-    Logger().silly('IGitConfig', 'Effective config', { config: conf });
-    return conf;
+export interface GitConfigValue<T> 
+{
+    value: T;
+    level: 'System' | 'Global' | 'Local';
+}
+
+export interface NamedGitConfigValue<T> extends GitConfigValue<T>
+{
+    name: string;
 }
 
 export interface IGitFlowConfigValues {
     branch: {
-        master: string;
-        develop: string;
+        master: GitConfigValue<string>;
+        develop: GitConfigValue<string>;
     };
     prefix: {
-        feature: string;
-        bugfix: string;
-        release: string;
-        hotfix: string;
-        support: string;
-        versiontag: string;
+        feature: GitConfigValue<string>;
+        bugfix: GitConfigValue<string>;
+        release: GitConfigValue<string>;
+        hotfix: GitConfigValue<string>;
+        support: GitConfigValue<string>;
+        versiontag: GitConfigValue<string>;
     };
 }
-export interface IGitConfigValues {
-    user?: Partial<Person>;
-}
+
 export interface IGitFlowConfig {
-    gitFlow?: IGitFlowConfigValues;
+    gitflow?: IGitConfigValues;
+}
+
+export interface IGitConfigValues {
+    user?: {
+        name: GitConfigValue<string>;
+        email: GitConfigValue<string>;
+    }
 }
 
 export interface ICorylusConfig {
     corylus?: {
-        autoFetchEnabled?: boolean;
-        autoFetchInterval?: number;
+        autoFetchEnabled?: GitConfigValue<boolean>;
+        autoFetchInterval?: GitConfigValue<number>;
     };
 }
 
@@ -50,10 +51,7 @@ export interface ICorylusConfig {
  * The software is intended for end-users, that would not typically have a need (or the capability) to modify
  * the system configuration anyway.
  */
-export interface IGitConfig {
-    local?: IGitConfigValues & IGitFlowConfig & ICorylusConfig;
-    global?: IGitConfigValues & ICorylusConfig;
-}
+export type IGitConfig = IGitConfigValues & IGitFlowConfig & ICorylusConfig;
 
 /**
  * The effective values of a config, i.e. the merged values from global and local

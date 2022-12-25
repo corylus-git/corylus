@@ -8,6 +8,7 @@ pub mod stash;
 pub mod branches;
 pub mod worktree;
 pub mod tags;
+pub mod config;
 
 use std::sync::Arc;
 

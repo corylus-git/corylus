@@ -2,6 +2,7 @@ pub mod git;
 pub mod graph;
 pub mod index;
 pub mod remote;
+pub mod config;
 
 use crate::error::BackendError;
 

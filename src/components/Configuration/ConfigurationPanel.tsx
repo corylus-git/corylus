@@ -3,12 +3,10 @@ import styled from 'styled-components';
 import { Logger } from '../../util/logger';
 import { StyledInput } from '../util/StyledInput';
 import { Formik } from 'formik';
-import { effective } from '../../model/IGitConfig';
 import { ConfigSection } from './ConfigSection';
 import { useTheme, allThemes } from '../../model/state/theme';
-import { useConfig } from '../../model/state/repo';
-import { syncConfig } from '../../model/actions/repo';
 import { StyledButton } from '../util/StyledButton';
+import { useConfig } from '../../model/state/repo';
 
 const ConfigPanelContainer = styled.div`
     width: 100%;
@@ -16,26 +14,19 @@ const ConfigPanelContainer = styled.div`
 `;
 
 export const ConfigurationPanel: React.FC = () => {
-    const gitConfig = useConfig();
+    const {data: gitConfig} = useConfig();
     const theme = useTheme();
     return (
+        !gitConfig ? <div>Loading config...</div> : 
         <ConfigPanelContainer>
             <Formik
                 initialValues={{
-                    username: effective(gitConfig)?.user?.name ?? '',
-                    useremail: effective(gitConfig)?.user?.email ?? '',
-                    autoFetchEnabled: !!effective(gitConfig)?.corylus?.autoFetchEnabled,
-                    autoFetchInterval: effective(gitConfig)?.corylus?.autoFetchInterval ?? 5,
+                    username: gitConfig?.user?.name.value ?? '',
+                    useremail: gitConfig?.user?.email.value ?? '',
+                    autoFetchEnabled: !!gitConfig?.corylus?.autoFetchEnabled,
+                    autoFetchInterval: gitConfig?.corylus?.autoFetchInterval ?? 5,
                 }}
-                onSubmit={(values) =>
-                    syncConfig({
-                        global: {
-                            corylus: {
-                                autoFetchEnabled: values.autoFetchEnabled,
-                                autoFetchInterval: values.autoFetchInterval,
-                            },
-                        },
-                    })
+                onSubmit={(values) => {}
                 }
                 enableReinitialize>
                 {(formik) => (

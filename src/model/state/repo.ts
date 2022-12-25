@@ -12,7 +12,7 @@ import { Logger } from '../../util/logger';
 import { just, Maybe, nothing } from '../../util/maybe';
 import { queryClient } from '../../util/queryClient';
 import { getDiff } from '../actions/repo';
-import { IGitConfig } from '../IGitConfig';
+import { GitConfigValue, IGitConfig, IGitConfigValues, NamedGitConfigValue } from '../IGitConfig';
 import {
     BranchInfo, Commit, CommitStats, PendingCommit, RebaseStatusInfo, RemoteMeta, Stash, Tag
 } from '../stateObjects';
@@ -53,19 +53,6 @@ export type RepoState = {
      */
     history: HistoryInfo;
     /**
-     * The branches of this repository
-     */
-    branches: readonly BranchInfo[];
-    /**
-     * The known remotes
-     */
-    remotes: readonly RemoteMeta[];
-    /**
-     * The tags in this repo
-     */
-    tags: readonly Tag[];
-
-    /**
      * The status of the current ongoing rebase, if any
      */
     rebaseStatus: Maybe<RebaseStatusInfo>;
@@ -74,17 +61,9 @@ export type RepoState = {
      */
     pendingCommit: Maybe<PendingCommit>;
     /**
-     * The stashes in this repo
-     */
-    stashes: readonly Stash[];
-    /**
      * The currently selected commit, if any
      */
     selectedCommit: Maybe<CommitStats>;
-    /**
-     * The configuration of the repository
-     */
-    config: IGitConfig;
     /**
      * The refs affected by a specific commit.
      */
@@ -95,14 +74,8 @@ export type RepoActions = {
     openRepo(path: string): Promise<void>;
     loadRepo(): Promise<void>;
     loadHistory(skip?: number, limit?: number): Promise<void>;
-    setBranches(branches: BranchInfo[]): void;
     setHistory(history: HistoryInfo): void;
-    loadTags(): Promise<void>;
-    loadStashes(): Promise<void>;
-    loadRemotes(): Promise<void>;
-    getConfig(): Promise<void>;
     setSelectedCommit(commit: Maybe<CommitStats>): void;
-    selectStash(stash: Stash): Promise<void>;
     /**
      * The asynchronous lock used to synchronize critical operations on this repo
      */
@@ -114,22 +87,17 @@ export const repoStore = create<RepoState & RepoActions>()(
     immer((set, get) => ({
         active: false,
         backend: (undefined as unknown) as GitBackend, // TODO: I hate this
-        branches: [],
-        config: {},
         history: { entries: [], total: 0, first: 0 },
         path: '',
         pendingCommit: nothing,
-        remotes: [],
         selectedCommit: nothing,
-        stashes: [],
         status: [],
         rebaseStatus: nothing,
-        tags: [],
         files: nothing,
         historyLoader: undefined,
         lock: new AsyncLock(),
         affected: { branches: [], tags: [], refs: [] },
-        openRepo: (path: string): Promise<void> => {
+       openRepo: (path: string): Promise<void> => {
             Logger().debug('openRepo', 'Opening repo', { path });
             invoke('git_open', { path });
             set(
@@ -139,7 +107,6 @@ export const repoStore = create<RepoState & RepoActions>()(
                     // TODO
                     // backend: new SimpleGitBackend(path),
                     branches: [],
-                    config: {},
                     history: { entries: [], total: 0, first: 0 },
                     historySize: 0,
                     path: path,
@@ -163,10 +130,6 @@ export const repoStore = create<RepoState & RepoActions>()(
             performance.mark('loadersStart');
             const loaders = [
                 get().loadHistory(),
-                get().loadTags(),
-                get().loadStashes(),
-                get().loadRemotes(),
-                get().getConfig(),
             ];
             await Promise.all(loaders);
             performance.mark('loadersEnd');
@@ -210,54 +173,10 @@ export const repoStore = create<RepoState & RepoActions>()(
             // };
             // partLoader();
         },
-        setBranches: (branches: BranchInfo[]): void => {
-            Logger().debug('setBranches', 'Setting branches');
-            Logger().debug('loadBranches', 'Success.', { branches });
-            set((state) => {
-                state.branches = branches;
-                return state;
-            });
-        },
         setHistory: (history: HistoryInfo) => {
             set(state => {
                 state.history = castDraft(history);
                 return state;
-            });
-        },
-        loadTags: async (): Promise<void> => {
-            Logger().debug('loadTags', 'Loading tags');
-            const tags = await get().backend.getTags();
-            Logger().debug('loadTags', 'Received tags', { tags: tags });
-            set((state) => {
-                state.tags = castDraft(tags);
-            });
-        },
-        loadStashes: async (): Promise<void> => {
-            Logger().debug('loadStashes', 'Attempting to load stashes');
-            const stashes = await get().backend.listStashes();
-            Logger().debug('loadStashes', 'Success', {
-                stashes: stashes,
-            });
-            set((state) => {
-                state.stashes = castDraft(stashes);
-            });
-        },
-        loadRemotes: async (): Promise<void> => {
-            Logger().debug('loadRemotes', 'Loading remotes');
-            const remotes = await get().backend.getRemotes();
-            Logger().debug('loadRemotes', 'Success.', { remotes: remotes });
-            set((state) => {
-                state.remotes = remotes;
-            });
-        },
-        getConfig: async (): Promise<void> => {
-            Logger().debug('getConfig', 'Loading repository config');
-            const config = await get().backend.getConfig();
-            Logger().silly('getConfig', 'Sucessfully loaded config', {
-                config: config,
-            });
-            set((state) => {
-                state.config = config;
             });
         },
         setSelectedCommit: (commit: Maybe<CommitStats>): void => {
@@ -269,14 +188,6 @@ export const repoStore = create<RepoState & RepoActions>()(
             set((state) => {
                 state.selectedCommit = nothing;
             });
-        },
-        selectStash: async (stash: Stash): Promise<void> => {
-            Logger().debug('selectStash', 'Requested loading stats for stash', {
-                stash: stash,
-            });
-            const stats = await get().backend.getStashDetails(stash);
-            Logger().debug('selectStash', 'Received stash details', { stats: stats });
-            // await get().selectCommit(stats);
         },
         getRebaseStatus: async (): Promise<void> => {
             Logger().debug('getRebaseStatus', 'Checking for rebase in progress');
@@ -290,6 +201,19 @@ export const repoStore = create<RepoState & RepoActions>()(
 );
 
 export const useRepo = createHook(repoStore);
+
+export const useConfig = (): UseQueryResult<IGitConfig> => 
+    useQuery('config', async () => {
+        const configValues = await invoke<NamedGitConfigValue<string>[]>('get_config');
+        console.log("Got config:", configValues);
+        return {
+            user: {
+               name: configValues.find(c => c.name === "user.name"),
+               email: configValues.find(c => c.name === "user.email")
+            }
+        }
+    });
+
 
 /**
  * Access the history of the repo
@@ -322,12 +246,6 @@ export const useStashes = (): UseQueryResult<readonly Stash[]> =>
     useQuery('stashes', () => invoke<readonly Stash[]>('get_stashes'));
 
 listen('stashed_changed', (_) => queryClient.invalidateQueries('get_stashes'));
-
-/**
- * Get the current state of the index
- */
-export const useConfig = (): IGitConfig =>
-    useRepo((state: RepoState & RepoActions) => state.config);
 
 /**
  * get the current pending commit (e.g. after a failed merge)

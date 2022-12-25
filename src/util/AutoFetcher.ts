@@ -1,13 +1,13 @@
 import React from 'react';
-import { RepoActions, RepoState, repoStore, useConfig } from '../model/state/repo';
+import { RepoActions, RepoState, repoStore} from '../model/state/repo';
 import { Logger } from './logger';
 import { nothing } from './maybe';
 
 export function useAutoFetcher(repo: RepoState & RepoActions): void {
-    const config = useConfig();
+    const config: any = {};
+    console.warn("Autofetcher broken. Move to backend.");
     React.useEffect(() => {
         let timer: number | undefined = undefined;
-        console.log(config);
         if (config.global?.corylus?.autoFetchEnabled) {
             Logger().debug('useAutoFetcher', 'Starting auto fetcher.', {
                 interval: config.global.corylus.autoFetchInterval,

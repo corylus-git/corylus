@@ -28,7 +28,8 @@ use crate::{
         remote::{get_remotes, push}, stash::{get_stashes, stash, get_stash_stats},
         branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch},
         worktree::get_worktrees,
-        tags::get_tags
+        tags::get_tags,
+        config::get_config
     },
     settings::get_settings, log::send_log,
 };
@@ -68,7 +69,8 @@ fn main() {
             delete_branch,
             change_branch,
             get_worktrees,
-            get_tags
+            get_tags,
+            get_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
