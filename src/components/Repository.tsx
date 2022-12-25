@@ -139,7 +139,7 @@ export const Repository: React.FC = () => {
                     <Route path="/" element={<HistoryPanel />} />
                     <Route path="index" element={<IndexPanel />} />
                     <Route path="config" element={<ConfigurationPanel />} />
-                    {/*<Route path="files" element={<ExplorerPanel />} /> */}
+                    <Route path="files" element={<ExplorerPanel />} />
                 </Routes>
             </div>
             <MainStatusBar />

@@ -1,4 +1,6 @@
+import { invoke } from '@tauri-apps/api';
 import { castDraft } from 'immer';
+import { useQuery, UseQueryResult } from 'react-query';
 import createHook from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
@@ -108,7 +110,9 @@ export const explorer = create<ExplorerState & ExplorerActions>()(
 
 export const useExplorer = createHook(explorer);
 
-export const useFiles = (): Maybe<readonly FileStats[]> => useExplorer((s) => s.files);
+//export const useFiles = (): Maybe<readonly FileStats[]> => useExplorer((s) => s.files);
+export const useFiles = (commit?: string): UseQueryResult<readonly FileStats[]> =>
+    useQuery(['files', commit], () => invoke<readonly FileStats[]>('get_files', { commit }));
 
 export const useFileHistory = (): Maybe<readonly Commit[]> => useExplorer((s) => s.fileHistory);
 

@@ -3,6 +3,8 @@ use serde::Serialize;
 
 use crate::error::BackendError;
 
+use super::index::get_workdir_status;
+
 /**
  * A reference to a parent with short and full OID
  */
@@ -187,6 +189,7 @@ pub enum DiffStatus {
     Unknown,
     Unmodified,
     Untracked,
+    Ignored,
 }
 
 impl From<git2::Delta> for DiffStatus {
@@ -215,6 +218,16 @@ pub struct FileStats {
      * The path of the object these stats apply to
      */
     pub path: Option<String>,
+}
+
+impl From<git2::StatusEntry<'_>> for FileStats
+{
+    fn from(status: git2::StatusEntry) -> Self {
+        Self {
+            status: get_workdir_status(&status),
+            path: status.path().map(|p| p.to_owned())
+        }
+    }
 }
 
 /**

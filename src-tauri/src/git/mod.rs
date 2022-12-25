@@ -9,6 +9,7 @@ pub mod branches;
 pub mod worktree;
 pub mod tags;
 pub mod config;
+pub mod files;
 
 use std::sync::Arc;
 

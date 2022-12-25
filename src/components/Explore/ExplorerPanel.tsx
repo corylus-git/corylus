@@ -87,14 +87,8 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
 };
 
 export const ExplorerPanel: React.FC<{ commit?: Commit }> = (props) => {
-    const files = useFiles();
+    const { data: files } = useFiles(props.commit?.oid);
     const [searchTerm, setSearchTerm] = React.useState('');
-    React.useEffect(() => {
-        explorer.getState().reset();
-        if (!props.commit) {
-            explorer.getState().loadWorkdir();
-        }
-    }, [props.commit, repoStore.getState().path]);
     return (
         <ExplorerPanelView>
             <div>
@@ -103,9 +97,9 @@ export const ExplorerPanel: React.FC<{ commit?: Commit }> = (props) => {
                     {props.commit ? ` commit ${props.commit.shortOid}` : ' the working directory'}
                 </h1>
                 <SearchBox onTermChange={setSearchTerm} isFirst={true} isLast={true} />
-                {files.found ? (
+                {files ? (
                     <FileTree
-                        files={files.value.filter((f) => f.path.indexOf(searchTerm) !== -1)}
+                        files={files.filter((f) => f.path.indexOf(searchTerm) !== -1)}
                     />
                 ) : (
                     <RunningIndicator active={true} size={2} />

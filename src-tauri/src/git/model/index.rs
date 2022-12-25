@@ -2,22 +2,7 @@ use serde::Serialize;
 
 use crate::error::BackendError;
 
-/**
- * The status a file can have in a diff
- */
-#[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(rename_all = "camelCase")]
-pub enum DiffStatus {
-    Added,
-    Modified,
-    Deleted,
-    Renamed,
-    Conflict,
-    Unknown,
-    Ignored,
-    Unmodified,
-    Untracked,
-}
+use super::git::DiffStatus;
 
 #[derive(Clone, Serialize, PartialEq, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -67,7 +52,7 @@ impl TryFrom<git2::StatusEntry<'_>> for IndexStatus {
     }
 }
 
-fn get_workdir_status(entry: &git2::StatusEntry<'_>) -> DiffStatus {
+pub fn get_workdir_status(entry: &git2::StatusEntry<'_>) -> DiffStatus {
     let status = entry.status();
     if status.is_wt_new() {
         DiffStatus::Untracked
