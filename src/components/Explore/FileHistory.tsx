@@ -5,7 +5,7 @@ import { StyledButton } from '../util/StyledButton';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { CommitDetailsView } from '../Diff/Commit';
-import { useFileHistory, explorer } from '../../model/state/explorer';
+import { useFileHistory, explorer, useFileHistoryGraph } from '../../model/state/explorer';
 import { GraphRenderer } from '../History/GraphRenderer';
 import { loadCommitStats, useBranches, useTags } from '../../model/state/repo';
 import { useAsync } from 'react-use';
@@ -34,12 +34,7 @@ const HistoryContainer = styled.div`
 
 export const FileHistory: React.FC = () => {
     const history = useFileHistory();
-    const graph = React.useMemo(
-        // TODO
-        () => ({ lines: [], rails: [] }),
-        // () => (history.found ? calculateGraphLayout(history.value) : { lines: [], rails: [] }),
-        [history]
-    );
+    const graph = useFileHistoryGraph();
     const targetRef = React.useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
     const tags = useTags();
@@ -82,12 +77,12 @@ export const FileHistory: React.FC = () => {
                         <GraphRenderer
                             width={dimensions.width - 10}
                             height={dimensions.height}
-                            totalCommits={graph.lines.length}
+                            totalCommits={graph?.length ?? 0}
                             first={0}
                             tags={tags}
                             branches={branches.data ?? []}
                             onCommitsSelected={(commit) => setSelectedCommit(commit[0])}
-                            getLine={(idx) => Promise.reject()}
+                            getLine={(idx) => Promise.resolve(graph![idx])}
                         />
                     </NoScrollPanel>
                     <SplitterPanel>

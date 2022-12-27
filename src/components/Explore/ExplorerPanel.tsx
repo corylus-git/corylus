@@ -1,8 +1,10 @@
+import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import React from 'react';
 import styled from 'styled-components';
 import { explorer, useFiles } from '../../model/state/explorer';
 import { repoStore } from '../../model/state/repo';
 import { Commit, FileStats } from '../../model/stateObjects';
+import { Logger } from '../../util/logger';
 import { FileStatus } from '../shared/FileStatus';
 import { SearchBox } from '../shared/SearchBox';
 import { RunningIndicator } from '../util/RunningIndicator';
@@ -57,7 +59,18 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
     const trees = props.files.reduce((existingTree, file) => {
         return insertPath(existingTree, file.path.split(/\//), file);
     }, [] as readonly TreeNode<FileStats>[]);
+    const [menuProps, setMenuState] = useMenuState();
+    const [meta, setMeta] = React.useState<FileStats>();
+    const [anchorPoint, setAnchorPoint] = React.useState<{x: number, y: number}>();
     return (
+        <>
+        <ControlledMenu {...menuProps} onClose={() => setMenuState(false)} anchorPoint={anchorPoint}>
+            <MenuItem onClick={() => {
+                 Logger().debug('FileTree', 'Showing file history', { file: meta!.path });
+                 explorer.getState().loadPathHistory(meta!.path);
+             }}>Show file history</MenuItem>
+            <MenuItem>Annotate edits (blame)</MenuItem>
+        </ControlledMenu>
         <Scrollable>
             {trees.map((t, i) => (
                 <Tree
@@ -67,7 +80,14 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
                         return (
                             <span
                                 title={`${path?.join('/') ?? ''}/${file}`}
-                                onContextMenu={() => meta && openContextMenu(meta)}>
+                                onContextMenu={(ev) => {
+                                    ev.preventDefault();
+                                    if (meta) {
+                                        setMeta(meta);
+                                        setAnchorPoint({x: ev.clientX, y: ev.clientY});
+                                        setMenuState(true);
+                                    }
+                                }}>
                                 {meta && (
                                     <FileStatus
                                         isConflicted={false}
@@ -83,6 +103,7 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
                 />
             ))}
         </Scrollable>
+        </>
     );
 };
 

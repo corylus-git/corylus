@@ -1,15 +1,82 @@
-use git2::{Delta, DiffOptions, Oid, Patch};
+use git2::{Delta, DiffOptions, Oid, Patch, Sort, Pathspec, PathspecFlags};
 use tauri::Window;
 
 use crate::error::BackendError;
 
 use super::{
-    model::git::{
-        Commit, DiffStat, DiffStatus, FileStats, FullCommitData, GitPerson,
-        ParentReference, StashData, TimeWithOffset, CommitStats, StashStatsData, CommitStatsData,
+    model::{
+        git::{
+            Commit, CommitStats, CommitStatsData, DiffStat, DiffStatus, FileStats, FullCommitData,
+            StashData,
+        },
+        graph::GraphLayoutData,
     },
-    with_backend, with_backend_mut, StateType,
+    with_backend, with_backend_mut, StateType, graph::calculate_graph_layout,
 };
+
+pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<Vec<Commit>, BackendError> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
+    revwalk.push_glob("heads/*")?;
+
+    let ps = Pathspec::new(pathspec)?;
+    let mut diffopts = DiffOptions::new();
+    if let Some(p) = pathspec {
+        log::debug!("Loading history for path spec {}", p);
+        diffopts.pathspec(p);
+    }
+
+    Ok(revwalk
+        .filter_map(|c| {
+            let commit = c.ok().map(|oid| repo.find_commit(oid).ok()).flatten()?;
+            let parents = commit.parent_count();
+            if parents == 0 {
+                let tree = commit.tree().ok()?;
+                if ps.match_tree(&tree, PathspecFlags::NO_MATCH_ERROR).is_ok() {
+                    map_commit(&commit, false).ok()
+                }
+                else {
+                    None
+                }
+            } else {
+                // do we have any diff to a parent matching the path spec?
+                let tree = commit.tree().ok()?;
+                let matching_parent = commit.parents().find(|parent| {
+                    let parent_tree_result = parent.tree();
+                    if let Ok(parent_tree) = parent_tree_result {
+                        let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(&mut diffopts));
+                        diff.map(|d| d.deltas().count() > 0).unwrap_or(true)
+                    } else {
+                        false
+                    }
+                });
+                matching_parent.map(|_| map_commit(&commit, false).ok()).flatten() // if any parent diff matches, the commit is in the history
+            }
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub async fn get_commits( 
+    state: StateType<'_>,
+    pathspec: Option<&str>,
+) -> Result<Vec<Commit>, BackendError>
+{
+    with_backend(state, |backend| {
+        load_history(&backend.repo, pathspec)
+    }).await
+}
+
+#[tauri::command]
+pub async fn get_graph(
+    state: StateType<'_>,
+    pathspec: Option<&str>,
+) -> Result<GraphLayoutData, BackendError> {
+    with_backend(state, |backend| {
+        let commits = load_history(&backend.repo, pathspec)?;
+        Ok(calculate_graph_layout(commits))
+    }).await
+}
 
 #[tauri::command]
 pub async fn get_commit(state: StateType<'_>, refNameOrOid: &str) -> Result<Commit, BackendError> {
@@ -26,7 +93,7 @@ pub async fn get_commit(state: StateType<'_>, refNameOrOid: &str) -> Result<Comm
 pub async fn get_commit_stats(
     state: StateType<'_>,
     window: Window,
-    oid: &str
+    oid: &str,
 ) -> Result<(), BackendError> {
     with_backend_mut(state, |backend| {
         let commit =

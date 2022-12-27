@@ -4,6 +4,7 @@ import { useQuery, UseQueryResult } from 'react-query';
 import createHook from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
+import { GraphLayoutData, LayoutListEntry } from '../../util/graphLayout';
 import { Logger } from '../../util/logger';
 import { just, Maybe, nothing } from '../../util/maybe';
 import { BlameInfo, Commit, DiffStatus, FileStats } from '../stateObjects';
@@ -22,6 +23,8 @@ export type ExplorerState = {
      * the currently open file history, if any
      */
     fileHistory: Maybe<readonly Commit[]>;
+
+    fileHistoryGraph?: readonly LayoutListEntry[]; 
     /**
      * The currently loaded blame
      */
@@ -43,6 +46,7 @@ export const explorer = create<ExplorerState & ExplorerActions>()(
         fileHistory: nothing,
         filePath: nothing,
         files: nothing,
+        fileHistoryGraph: undefined,
         loadWorkdir: async (): Promise<void> => {
             Logger().debug('loadWorkdir', 'Loading working directory state');
             const status = await repoStore.getState().backend.getStatus();
@@ -66,13 +70,14 @@ export const explorer = create<ExplorerState & ExplorerActions>()(
         },
         loadPathHistory: async (path: string): Promise<void> => {
             Logger().debug('loadPathHistory', 'Loading history for path', { path });
-            const history = await repoStore.getState().backend.getHistory(path);
+            const history = await invoke<GraphLayoutData>('get_graph', { pathspec: path });
             Logger().debug('loadPathHistory', 'Received history from backend', {
-                items: history.length,
+                items: history.lines.length,
             });
             set((state) => {
                 Logger().silly('loadPathHistory', 'Setting history state');
-                state.fileHistory = castDraft(just(history));
+                state.fileHistory = castDraft(just(history.lines.map(e => e.commit)));
+                state.fileHistoryGraph = castDraft(history.lines);
                 state.filePath = just(path);
             });
         },
@@ -115,6 +120,8 @@ export const useFiles = (commit?: string): UseQueryResult<readonly FileStats[]> 
     useQuery(['files', commit], () => invoke<readonly FileStats[]>('get_files', { commit }));
 
 export const useFileHistory = (): Maybe<readonly Commit[]> => useExplorer((s) => s.fileHistory);
+
+export const useFileHistoryGraph = (): readonly LayoutListEntry[] | undefined => useExplorer(s => s.fileHistoryGraph);
 
 export const useFilePath = (): Maybe<string> => useExplorer((s) => s.filePath);
 
