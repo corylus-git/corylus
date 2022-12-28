@@ -7,12 +7,57 @@ use super::{
     model::{
         git::{
             Commit, CommitStats, CommitStatsData, DiffStat, DiffStatus, FileStats, FullCommitData,
-            StashData,
+            StashData, ParentReference,
         },
         graph::GraphLayoutData,
     },
     with_backend, with_backend_mut, StateType, graph::calculate_graph_layout,
 };
+
+fn replace_in_history(oid: &str, replace_with: &[ParentReference], commits: Vec<Commit>) -> Vec<Commit>
+{
+    commits.into_iter().map(|c| {
+        match &c {
+            Commit::Stash(_) => c,
+            Commit::Commit(data) => {
+                let mut new_parents: Vec<ParentReference> = c.as_graph_node().parents().into_iter().filter(|p| p.oid != oid).map(|p| p.clone()).collect();
+                if new_parents.len() < c.as_graph_node().parents().len() {
+                    new_parents.extend_from_slice(replace_with);
+                }
+                Commit::Commit(FullCommitData {
+                    oid: data.oid.clone(),
+                    short_oid: data.short_oid.clone(),
+                    parents: new_parents,
+                    author: data.author.clone(),
+                    message: data.message.clone(),
+                    committer: data.committer.clone()
+                })
+            }
+        }
+    }).collect()
+}
+
+fn has_changes(commit: &git2::Commit, ps: &Pathspec, diffopts: &mut DiffOptions, repo: &git2::Repository) -> Result<bool, BackendError>
+{
+    let parents = commit.parent_count();
+    if parents == 0 {
+        let tree = commit.tree()?;
+        Ok(ps.match_tree(&tree, PathspecFlags::NO_MATCH_ERROR).is_ok())
+    } else {
+        // do we have any diff to a parent matching the path spec?
+        let tree = commit.tree()?;
+        let matching_parent = commit.parents().find(|parent| {
+            let parent_tree_result = parent.tree();
+            if let Ok(parent_tree) = parent_tree_result {
+                let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(diffopts));
+                diff.map(|d| d.deltas().count() > 0).unwrap_or(false)
+            } else {
+                false
+            }
+        });
+        Ok(matching_parent.is_some())
+    }
+}
 
 pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<Vec<Commit>, BackendError> {
     let mut revwalk = repo.revwalk()?;
@@ -26,34 +71,18 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
         diffopts.pathspec(p);
     }
 
-    Ok(revwalk
-        .filter_map(|c| {
-            let commit = c.ok().map(|oid| repo.find_commit(oid).ok()).flatten()?;
-            let parents = commit.parent_count();
-            if parents == 0 {
-                let tree = commit.tree().ok()?;
-                if ps.match_tree(&tree, PathspecFlags::NO_MATCH_ERROR).is_ok() {
-                    map_commit(&commit, false).ok()
-                }
-                else {
-                    None
-                }
-            } else {
-                // do we have any diff to a parent matching the path spec?
-                let tree = commit.tree().ok()?;
-                let matching_parent = commit.parents().find(|parent| {
-                    let parent_tree_result = parent.tree();
-                    if let Ok(parent_tree) = parent_tree_result {
-                        let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(&mut diffopts));
-                        diff.map(|d| d.deltas().count() > 0).unwrap_or(true)
-                    } else {
-                        false
-                    }
-                });
-                matching_parent.map(|_| map_commit(&commit, false).ok()).flatten() // if any parent diff matches, the commit is in the history
-            }
-        })
-        .collect())
+    let mut internal_history = vec![];
+    for current in revwalk {
+        let commit = current.and_then(|oid| repo.find_commit(oid))?;
+        let output = map_commit(&commit, false)?;
+        if has_changes(&commit, &ps, &mut diffopts, &repo)? {
+            internal_history.push(output);
+        } else {
+            internal_history = replace_in_history(output.as_graph_node().oid(), output.as_graph_node().parents(), internal_history);
+        }
+    }
+
+    Ok(internal_history)
 }
 
 #[tauri::command]
