@@ -1,26 +1,39 @@
-use git2::{Delta, DiffOptions, Oid, Patch, Sort, Pathspec, PathspecFlags};
+use std::collections::HashMap;
+
+use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Sort};
 use tauri::Window;
 
 use crate::error::BackendError;
 
 use super::{
+    graph::calculate_graph_layout,
     model::{
         git::{
             Commit, CommitStats, CommitStatsData, DiffStat, DiffStatus, FileStats, FullCommitData,
-            StashData, ParentReference,
+            GraphNodeData, ParentReference, StashData,
         },
         graph::GraphLayoutData,
     },
-    with_backend, with_backend_mut, StateType, graph::calculate_graph_layout,
+    with_backend, with_backend_mut, StateType,
 };
 
-fn replace_in_history(oid: &str, replace_with: &[ParentReference], commits: Vec<Commit>) -> Vec<Commit>
-{
-    commits.into_iter().map(|c| {
-        match &c {
+fn replace_in_history(
+    oid: &str,
+    replace_with: &[ParentReference],
+    commits: Vec<Commit>,
+) -> Vec<Commit> {
+    commits
+        .into_iter()
+        .map(|c| match &c {
             Commit::Stash(_) => c,
             Commit::Commit(data) => {
-                let mut new_parents: Vec<ParentReference> = c.as_graph_node().parents().into_iter().filter(|p| p.oid != oid).map(|p| p.clone()).collect();
+                let mut new_parents: Vec<ParentReference> = c
+                    .as_graph_node()
+                    .parents()
+                    .into_iter()
+                    .filter(|p| p.oid != oid)
+                    .map(|p| p.clone())
+                    .collect();
                 if new_parents.len() < c.as_graph_node().parents().len() {
                     new_parents.extend_from_slice(replace_with);
                 }
@@ -30,15 +43,19 @@ fn replace_in_history(oid: &str, replace_with: &[ParentReference], commits: Vec<
                     parents: new_parents,
                     author: data.author.clone(),
                     message: data.message.clone(),
-                    committer: data.committer.clone()
+                    committer: data.committer.clone(),
                 })
             }
-        }
-    }).collect()
+        })
+        .collect()
 }
 
-fn has_changes(commit: &git2::Commit, ps: &Pathspec, diffopts: &mut DiffOptions, repo: &git2::Repository) -> Result<bool, BackendError>
-{
+fn has_changes(
+    commit: &git2::Commit,
+    ps: &Pathspec,
+    diffopts: &mut DiffOptions,
+    repo: &git2::Repository,
+) -> Result<bool, BackendError> {
     let parents = commit.parent_count();
     if parents == 0 {
         let tree = commit.tree()?;
@@ -59,7 +76,71 @@ fn has_changes(commit: &git2::Commit, ps: &Pathspec, diffopts: &mut DiffOptions,
     }
 }
 
-pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<Vec<Commit>, BackendError> {
+/// build a graph in the form of an adjecency map from the given commits
+fn build_adjecency_map(commits: &Vec<Commit>) -> HashMap<String, Vec<String>> {
+    let mut result = HashMap::<String, Vec<String>>::new();
+    for commit in commits {
+        result.insert(
+            commit.as_graph_node().oid().to_owned(),
+            commit
+                .as_graph_node()
+                .parents()
+                .iter()
+                .map(|p| p.oid.clone())
+                .collect(),
+        );
+    }
+    result
+}
+
+fn has_indirect_path(graph: &HashMap<String, Vec<String>>, start: &str, end: &str, is_start: bool) -> bool {
+    let neighbors = graph.get(start);
+    if let Some(n) = neighbors {
+        for neighbor in n {
+            if neighbor == end {
+                return !is_start // paths only count if this is an indirect path
+            } else {
+                if has_indirect_path(graph, neighbor, end, false) {
+                    return true
+                }
+            }
+        }
+        false
+    }
+    else {
+        false
+    }
+}
+
+fn transitive_reduction(commits: Vec<Commit>) -> Vec<Commit> {
+    let mut result = vec![];
+    let graph = build_adjecency_map(&commits);
+    for commit in commits {
+        if commit.as_graph_node().parents().len() > 1 {
+            let mut simplified_parents = vec![];
+            // should actually always match as we're not touching stashes
+            if let Commit::Commit(mut data) = commit {
+                // check whether we have multiple connections to the same parent
+                for parent in data.parents {
+                    if !has_indirect_path(&graph, &data.oid, &parent.oid, true) {
+                        simplified_parents.push(parent);
+                    }
+                }
+                data.parents = simplified_parents;
+                result.push(Commit::Commit(data));
+            }
+        }
+        else {
+            result.push(commit);
+        }
+    }
+    result
+}
+
+pub fn load_history(
+    repo: &git2::Repository,
+    pathspec: Option<&str>,
+) -> Result<Vec<Commit>, BackendError> {
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
     revwalk.push_glob("heads/*")?;
@@ -78,22 +159,23 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
         if has_changes(&commit, &ps, &mut diffopts, &repo)? {
             internal_history.push(output);
         } else {
-            internal_history = replace_in_history(output.as_graph_node().oid(), output.as_graph_node().parents(), internal_history);
+            internal_history = replace_in_history(
+                output.as_graph_node().oid(),
+                output.as_graph_node().parents(),
+                internal_history,
+            );
         }
     }
 
-    Ok(internal_history)
+    Ok(transitive_reduction(internal_history))
 }
 
 #[tauri::command]
-pub async fn get_commits( 
+pub async fn get_commits(
     state: StateType<'_>,
     pathspec: Option<&str>,
-) -> Result<Vec<Commit>, BackendError>
-{
-    with_backend(state, |backend| {
-        load_history(&backend.repo, pathspec)
-    }).await
+) -> Result<Vec<Commit>, BackendError> {
+    with_backend(state, |backend| load_history(&backend.repo, pathspec)).await
 }
 
 #[tauri::command]
@@ -104,7 +186,8 @@ pub async fn get_graph(
     with_backend(state, |backend| {
         let commits = load_history(&backend.repo, pathspec)?;
         Ok(calculate_graph_layout(commits))
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
