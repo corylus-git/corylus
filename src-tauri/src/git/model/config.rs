@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum GitConfigLevel {
     Local,
@@ -8,7 +8,7 @@ pub enum GitConfigLevel {
     System
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GitConfigEntry
 {

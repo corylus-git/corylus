@@ -253,6 +253,7 @@ export const DiffViewer: React.FC<{ file: FileDiff } & DiffViewerPropsBase> = (p
     return (
         <DiffViewContainer
             onContextMenu={(ev) => {
+                ev.preventDefault();
                 if (selectedLines.found) {
                     props.onContextMenu?.(ev, selectedLines.value);
                 }

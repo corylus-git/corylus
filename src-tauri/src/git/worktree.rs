@@ -7,7 +7,7 @@ use super::{with_backend, GitBackend, StateType};
 
 #[tauri::command]
 pub async fn get_worktrees(state: StateType<'_>) -> Result<Vec<Worktree>, BackendError> {
-    with_backend(state, |backend| load_worktrees(backend)).await
+    with_backend(state, load_worktrees).await
 }
 
 pub fn load_worktrees(backend: &GitBackend) -> Result<Vec<Worktree>, BackendError> {
@@ -32,7 +32,7 @@ pub fn load_worktrees(backend: &GitBackend) -> Result<Vec<Worktree>, BackendErro
                             .ok()
                             .and_then(|rep| rep.head().ok())
                             .and_then(|h| h.peel_to_commit().ok())
-                            .and_then(|c| Some(c.id().to_string())),
+                            .map(|c| c.id().to_string()),
                         is_valid: wt.validate().is_ok(),
                     }
                 })

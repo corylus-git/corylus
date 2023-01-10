@@ -8,14 +8,14 @@ use super::index::get_workdir_status;
 /**
  * A reference to a parent with short and full OID
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ParentReference {
     pub oid: String,
     pub short_oid: String,
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeWithOffset {
     pub utc_seconds: i64,
@@ -31,7 +31,7 @@ impl From<git2::Time> for TimeWithOffset {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GitPerson {
     pub name: String,
@@ -50,14 +50,14 @@ impl From<Signature<'_>> for GitPerson {
 }
 
 pub trait GraphNodeData {
-    fn oid<'a>(&'a self) -> &'a str;
-    fn parents<'a>(&'a self) -> &'a Vec<ParentReference>;
+    fn oid(&'_ self) -> &'_ str;
+    fn parents(&'_ self) -> &'_ Vec<ParentReference>;
 }
 
 /**
  * Detailed information about a commit
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FullCommitData {
     pub oid: String,
@@ -69,11 +69,11 @@ pub struct FullCommitData {
 }
 
 impl GraphNodeData for FullCommitData {
-    fn oid<'a>(&'a self) -> &'a str {
+    fn oid(&'_ self) -> &'_ str {
         &self.oid
     }
 
-    fn parents<'a>(&'a self) -> &'a Vec<ParentReference> {
+    fn parents(&'_ self) -> &'_ Vec<ParentReference> {
         &self.parents
     }
 }
@@ -130,7 +130,7 @@ impl TryFrom<&git2::Commit<'_>> for FullCommitData {
 /**
  * Detailed information about a Stash
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct StashData {
     pub ref_name: String,
@@ -162,7 +162,7 @@ impl TryFrom<&git2::Commit<'_>> for StashData {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Commit {
     Commit(FullCommitData),
@@ -178,7 +178,7 @@ impl Commit {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffStatus {
     Added,
@@ -207,7 +207,7 @@ impl From<git2::Delta> for DiffStatus {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FileStats {
     /**
@@ -233,7 +233,7 @@ impl From<git2::StatusEntry<'_>> for FileStats
 /**
  * Statistics of a specific entry in a diff (as output by git show --stat)
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffStat {
     /**
@@ -258,14 +258,14 @@ pub struct DiffStat {
     pub deletions: usize,
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum CommitStats {
     Commit(CommitStatsData),
     Stash(StashStatsData),
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CommitStatsData {
     /**
@@ -285,7 +285,7 @@ pub struct CommitStatsData {
     pub incoming: Option<Vec<DiffStat>>,
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct StashStatsData {
     /**
@@ -312,7 +312,7 @@ pub struct StashStatsData {
 /**
  * struct representing the diff of a single file
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FileDiff {
     /**
@@ -338,7 +338,7 @@ pub struct FileDiff {
 /**
  * struct representing a chunk in a diff
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffChunk {
     /**
@@ -358,7 +358,7 @@ impl TryFrom<git2::DiffHunk<'_>> for DiffChunk {
         Ok(Self {
             header: String::from_utf8_lossy(hunk.header())
                 .to_string()
-                .split("\n")
+                .split('\n')
                 .collect(),
             lines: vec![],
         })
@@ -367,7 +367,7 @@ impl TryFrom<git2::DiffHunk<'_>> for DiffChunk {
 /**
  * An individual line in the diff
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DiffLineData {
     /**
@@ -397,14 +397,13 @@ impl TryFrom<git2::DiffLine<'_>> for DiffLineData {
     }
 }
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum DiffLine {
     Insert(DiffLineData),
     Delete(DiffLineData),
     Context(DiffLineData),
     PseudoContext(DiffLineData),
-    Timeout(DiffLineData),
 }
 
 impl TryFrom<git2::DiffLine<'_>> for DiffLine {
@@ -449,7 +448,7 @@ fn handle_line(
         git2::DiffLineType::FileHeader => {
             diffs.push(FileDiff {
                 header: String::from_utf8_lossy(line.content())
-                    .split("\n")
+                    .split('\n')
                     .map(|s| s.to_owned())
                     .collect(),
                 old_name: "old".to_owned(), // TODO extract the value from the header
@@ -460,15 +459,15 @@ fn handle_line(
         }
         git2::DiffLineType::HunkHeader => diffs
             .last_mut()
-            .and_then(|diff| {
+            .map(|diff| {
                 diff.chunks.push(DiffChunk {
                     header: String::from_utf8_lossy(line.content())
-                        .split("\n")
+                        .split('\n')
                         .map(|s| s.to_owned())
                         .collect(),
                     lines: vec![],
                 });
-                Some(true)
+                true
             })
             .unwrap_or(false),
         git2::DiffLineType::Binary => false,
@@ -476,7 +475,7 @@ fn handle_line(
     }
 }
 
-fn push_line(line: git2::DiffLine<'_>, diffs: &mut Vec<FileDiff>) -> bool {
+fn push_line(line: git2::DiffLine<'_>, diffs: &mut [FileDiff]) -> bool {
     diffs
         .last_mut()
         .and_then(|diff| diff.chunks.last_mut())
@@ -488,7 +487,7 @@ fn push_line(line: git2::DiffLine<'_>, diffs: &mut Vec<FileDiff>) -> bool {
 }
 
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Worktree {
     pub name: String,
@@ -501,7 +500,7 @@ pub struct Worktree {
 /**
  * information about a tag in the repository
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Tag {
     /**

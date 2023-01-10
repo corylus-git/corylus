@@ -54,10 +54,10 @@ impl GitBackend {
         })?)
     }
 
-    pub fn load_history(&mut self, window: &Window) {
+    pub fn load_history(&mut self, window: &Window) -> Result<(), BackendError> {
         let mut revwalk = self.repo.revwalk().unwrap(); // TODO
-        revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME);
-        revwalk.push_glob("heads/*");
+        revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
+        revwalk.push_glob("heads/*")?;
         let commits: Vec<Commit> = revwalk
             .filter_map(|c| {
                 c.ok().map(|oid| {
@@ -77,12 +77,14 @@ impl GitBackend {
                 change_start_idx: 0,
                 change_end_idx: self.graph.lines.len(),
             },
-        );
-        window.emit("graphChanged", &self.graph);
+        )?;
+        window.emit("graphChanged", &self.graph)?;
+        Ok(())
     }
 
-    pub fn load_repo_data(&mut self, window: &Window) {
-        self.load_history(window);
+    pub fn load_repo_data(&mut self, window: &Window) -> Result<(), BackendError> {
+        self.load_history(window)?;
+        Ok(())
     }
 
     fn load_diff(
@@ -91,11 +93,11 @@ impl GitBackend {
         to_parent: Option<&str>,
         pathspec: &[Option<&str>],
     ) -> Result<git2::Diff, BackendError> {
-        let oid = commit_id.map(|id| Oid::from_str(id)).transpose()?;
+        let oid = commit_id.map(Oid::from_str).transpose()?;
         let commit_tree = oid
             .map(|coid| self.repo.find_commit(coid).and_then(|c| c.tree()))
             .transpose()?;
-        let parent_commit_oid = to_parent.map(|id| Oid::from_str(id)).transpose()?;
+        let parent_commit_oid = to_parent.map(Oid::from_str).transpose()?;
         let parent_commit_tree = parent_commit_oid
             .map(|pid| self.repo.find_commit(pid).and_then(|c| c.tree()))
             .transpose()?;
@@ -119,7 +121,7 @@ fn split_branch_name(
 ) -> Option<(Option<String>, String)> {
     if let Ok(Some(branch_name)) = branch.0.name() {
         if branch.1 == git2::BranchType::Remote {
-            if let Some((remote, suffix)) = branch_name.split_once("/") {
+            if let Some((remote, suffix)) = branch_name.split_once('/') {
                 Some((Some(remote.to_owned()), suffix.to_owned()))
             } else {
                 None
@@ -161,7 +163,7 @@ pub async fn git_open(
     with_state_mut(state, |s| {
         s.git = Some(GitBackend::new(path)?);
         // TODO spawn of extra thread and possibly lock inside the backend
-        s.git.as_mut().unwrap().load_repo_data(&window);
+        s.git.as_mut().map(|r| r.load_repo_data(&window));
         info!("Successfully opened repo at {}", path);
         Ok(())
     })
@@ -173,7 +175,7 @@ pub fn is_git_dir(name: &str) -> bool {
     Repository::open(name).is_ok()
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq,Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffSourceType {
     Workdir,
@@ -187,7 +189,7 @@ pub async fn with_state<F: FnOnce(&AppState) -> Result<R, E>, R, E>(
     op: F,
 ) -> Result<R, E> {
     let state_guard = state.lock().await;
-    op(&*state_guard)
+    op(&state_guard)
 }
 
 pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(
@@ -195,7 +197,7 @@ pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(
     op: F,
 ) -> Result<R, E> {
     let mut state_guard = state.lock().await;
-    op(&mut *state_guard)
+    op(&mut state_guard)
 }
 
 pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
@@ -203,8 +205,8 @@ pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
     op: F,
 ) -> Result<R, BackendError> {
     let state_guard = state.lock().await;
-    if let Some(git) = (*state_guard).git.as_ref() {
-        op(&git)
+    if let Some(git) = state_guard.git.as_ref() {
+        op(git)
     } else {
         Err(BackendError::new("Cannot load diff without open git repo"))
     }
@@ -215,7 +217,7 @@ pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> Result<R, BackendErr
     op: F,
 ) -> Result<R, BackendError> {
     let mut state_guard = state.lock().await;
-    if let Some(git) = (*state_guard).git.as_mut() {
+    if let Some(git) = state_guard.git.as_mut() {
         op(git)
     } else {
         Err(BackendError::new("Cannot load diff without open git repo"))

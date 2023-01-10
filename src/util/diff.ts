@@ -138,8 +138,10 @@ function correctHeader(block: DiffChunk, newStartCorrection: number): [DiffChunk
 }
 
 export function serializeDiff(diffHeader: string[], diff: FileDiff): string {
-    const diffLines = diffHeader.concat(
+    console.log("Header:", diffHeader);
+    const diffLines = diffHeader.filter(h => h.length != 0).concat(
         ...diff.chunks.map((b) => [b.header].concat(b.lines.map((l) => {
+            l.content = l.content.replace('\n', '');
             switch (l.type)
             {
                 case 'context':

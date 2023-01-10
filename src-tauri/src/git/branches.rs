@@ -6,7 +6,7 @@ use crate::error::BackendError;
 use super::{
     model::BranchInfo,
     with_backend,
-    worktree::{get_worktrees, load_worktrees},
+    worktree::load_worktrees,
     StateType,
 };
 
@@ -19,9 +19,9 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, Backe
             branch.ok().and_then(|b| {
                 let worktree = worktrees.iter().find(|wt| {
                     b.0.get()
-                        .peel_to_commit()
-                        .ok()
-                        .and_then(|c| Some(c.as_object().id().to_string()))
+                       .peel_to_commit()
+                       .ok()
+                        .map(|c| c.as_object().id().to_string())
                         .and_then(|id| wt.oid.as_ref().map(|oid| &id == oid))
                         .unwrap_or(false)
                 });
@@ -31,7 +31,7 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, Backe
                 })
             })
         });
-        Ok(result.map(|branch| branch).collect())
+        Ok(result.collect())
     })
     .await
 }
@@ -66,10 +66,11 @@ pub async fn delete_branch(
     with_backend(state, |backend| {
         let mut branch = backend.repo.find_branch(branch, git2::BranchType::Local)?;
         if remove_remote {
-            branch.upstream().map(|mut u| u.delete())?;
+            let mut upstream = branch.upstream()?;
+            upstream.delete()?;
         };
         branch.delete()?;
-        window.emit("branches-changed", {});
+        window.emit("branches-changed", {})?;
         Ok(())
     })
     .await
@@ -104,7 +105,7 @@ pub async fn create_branch(
                 })?,
             )?;
         };
-        window.emit("branches-changed", {});
+        window.emit("branches-changed", {})?;
         Ok(())
     })
     .await
@@ -136,7 +137,7 @@ pub async fn change_branch(
         backend.repo.set_head(reference.name().ok_or(BackendError {
             message: "Cannot get reference name of the branch. Not updating HEAD".to_owned(),
         })?)?;
-        window.emit("branches-changed", {});
+        window.emit("branches-changed", {})?;
         Ok(())
     })
     .await

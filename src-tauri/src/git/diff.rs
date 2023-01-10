@@ -23,14 +23,13 @@ pub async fn get_diff(
             let parent = to_parent.map(|p| p.to_owned()).or_else(|| {
                 if source == DiffSourceType::Commit {
                     commit_id
-                        .map(|id| {
+                        .and_then(|id| {
                             Oid::from_str(id)
                                 .and_then(|oid| backend.repo.find_commit(oid))
                                 .and_then(|commit| commit.parent_id(0))
-                                .and_then(|oid| Ok(oid.to_string()))
+                                .map(|oid| oid.to_string())
                                 .ok()
                         })
-                        .flatten()
                 } else {
                     None
                 }
@@ -44,7 +43,7 @@ pub async fn get_diff(
             if let Some(p) = path {
                 if untracked.unwrap_or(false) {
                     let empty = vec![];
-                    let full_path = backend.repo.workdir().map(|repo_dir| repo_dir.join(p)).ok_or(BackendError { message: format!("Could not resolve path {}", p).to_string() })?;
+                    let full_path = backend.repo.workdir().map(|repo_dir| repo_dir.join(p)).ok_or(BackendError { message: format!("Could not resolve path {}", p) })?;
                     let contents = read(full_path).map_err(|e| BackendError { message: e.to_string() })?;
                     let mut patch = Patch::from_buffers(&empty, None, &contents, Some(Path::new(p)), Some(&mut opts))?;
                     let diff = git2::Diff::from_buffer(&(patch.to_buf()?))?;
@@ -81,7 +80,6 @@ pub async fn get_diff(
                 Err(BackendError::new("Cannot load diff of unidentified stash"))
             }
         }
-        _ => Err(BackendError::new("Unknown diff source type")),
     })
     .await
 }

@@ -328,16 +328,7 @@ export const addDiff = trackError(
         revert: boolean
     ): Promise<void> => {
         try {
-            await repoStore.getState().backend.applyDiff(diff, revert, false);
-            // repoStore.getState().getStatus();
-            const result = await repoStore
-                .getState()
-                .backend.getDiff({ source: source, path: path });
-            if (!result) {
-                stagingArea.getState().deselectDiff();
-            } else {
-                stagingArea.getState().loadDiff(source, path);
-            }
+            await invoke('apply_diff', { diff, revert });
         } catch (e: any) {
             Logger().debug('addDiff', 'Could not add diff to index', {
                 diff: diff,

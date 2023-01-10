@@ -17,7 +17,7 @@ pub async fn get_files(state: StateType<'_>) -> Result<Vec<FileStats>, BackendEr
             .repo
             .statuses(Some(&mut status_options))?
             .iter()
-            .map(|status| FileStats::from(status)).collect();
+            .map(FileStats::from).collect();
         Ok(statuses)
     })
     .await

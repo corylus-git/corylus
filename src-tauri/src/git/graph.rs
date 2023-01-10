@@ -1,9 +1,7 @@
 use super::model::{
-    git::{Commit},
+    git::Commit,
     graph::{GraphLayoutData, LayoutListEntry, Rail},
 };
-
-static EMPTY_STRING: String = String::new();
 
 /// Place the given entry on the first usable rail
 ///
@@ -158,7 +156,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned())],
-                        commit: child.clone()
+                        commit: child
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -167,7 +165,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![None],
-                        commit: parent.clone()
+                        commit: parent
                     }
                 ],
                 rails: vec![None]
@@ -193,7 +191,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned())],
-                        commit: child2.clone()
+                        commit: child2
                     },
                     LayoutListEntry {
                         rail: 1,
@@ -202,7 +200,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned()), Some("2222".to_owned())],
-                        commit: child1.clone()
+                        commit: child1
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -211,7 +209,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![1],
                         rails: vec![None, None],
-                        commit: parent.clone()
+                        commit: parent
                     }
                 ],
                 rails: vec![None, None]
@@ -237,7 +235,7 @@ mod tests {
                         outgoing: vec![1],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned()), Some("1111".to_owned())],
-                        commit: child.clone()
+                        commit: child
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -246,7 +244,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![None, Some("1111".to_owned())],
-                        commit: parent1.clone()
+                        commit: parent1
                     },
                     LayoutListEntry {
                         rail: 1,
@@ -255,7 +253,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![None, None],
-                        commit: parent2.clone()
+                        commit: parent2
                     }
                 ],
                 rails: vec![None, None]
@@ -288,7 +286,7 @@ mod tests {
                         outgoing: vec![1],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned()), Some("3333".to_owned())],
-                        commit: grandchild.clone()
+                        commit: grandchild
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -297,7 +295,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("1111".to_owned()), Some("3333".to_owned())],
-                        commit: child_left.clone()
+                        commit: child_left
                     },
                     LayoutListEntry {
                         rail: 1,
@@ -306,7 +304,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("1111".to_owned()), Some("1111".to_owned())],
-                        commit: child_right.clone()
+                        commit: child_right
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -315,7 +313,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![1],
                         rails: vec![None, None],
-                        commit: parent.clone()
+                        commit: parent
                     }
                 ],
                 rails: vec![None, None]
@@ -349,7 +347,7 @@ mod tests {
                         outgoing: vec![1],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned()), Some("3333".to_owned())],
-                        commit: grandchild.clone()
+                        commit: grandchild
                     },
                     LayoutListEntry {
                         rail: 1,
@@ -358,7 +356,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("2222".to_owned()), Some("2222".to_owned())],
-                        commit: child.clone()
+                        commit: child
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -367,7 +365,7 @@ mod tests {
                         outgoing: vec![1],
                         incoming: vec![1],
                         rails: vec![Some("0000".to_owned()), Some("1111".to_owned())],
-                        commit: parent.clone()
+                        commit: parent
                     },
                     LayoutListEntry {
                         rail: 1,
@@ -376,7 +374,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![],
                         rails: vec![Some("0000".to_owned()), Some("0000".to_owned())],
-                        commit: grandparent.clone()
+                        commit: grandparent
                     },
                     LayoutListEntry {
                         rail: 0,
@@ -385,7 +383,7 @@ mod tests {
                         outgoing: vec![],
                         incoming: vec![1],
                         rails: vec![None, None],
-                        commit: greatgrandparent.clone()
+                        commit: greatgrandparent
                     }
                 ],
                 rails: vec![None, None]

@@ -322,6 +322,9 @@ export function useDiff(source: 'commit' | 'stash' | 'index' | 'workdir', path: 
         untracked
     }));
 }
+listen<{commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 'workdir', parent?: string, untracked?: boolean}>('diff-changed', ev => {
+    Logger().debug('diff-changed', 'Diff changed', { paylod: ev.payload });
+});
 
 /**
  * =================================================

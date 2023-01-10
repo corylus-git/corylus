@@ -54,7 +54,7 @@ impl TryFrom<(git2::Branch<'_>, git2::BranchType)> for BranchInfo
         if let Some((remote, branch_name)) = split_branch_name(&branch) {
             Ok(BranchInfo {
                                 ref_name: branch_name,
-                                current: (&branch.0).is_head(),
+                                current: branch.0.is_head(),
                                 head: branch
                                     .0
                                     .into_reference()
@@ -78,7 +78,7 @@ fn split_branch_name(
 ) -> Option<(Option<String>, String)> {
     if let Ok(Some(branch_name)) = branch.0.name() {
         if branch.1 == git2::BranchType::Remote {
-            if let Some((remote, suffix)) = branch_name.split_once("/") {
+            if let Some((remote, suffix)) = branch_name.split_once('/') {
                 Some((Some(remote.to_owned()), suffix.to_owned()))
             } else {
                 None

@@ -1,4 +1,4 @@
-use log::{error, info, debug};
+use log::{error, debug};
 use tauri::Window;
 
 use crate::error::BackendError;
@@ -26,7 +26,7 @@ pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> Result<(
     with_backend(state, |backend| {
         let mut index = backend.repo.index()?;
         index.add_all([path], git2::IndexAddOption::DEFAULT, None)?;
-        window.emit("status-changed", ());
+        window.emit("status-changed", ())?;
         Ok(())
     })
     .await
@@ -36,10 +36,11 @@ pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> Result<(
 pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> Result<(), BackendError> {
     with_backend(state, |backend| {
         let head = backend.repo.head()?.peel_to_commit()?;
+        log::debug!("Unstaging {}", path);
         backend
             .repo
             .reset_default(Some(&head.into_object()), [path])?;
-        window.emit("status-changed", ());
+        window.emit("status-changed", ())?;
         Ok(())
     })
     .await
@@ -75,9 +76,9 @@ pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: 
                 debug!("Committed {}", oid);
             }
         }
-        backend.load_history(&window);
-        window.emit("status-changed", {});
-        window.emit("branches-changed", {});
+        backend.load_history(&window)?;
+        window.emit("status-changed", ())?;
+        window.emit("branches-changed", ())?;
         Ok(())
     })
     .await
@@ -86,4 +87,18 @@ pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: 
         error!("Could not commit. {}", e); 
         e
     })
+}
+
+#[tauri::command]
+pub async fn apply_diff(window: Window, state: StateType<'_>, diff: &str, revert: bool) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        log::debug!("Applying diff to index: {}", diff);
+        let diff = git2::Diff::from_buffer(diff.as_bytes())?;
+        let head_tree = backend.repo.head()?.peel_to_tree()?;
+        let mut index = backend.repo.apply_to_tree(&head_tree, &diff, None)?;
+        backend.repo.set_index(&mut index)?;
+        window.emit("status-changed", ())?;
+        window.emit("diff-changed", ())?;
+        Ok(())
+    }).await
 }

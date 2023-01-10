@@ -1,4 +1,4 @@
-use git2::{Direction, PushOptions};
+use git2::PushOptions;
 use log::debug;
 use tauri::Window;
 
@@ -12,20 +12,15 @@ pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>, Backen
         let remote_names = backend.repo.remotes()?;
         let remotes = remote_names
             .iter()
-            .map(|r| r.map(|name| backend.repo.find_remote(name)))
-            .flatten()
+            .filter_map(|r| r.map(|name| backend.repo.find_remote(name)))
             .flatten();
         Ok(remotes
             .filter_map(|remote| {
                 if let Some(name) = remote.name() {
-                    if let Some(url) = remote.url() {
-                        Some(RemoteMeta {
+                    remote.url().map(|u| RemoteMeta {
                             remote: name.to_owned(),
-                            url: url.to_owned(),
+                            url: u.to_owned(),
                         })
-                    } else {
-                        None
-                    }
                 } else {
                     None
                 }
@@ -42,9 +37,9 @@ pub async fn push(
     remote: String,
     branch: Option<String>,
     upstream: Option<String>,
-    set_upstream: Option<bool>,
-    force: Option<bool>,
-    push_tags: Option<bool>,
+    _set_upstream: Option<bool>,
+    _force: Option<bool>,
+    _push_tags: Option<bool>,
 ) -> Result<(), BackendError> {
     with_backend_mut(state, |backend| {
         let mut remote = backend.repo.find_remote(&remote)?;
@@ -64,7 +59,7 @@ pub async fn push(
             Some(&mut options),
         )?;
         debug!("Success");
-        window.emit("branches_changed", {});
+        window.emit("branches_changed", {})?;
         Ok(())
     })
     .await

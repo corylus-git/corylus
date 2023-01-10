@@ -4,7 +4,7 @@ use crate::error::BackendError;
 
 use super::git::DiffStatus;
 
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct IndexStatus {
     /**

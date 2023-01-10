@@ -1,8 +1,6 @@
-use std::{collections::{HashMap, hash_map::Entry}, hash::Hash};
-
 use config::Config;
 use directories::ProjectDirs;
-use serde::{Deserialize, Serialize, Deserializer, de::Visitor};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     error::BackendError,

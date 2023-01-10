@@ -11,7 +11,7 @@ pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>, BackendError> {
             let target = backend
                 .repo
                 .find_tag(tag_id)
-                .and_then(|tag| Ok(tag.target_id().to_string()))
+                .map(|tag| tag.target_id().to_string())
                 .ok();
             log::debug!(
                 "Tag: {} ({}) -> {:?}",

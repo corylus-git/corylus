@@ -1,4 +1,4 @@
-use serde::{Serialize};
+use serde::Serialize;
 
 use super::git::Commit;
 
@@ -10,7 +10,7 @@ pub type Rail = Option<String>;
 /**
  * A layout list entry representing one specific line in the graph
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all="camelCase")]
 pub struct LayoutListEntry {
     /**
@@ -47,7 +47,7 @@ pub struct LayoutListEntry {
 /**
  * Data structure representing a graph state
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all="camelCase")]
 pub struct GraphLayoutData {
     /**
@@ -63,7 +63,7 @@ pub struct GraphLayoutData {
 /**
  * Information about the area of a change in the history graph
  */
-#[derive(Clone, Serialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all="camelCase")]
 pub struct GraphChangeData {
     /**

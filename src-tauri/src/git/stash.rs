@@ -26,7 +26,7 @@ pub async fn stash(
                 None
             },
         )?;
-        window.emit("stashed_changed", {});
+        window.emit("stashed_changed", {})?;
         Ok(())
     })
     .await
@@ -39,13 +39,13 @@ pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendErr
         backend.repo.stash_foreach(|idx, message, oid| {
             stashes_data.push((idx, message.to_owned(), oid.to_owned()));
             true
-        });
+        })?;
         stashes_data
             .iter()
-            .map(|(idx, message, oid)| {
+            .map(|(idx, _message, oid)| {
                 let commit = backend.repo.find_commit(*oid)?;
                 Ok(Commit::Stash(StashData {
-                    ref_name: format!("stash@{{{}}}", idx).to_owned(),
+                    ref_name: format!("stash@{{{}}}", idx),
                     oid: oid.to_string(),
                     short_oid: "".to_owned(),
                     message: commit.message().unwrap_or("").to_owned(),
@@ -84,7 +84,7 @@ pub async fn get_stash_stats(
                 )
             })
             .ok()
-            .and_then(|diff| Some(map_diff(&diff)));
+            .map(|diff| map_diff(&diff));
         let untracked_stats = stash_commit
             .parent(2)
             .and_then(|commit| commit.tree())
@@ -96,7 +96,7 @@ pub async fn get_stash_stats(
                 )
             })
             .ok()
-            .and_then(|diff| Some(map_diff(&diff)));
+            .map(|diff| map_diff(&diff));
         window.emit(
             "commitStatsChanged",
             CommitStats::Stash(StashStatsData {
@@ -105,7 +105,7 @@ pub async fn get_stash_stats(
                 index: index_stats,
                 untracked: untracked_stats,
             }),
-        );
+        )?;
         Ok(())
     })
     .await

@@ -10,7 +10,7 @@ use super::{
     model::{
         git::{
             Commit, CommitStats, CommitStatsData, DiffStat, DiffStatus, FileStats, FullCommitData,
-            GraphNodeData, ParentReference, StashData,
+            ParentReference, StashData,
         },
         graph::GraphLayoutData,
     },
@@ -30,9 +30,9 @@ fn replace_in_history(
                 let mut new_parents: Vec<ParentReference> = c
                     .as_graph_node()
                     .parents()
-                    .into_iter()
+                    .iter()
                     .filter(|p| p.oid != oid)
-                    .map(|p| p.clone())
+                    .cloned()
                     .collect();
                 if new_parents.len() < c.as_graph_node().parents().len() {
                     new_parents.extend_from_slice(replace_with);
@@ -99,10 +99,8 @@ fn has_indirect_path(graph: &HashMap<String, Vec<String>>, start: &str, end: &st
         for neighbor in n {
             if neighbor == end {
                 return !is_start // paths only count if this is an indirect path
-            } else {
-                if has_indirect_path(graph, neighbor, end, false) {
-                    return true
-                }
+            } else if has_indirect_path(graph, neighbor, end, false) {
+                return true
             }
         }
         false
@@ -156,7 +154,7 @@ pub fn load_history(
     for current in revwalk {
         let commit = current.and_then(|oid| repo.find_commit(oid))?;
         let output = map_commit(&commit, false)?;
-        if has_changes(&commit, &ps, &mut diffopts, &repo)? {
+        if has_changes(&commit, &ps, &mut diffopts, repo)? {
             internal_history.push(output);
         } else {
             internal_history = replace_in_history(
@@ -191,10 +189,10 @@ pub async fn get_graph(
 }
 
 #[tauri::command]
-pub async fn get_commit(state: StateType<'_>, refNameOrOid: &str) -> Result<Commit, BackendError> {
+pub async fn get_commit(state: StateType<'_>, ref_name_or_oid: &str) -> Result<Commit, BackendError> {
     with_backend(state, |backend| {
         let parsed_oid =
-            Oid::from_str(refNameOrOid).or_else(|_| backend.repo.refname_to_id(refNameOrOid))?;
+            Oid::from_str(ref_name_or_oid).or_else(|_| backend.repo.refname_to_id(ref_name_or_oid))?;
         let commit = backend.repo.find_commit(parsed_oid)?;
         map_commit(&commit, false)
     })
@@ -227,7 +225,7 @@ pub async fn get_commit_stats(
                     Some(DiffOptions::new().patience(true)),
                 )
             })
-            .and_then(|diff| Ok(map_diff(&diff)))
+            .map(|diff| map_diff(&diff))
             .ok();
 
         window.emit(
@@ -237,7 +235,7 @@ pub async fn get_commit_stats(
                 direct,
                 incoming,
             }),
-        );
+        )?;
         Ok(())
     })
     .await
@@ -267,11 +265,10 @@ pub fn map_diff(diff: &git2::Diff) -> Vec<DiffStat> {
     diff.deltas()
         .enumerate()
         .map(|(idx, delta)| {
-            let (_, additions, deletions) = Patch::from_diff(&diff, idx)
+            let (_, additions, deletions) = Patch::from_diff(diff, idx)
                 .ok()
                 .flatten()
-                .map(|p| p.line_stats().ok())
-                .flatten()
+                .and_then(|p| p.line_stats().ok())
                 .unwrap_or((0, 0, 0));
             DiffStat {
                 file: FileStats {

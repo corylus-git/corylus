@@ -21,6 +21,12 @@ impl From<git2::Error> for BackendError {
     }
 }
 
+impl From<tauri::Error> for BackendError {
+    fn from(err: tauri::Error) -> Self {
+        Self::new(&err.to_string())
+    }
+}
+
 impl Display for BackendError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.message.as_str())

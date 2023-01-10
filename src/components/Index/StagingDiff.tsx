@@ -2,7 +2,7 @@ import React from 'react';
 import { ChunkRendererProps, DiffViewer, SelectedLines, maxLineNumber } from '../Diff/DiffViewer';
 import { serializeDiff, modifyDiff } from '../../util/diff';
 import styled from 'styled-components';
-import { FileDiff, parse } from '../../util/diff-parser';
+import { FileDiff } from '../../util/diff-parser';
 import { Logger } from '../../util/logger';
 import { calculateHighlightAreas } from '../../util/diff-highlighter';
 
@@ -122,7 +122,7 @@ export const StagingDiff: React.FC<{
         <DiffViewer
             file={diff}
             chunk={StagingChunk}
-            onContextMenu={(ev, currentSelection) => {
+            onContextMenu={(_ev, currentSelection) => {
                 if (currentSelection) {
                     const newDiff = serializeDiff(
                         diff.header,
