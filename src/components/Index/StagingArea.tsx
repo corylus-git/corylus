@@ -86,7 +86,7 @@ export const StagingArea: React.FC<{
                         onClick={() =>
                             props.onUnstagePath({
                                 type: 'dir',
-                                path: '.',
+                                path: '',
                                 workdirStatus: 'modified',
                                 indexStatus: 'unknown',
                                 isConflicted: false,
