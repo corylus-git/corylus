@@ -2,10 +2,7 @@ import { Logger } from '../../util/logger';
 import { Tag, BranchInfo, Stash, IndexStatus, Commit, CommitStats, CommitStatsData } from '../stateObjects';
 import { just, Maybe } from '../../util/maybe';
 import { toast } from 'react-toastify';
-import { structuredToast } from '../../util/structuredToast';
 // import { MergeResult } from 'simple-git/promise';
-import { IndexTreeNode } from '../../components/Index/IndexTree';
-import { exists } from '@tauri-apps/api/fs';
 // import fs from 'fs';
 import { join } from '@tauri-apps/api/path';
 import { repoStore } from '../state/repo';
@@ -152,7 +149,7 @@ export const addWorktree = trackError(
         Logger().info('addWorktree', 'creating worktree', {
             path, ref
         });
-        await repoStore.getState().backend.checkoutWorktree(ref, path);
+        await invoke('checkout_worktree', { refName: ref, path});
         Logger().info('addWorktree', 'Success');
     }
 )

@@ -27,7 +27,7 @@ use crate::{
         index::{commit, get_status, stage, unstage, apply_diff},
         remote::{get_remotes, push}, stash::{get_stashes, stash, get_stash_stats},
         branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch},
-        worktree::get_worktrees,
+        worktree::{get_worktrees, checkout_worktree},
         tags::get_tags,
         config::get_config,
         files::get_files
@@ -72,6 +72,7 @@ fn main() {
             delete_branch,
             change_branch,
             get_worktrees,
+            checkout_worktree,
             get_tags,
             get_config,
             get_files,

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import styled from 'styled-components';
+import { open, message } from '@tauri-apps/api/dialog';
 
 import { BranchInfo, RemoteMeta } from '../../model/stateObjects';
 import { TreeNode, Tree } from '../util/Tree/Tree';
@@ -19,6 +20,7 @@ import {
     useRemotes,
     useAffectedBranches,
     useBranches,
+    repoStore,
 } from '../../model/state/repo';
 import { StyledButton } from '../util/StyledButton';
 
@@ -30,7 +32,7 @@ import { Hoverable } from '../StyleBase';
 import { WorkTree } from './WorkTree';
 import { UpstreamMissing } from './UpstreamMissing';
 import { SectionHeader } from './SectionHeader';
-import { getTab } from '../../model/state/tabs';
+import { getTab, tabsStore } from '../../model/state/tabs';
 import { ControlledMenu, ControlledMenuProps, MenuGroup, MenuItem, useMenuState } from '@szhsin/react-menu';
 
 export interface BranchesProps {
@@ -109,13 +111,23 @@ const ContextMenu: React.FC<{
                     <MenuItem>Rebase {props.currentBranch.value.refName} on {props.branch.refName}</MenuItem>
                     <MenuItem>Interactive rebase {props.currentBranch!.value.refName} on {props.branch.refName}</MenuItem>
                     {
-                        props.branch.worktree && getTab(props.branch.worktree) && <MenuItem>Switch to worktree tab at {props.branch.worktree}</MenuItem>
+                        props.branch.worktree && getTab(props.branch.worktree) && <MenuItem onClick={() => tabsStore.getState().switchTab(getTab(props.branch.worktree!)!)}>Switch to worktree tab at {props.branch.worktree}</MenuItem>
                     }
                     {
-                        props.branch.worktree && !getTab(props.branch.worktree) && <MenuItem>Open worktree at {props.branch.worktree}</MenuItem>
+                        props.branch.worktree && !getTab(props.branch.worktree) && <MenuItem onClick={() => tabsStore.getState().openRepoInNew(props.branch.worktree!) }>Open worktree at {props.branch.worktree}</MenuItem>
                     }
                     {
-                        !props.branch.worktree && <MenuItem>Check {props.branch.refName} out as worktree</MenuItem>
+                        !props.branch.worktree && <MenuItem onClick={async () => {
+                            const dir = await open({
+                                title: 'Choose parent directory to create the worktree in',
+                                directory: true
+                            });
+
+                            if (dir && !Array.isArray(dir)) {
+                                await addWorktree(`refs/heads/${props.branch.refName}`, dir);
+                                tabsStore.getState().openRepoInNew(dir);
+                            }
+                        }}>Check {props.branch.refName} out as worktree</MenuItem>
                     }
                 </MenuGroup>
             }
@@ -400,7 +412,7 @@ function BranchTree(props: {
             }}
             onEntryClick={(meta) => {
                 if ((meta as BranchInfo)?.head) {
-                    // repoStore.getState().selectCommit((meta as BranchInfo).head);
+                    repoStore.getState().setSelectedCommit((meta as BranchInfo).head);
                 }
             }}
             onEntryDoubleClick={(branch) => {

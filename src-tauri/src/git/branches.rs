@@ -18,12 +18,7 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, Backe
         let result = branches.filter_map(|branch| {
             branch.ok().and_then(|b| {
                 let worktree = worktrees.iter().find(|wt| {
-                    b.0.get()
-                       .peel_to_commit()
-                       .ok()
-                        .map(|c| c.as_object().id().to_string())
-                        .and_then(|id| wt.oid.as_ref().map(|oid| &id == oid))
-                        .unwrap_or(false)
+                    wt.branch.as_ref().map_or(false, |wtb| wtb == b.0.get().name().unwrap_or(""))
                 });
                 BranchInfo::try_from(b).ok().map(|mut bi| {
                     bi.worktree = worktree.map(|wt| wt.path.clone());
