@@ -1,7 +1,7 @@
 {
-  "name": "tauri-app",
+  "name": "corylus",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0.git",
   "type": "module",
   "scripts": {
     "dev": "vite",
