@@ -6,8 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "Corylus",
-    "version": "0.0.0"
+    "productName": "Corylus"
   },
   "tauri": {
     "allowlist": {

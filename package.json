@@ -1,7 +1,6 @@
 {
   "name": "corylus",
   "private": true,
-  "version": "0.2.0.git",
   "type": "module",
   "scripts": {
     "dev": "vite",

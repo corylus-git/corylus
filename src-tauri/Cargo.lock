@@ -407,6 +407,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "corylus"
+version = "0.2.0"
+dependencies = [
+ "config",
+ "directories",
+ "git2",
+ "lazy_static",
+ "log",
+ "serde",
+ "serde_json",
+ "simple_logger",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2931,22 +2947,6 @@ dependencies = [
  "webkit2gtk",
  "webview2-com",
  "windows 0.39.0",
-]
-
-[[package]]
-name = "tauri-app"
-version = "0.0.0"
-dependencies = [
- "config",
- "directories",
- "git2",
- "lazy_static",
- "log",
- "serde",
- "serde_json",
- "simple_logger",
- "tauri",
- "tauri-build",
 ]
 
 [[package]]
