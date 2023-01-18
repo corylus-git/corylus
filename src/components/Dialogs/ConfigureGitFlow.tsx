@@ -35,20 +35,20 @@ export const ConfigureGitFlow: React.FC = () => {
         <Modal isOpen={true}>
             <Formik
                 onSubmit={(values) => {
-                    configure({
-                        branch: {
-                            master: values.master,
-                            develop: values.develop,
-                        },
-                        prefix: {
-                            feature: values.feature,
-                            release: values.release,
-                            support: values.support,
-                            hotfix: values.hotfix,
-                            bugfix: values.bugfix,
-                            versiontag: values.tags,
-                        },
-                    });
+                    // configure({
+                    //     branch: {
+                    //         master: values.master,
+                    //         develop: values.develop,
+                    //     },
+                    //     prefix: {
+                    //         feature: values.feature,
+                    //         release: values.release,
+                    //         support: values.support,
+                    //         hotfix: values.hotfix,
+                    //         bugfix: values.bugfix,
+                    //         versiontag: values.tags,
+                    //     },
+                    // });
                     dialog.close();
                 }}
                 onReset={() => dialog.close()}

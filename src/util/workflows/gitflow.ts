@@ -41,23 +41,23 @@ export class Gitflow implements IGitWorkflow {
             return [
                 {
                     type: 'feature',
-                    base: this.config.value.branch.develop,
-                    prefix: this.config.value.prefix.feature,
+                    base: this.config.value.branch.develop.value,
+                    prefix: this.config.value.prefix.feature.value,
                 },
                 {
                     type: 'bugfix',
-                    base: this.config.value.branch.develop,
-                    prefix: this.config.value.prefix.bugfix,
+                    base: this.config.value.branch.develop.value,
+                    prefix: this.config.value.prefix.bugfix.value,
                 },
                 {
                     type: 'release',
-                    base: this.config.value.branch.develop,
-                    prefix: this.config.value.prefix.release,
+                    base: this.config.value.branch.develop.value,
+                    prefix: this.config.value.prefix.release.value,
                 },
                 {
                     type: 'hotfix',
-                    base: this.config.value.branch.master,
-                    prefix: this.config.value.prefix.hotfix,
+                    base: this.config.value.branch.master.value,
+                    prefix: this.config.value.prefix.hotfix.value,
                 },
             ];
         }
@@ -105,8 +105,9 @@ export class Gitflow implements IGitWorkflow {
     // }
 
     private get config(): Maybe<IGitFlowConfigValues> {
-        const local = repoStore.getState().config.local;
-        return local?.gitFlow ? just(local.gitFlow) : nothing;
+        return nothing;
+        //const local = repoStore.getState().config.local;
+        //return local?.gitFlow ? just(local.gitFlow) : nothing;
     }
 }
 
@@ -115,14 +116,14 @@ export const configure = async (config: IGitFlowConfigValues): Promise<void> => 
     Logger().info('GitFlow', 'Initializing Gitflow');
     // set the config
     Logger().info('Gitflow', 'Setting gitflow config', { config: config });
-    await backend.setConfigValue('gitflow.branch.master', config.branch.master, 'local');
-    await backend.setConfigValue('gitflow.branch.develop', config.branch.develop, 'local');
-    await backend.setConfigValue('gitflow.prefix.feature', config.prefix.feature, 'local');
-    await backend.setConfigValue('gitflow.prefix.bugfix', config.prefix.bugfix, 'local');
-    await backend.setConfigValue('gitflow.prefix.release', config.prefix.release, 'local');
-    await backend.setConfigValue('gitflow.prefix.hotfix', config.prefix.hotfix, 'local');
-    await backend.setConfigValue('gitflow.prefix.support', config.prefix.support, 'local');
-    await backend.setConfigValue('gitflow.prefix.versiontag', config.prefix.versiontag, 'local');
+    // await backend.setConfigValue('gitflow.branch.master', config.branch.master, 'local');
+    // await backend.setConfigValue('gitflow.branch.develop', config.branch.develop, 'local');
+    // await backend.setConfigValue('gitflow.prefix.feature', config.prefix.feature, 'local');
+    // await backend.setConfigValue('gitflow.prefix.bugfix', config.prefix.bugfix, 'local');
+    // await backend.setConfigValue('gitflow.prefix.release', config.prefix.release, 'local');
+    // await backend.setConfigValue('gitflow.prefix.hotfix', config.prefix.hotfix, 'local');
+    // await backend.setConfigValue('gitflow.prefix.support', config.prefix.support, 'local');
+    // await backend.setConfigValue('gitflow.prefix.versiontag', config.prefix.versiontag, 'local');
     // get the history in order to decide, whether we can create our branches at all
     const history = await backend.getHistory();
     if (history.length === 0) {
@@ -134,27 +135,27 @@ export const configure = async (config: IGitFlowConfigValues): Promise<void> => 
         backend.commit('Initial commit');
         // this will have created an initial commit on 'master' -> if the configuration wants to have a different
         //  branch name, rename it
-        if (config.branch.master !== 'master') {
-            backend.renameBranch('master', config.branch.master);
-        }
+        // if (config.branch.master !== 'master') {
+        //     backend.renameBranch('master', config.branch.master);
+        // }
     }
     // create the two long-lived branches first, if necessary
     const branches = await backend.getBranches();
-    if (branches.findIndex((b) => b.refName === config.branch.master) === -1) {
-        Logger().info('Gitflow', 'Creating master branch');
-        backend.branch(config.branch.master, 'HEAD', true);
-    } else {
-        Logger().debug('Gitflow', 'Master branch already exists. Not recreating.');
-    }
-    if (branches.findIndex((b) => b.refName === config.branch.develop) === -1) {
-        Logger().info('Gitflow', 'Creating develop branch');
-        backend.branch(config.branch.develop, 'HEAD', false);
-    } else {
-        Logger().debug('Gitflow', 'Develop branch already exists. Checking out.');
-        backend.checkout(config.branch.develop);
-    }
-    repoStore.getState().getConfig();
-    toast.success('Successfully set up repository for GitFlow');
+    // if (branches.findIndex((b) => b.refName === config.branch.master) === -1) {
+    //     Logger().info('Gitflow', 'Creating master branch');
+    //     backend.branch(config.branch.master, 'HEAD', true);
+    // } else {
+    //     Logger().debug('Gitflow', 'Master branch already exists. Not recreating.');
+    // }
+    // if (branches.findIndex((b) => b.refName === config.branch.develop) === -1) {
+    //     Logger().info('Gitflow', 'Creating develop branch');
+    //     backend.branch(config.branch.develop, 'HEAD', false);
+    // } else {
+    //     Logger().debug('Gitflow', 'Develop branch already exists. Checking out.');
+    //     backend.checkout(config.branch.develop);
+    // }
+    // repoStore.getState().getConfig();
+    // toast.success('Successfully set up repository for GitFlow');
 };
 
 export const startBranch = async (
@@ -165,25 +166,25 @@ export const startBranch = async (
 ): Promise<void> => {
     Logger().debug('GitFlow', `Starting new ${type} branch`);
     const repo = repoStore.getState();
-    const sourceBranch = repo.branches.find((b) => b.refName === source);
-    const sourceBehind = sourceBranch?.upstream?.behind ?? 0;
-    if (
-        sourceBehind > 0 &&
-        confirm(`${source} is not up-to-date with its upstream. Pull changes first?`)
-    ) {
-        await repo.backend.fetch({
-            remote: fromNullable(sourceBranch!.upstream?.remoteName),
-            branch: just(`${sourceBranch?.upstream?.ref}:${sourceBranch?.refName}`),
-            prune: false,
-            fetchTags: false,
-        });
-    }
-    dialog.open({
-        type: 'request-new-branch',
-        subType: 'workflow',
-        source: just(source),
-        branchPrefix: just(prefix),
-    });
+    // const sourceBranch = repo.branches.find((b) => b.refName === source);
+    // const sourceBehind = sourceBranch?.upstream?.behind ?? 0;
+    // if (
+    //     sourceBehind > 0 &&
+    //     confirm(`${source} is not up-to-date with its upstream. Pull changes first?`)
+    // ) {
+    //     await repo.backend.fetch({
+    //         remote: fromNullable(sourceBranch!.upstream?.remoteName),
+    //         branch: just(`${sourceBranch?.upstream?.ref}:${sourceBranch?.refName}`),
+    //         prune: false,
+    //         fetchTags: false,
+    //     });
+    // }
+    // dialog.open({
+    //     type: 'request-new-branch',
+    //     subType: 'workflow',
+    //     source: just(source),
+    //     branchPrefix: just(prefix),
+    // });
 };
 
 export const finishBranch = async (type: GitflowBranchType, target: string): Promise<void> => {

@@ -412,7 +412,7 @@ function BranchTree(props: {
             }}
             onEntryClick={(meta) => {
                 if ((meta as BranchInfo)?.head) {
-                    repoStore.getState().setSelectedCommit((meta as BranchInfo).head);
+                /*     repoStore.getState().setSelectedCommit((meta as BranchInfo).head); */
                 }
             }}
             onEntryDoubleClick={(branch) => {

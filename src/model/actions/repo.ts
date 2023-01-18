@@ -87,8 +87,8 @@ export const fetchRemote = trackError(
             progress.getState().setProgress('Finished fetching changes', false, 5000);
             repoStore.getState().loadHistory();
             // repoStore.getState().loadBranches();
-            repoStore.getState().loadRemotes();
-            repoStore.getState().loadTags();
+            // repoStore.getState().loadRemotes();
+            // repoStore.getState().loadTags();
         } catch (e) {
             progress.getState().setProgress('Failed fetching changes', false, 5000);
             throw e;
@@ -111,7 +111,7 @@ export const push = trackError(
             await invoke('push', {
                 branch: sourceBranch,
                 remote: remote,
-                upstream: upstream,
+                    upstream: upstream,
                 setUpstream: setUpstream,
                 pushTags
             });
@@ -368,7 +368,6 @@ export const applyStash = trackError(
         });
         await repoStore.getState().backend.applyStash(stash, deleteAfterApply);
         Logger().debug('applyStash', 'Success');
-        await repoStore.getState().loadStashes();
         // repoStore.getState().getStatus();
     }
 );
@@ -382,7 +381,6 @@ export const dropStash = trackError(
         });
         await repoStore.getState().backend.dropStash(stash);
         Logger().debug('dropStash', 'Success');
-        await repoStore.getState().loadStashes();
         // repoStore.getState().getStatus();
     }
 );
@@ -398,7 +396,6 @@ export const createTag = trackError(
         });
         await repoStore.getState().backend.createTag(tag, ref, message);
         Logger().silly('createTag', 'Success.');
-        await repoStore.getState().loadTags();
     }
 );
 
@@ -409,7 +406,6 @@ export const deleteTag = trackError(
         Logger().debug('deleteTag', 'Deleting tag', { tag });
         await repoStore.getState().backend.deleteTag(tag);
         Logger().silly('deleteTag', 'Success');
-        await repoStore.getState().loadTags();
     }
 );
 
@@ -494,7 +490,6 @@ export const addRemote = trackError(
     async (name: string, url: string): Promise<void> => {
         Logger().debug('addRemote', 'Adding new remote', { name, url });
         await repoStore.getState().backend.addRemote(name, url);
-        await repoStore.getState().loadRemotes();
     }
 );
 
@@ -504,7 +499,6 @@ export const updateRemote = trackError(
     async (name: string, url: string): Promise<void> => {
         Logger().debug('updateRemote', 'Updating remote', { name, url });
         await repoStore.getState().backend.updateRemote(name, url);
-        await repoStore.getState().loadRemotes();
     }
 );
 
@@ -514,7 +508,6 @@ export const deleteRemote = trackError(
     async (name: string): Promise<void> => {
         Logger().debug('deleteRemote', 'Deleting remote', { name });
         await repoStore.getState().backend.deleteRemote(name);
-        await repoStore.getState().loadRemotes();
         await repoStore.getState().loadHistory();
         // await repoStore.getState().loadBranches();
     }
@@ -544,7 +537,6 @@ export const rebase = trackError(
         const promises = [
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
-            repoStore.getState().loadTags(),
             // repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
@@ -560,7 +552,6 @@ export const abortRebase = trackError(
         const promises = [
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
-            repoStore.getState().loadTags(),
             // repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
@@ -576,7 +567,6 @@ export const continueRebase = trackError(
         const promises = [
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
-            repoStore.getState().loadTags(),
             // repoStore.getState().getStatus(),
         ];
         await Promise.all(promises);
@@ -588,17 +578,17 @@ export const syncConfig = trackError(
     'syncConfig',
     async (values: IGitConfig): Promise<void> => {
         const store = repoStore.getState().backend.setConfigValue;
-        await store(
-            AUTOFETCHENABLED,
-            values.global?.corylus?.autoFetchEnabled ? 'true' : 'false',
-            'global'
-        );
-        await store(
-            AUTOFETCHINTERVAL,
-            `${values.global?.corylus?.autoFetchInterval ?? 5}`,
-            'global'
-        );
-        await repoStore.getState().getConfig(); // reload the config after successful store
+        // await store(
+        //     AUTOFETCHENABLED,
+        //     values.global?.corylus?.autoFetchEnabled ? 'true' : 'false',
+        //     'global'
+        // );
+        // await store(
+        //     AUTOFETCHINTERVAL,
+        //     `${values.global?.corylus?.autoFetchInterval ?? 5}`,
+        //     'global'
+        // );
+        // await repoStore.getState().getConfig(); // reload the config after successful store
         toast.success('Sucessfully stored config values');
     }
 );
