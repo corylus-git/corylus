@@ -1,8 +1,8 @@
 [package]
-name = "tauri-app"
-version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+name = "corylus"
+version = "0.2.0"
+description = "A Git UI"
+authors = ["Markus Brueckner"]
 license = ""
 repository = ""
 edition = "2021"
