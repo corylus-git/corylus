@@ -1,7 +1,6 @@
 import React, { ComponentProps, useRef } from 'react';
 import styled from 'styled-components';
 import CloseIcon from '../icons/CloseIcon.svg';
-import { unsafeDefinitely } from '../../util/maybe';
 import { NewTab } from '../NewTab/NewTab';
 import { Repository } from '../Repository';
 import { useTabs } from '../../model/state/tabs';
@@ -9,7 +8,7 @@ import { Logger } from '../../util/logger';
 
 const TabContainer = styled.div`
     display: grid;
-    grid-template-rows: 1.5rem 1fr;
+    grid-template-rows: 2rem 1fr;
     height: 100%;
 `;
 
@@ -17,6 +16,7 @@ const TabHeader = styled.nav`
     position: relative;
     display: grid;
     border-bottom: 1px solid var(--border);
+    height: 2rem;
     grid-template-columns: 1fr 2rem;
 
     .scroll-container {
@@ -28,7 +28,7 @@ const TabHeader = styled.nav`
         .tabs-header-container {
             display: flex;
             overflow: hidden;
-            height: 1.5rem;
+            height: 2rem;
         }
     }
 `;
@@ -99,6 +99,7 @@ const NavButton = styled.button`
     font-weight: 100;
     text-align: center;
     cursor: pointer;
+    height: 2rem;
 `;
 
 function doScroll(
@@ -201,6 +202,7 @@ export const Tabs: React.FC = () => {
                             position: 'absolute',
                             right: 0,
                             top: 0,
+                            display: 'inline-block',
                         }}>
                         &gt;
                     </NavButton>

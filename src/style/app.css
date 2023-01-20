@@ -22,6 +22,10 @@
     --diff-conflict-value: 255, 0, 0;
 }
 
+html {
+    font-size: 16px;
+}
+
 /* The diff classes */
 .diff-insert {
     background-color: hsl(120, 30%, calc(50% + (var(--lightness) - 50%) / 1.2));
