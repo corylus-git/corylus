@@ -46,7 +46,7 @@ const Highlighter: React.FC<{ str: string; searchTerm?: string; fullHighlight?: 
 
 function CommitMessage(props: { message: string; searchTerm?: string }) {
     return (
-        <pre style={{ margin: 0, padding: 0, fontFamily: 'inherit', display: 'inline' }}>
+        <pre style={{ margin: 0, padding: 0, fontFamily: 'inherit', display: 'inline'}}>
             <Highlighter str={props.message} searchTerm={props.searchTerm} />
         </pre>
     );
@@ -67,10 +67,11 @@ export const CommitInfo: React.FC<CommitInfoProps> = (props) => {
                 padding: '5px',
                 boxSizing: 'border-box',
                 cursor: 'pointer',
+				overflow: 'hidden',
             }}>
             <div
                 style={{
-                    height: '1.2rem',
+                    height: '1.4rem',
                     overflow: 'hidden',
                     margin: 0,
                     whiteSpace: 'nowrap',

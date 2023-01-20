@@ -15,8 +15,19 @@ const CommitMessage = styled.div`
 
 const CommitEntry = styled(HoverableDiv) <{ isSelected?: boolean }>`
     display: flex;
-    min-height: 3rem;
     background-color: ${(props) => (props.isSelected ? 'var(--selected)' : undefined)};
+`;
+
+const ZoomSizeDetector = styled.div`
+	position: absolute;
+	z-index: -100;
+	width: 1rem;
+	height: 1rem;
+	margin: 0;
+	border: 0;
+	top: 0;
+	left: 0;
+	display: hidden;
 `;
 
 export interface SizableControlProps {
@@ -94,6 +105,14 @@ export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps> = (p
 
 export const GraphRenderer = React.forwardRef<ListSelector, GraphRendererProps>((props, ref) => {
     const { getLine, branches, tags, searchTerm, onOpenContextMenu } = props;
+	const zoomDetectorRef = React.useRef();
+	const [baseHeight, setBaseHeight] = React.useState(16);
+
+	React.useEffect(() => {
+		if (zoomDetectorRef.current) {
+			setBaseHeight(zoomDetectorRef.current.clientHeight);
+		}
+	}, [zoomDetectorRef.current]);
 
     const ListEntry = (props: SelectableListEntryProps) => (
         <GraphLine
@@ -112,7 +131,7 @@ export const GraphRenderer = React.forwardRef<ListSelector, GraphRendererProps>(
                 style={{
                     marginTop: '0.5rem',
                 }}
-                itemSize={48}
+                itemSize={baseHeight*3}
                 itemCount={props.totalCommits}
                 width={props.width}
                 height={props.height}
@@ -124,6 +143,7 @@ export const GraphRenderer = React.forwardRef<ListSelector, GraphRendererProps>(
                 multi={props.multi}>
                 {ListEntry}
             </SelectableList>
+			<ZoomSizeDetector ref={zoomDetectorRef} />
         </>
     );
 });
