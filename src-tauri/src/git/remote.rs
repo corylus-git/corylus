@@ -1,4 +1,4 @@
-use git2::PushOptions;
+use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions};
 use log::debug;
 use tauri::Window;
 
@@ -18,9 +18,9 @@ pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>, Backen
             .filter_map(|remote| {
                 if let Some(name) = remote.name() {
                     remote.url().map(|u| RemoteMeta {
-                            remote: name.to_owned(),
-                            url: u.to_owned(),
-                        })
+                        remote: name.to_owned(),
+                        url: u.to_owned(),
+                    })
                 } else {
                     None
                 }
@@ -53,13 +53,56 @@ pub async fn push(
         } else {
             vec![]
         };
-        debug!("Pushing to {} {:?}", remote.name().unwrap_or("<invalid>"), refspecs);
-        remote.push(
-            &refspecs,
-            Some(&mut options),
-        )?;
+        debug!(
+            "Pushing to {} {:?}",
+            remote.name().unwrap_or("<invalid>"),
+            refspecs
+        );
+        remote.push(&refspecs, Some(&mut options))?;
         debug!("Success");
         window.emit("branches_changed", {})?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn fetch(
+    state: StateType<'_>,
+    window: Window,
+    remote: Option<&str>,
+    ref_spec: Option<&str>,
+    prune: bool,
+    fetch_tags: bool,
+) -> Result<(), BackendError> {
+    with_backend_mut(state, |backend| {
+        backend
+            .repo
+            .remotes()?
+            .iter()
+            .try_for_each(|remote_name| -> Result<(), BackendError> {
+                if let Some(name) = remote_name {
+                    if remote.is_none() || remote.unwrap() == name {
+                        debug!("Fetching changes from remote {}", name);
+                        let mut r = backend.repo.find_remote(name)?;
+                        let mut options = FetchOptions::new();
+                        options.prune(if prune {
+                            FetchPrune::On
+                        } else {
+                            FetchPrune::Off
+                        });
+                        options.download_tags(if fetch_tags {
+                            AutotagOption::All
+                        } else {
+                            AutotagOption::None
+                        });
+                        r.fetch(&ref_spec.map_or([""], |rs| [rs]), Some(&mut options), None)?;
+                    }
+                }
+                Ok(())
+            })?;
+        window.emit("branches_changed", {})?;
+        window.emit("history_changed", {})?;
         Ok(())
     })
     .await

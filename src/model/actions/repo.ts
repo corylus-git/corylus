@@ -1,6 +1,6 @@
 import { Logger } from '../../util/logger';
 import { Tag, BranchInfo, Stash, IndexStatus, Commit, CommitStats, CommitStatsData } from '../stateObjects';
-import { just, Maybe } from '../../util/maybe';
+import { just, Maybe, toOptional } from '../../util/maybe';
 import { toast } from 'react-toastify';
 // import { MergeResult } from 'simple-git/promise';
 // import fs from 'fs';
@@ -78,17 +78,13 @@ export const fetchRemote = trackError(
     ): Promise<void> => {
         try {
             progress.getState().setProgress('Fetching remote changes', true);
-            await repoStore.getState().backend.fetch({
-                prune: prune,
-                remote: remote,
-                branch: refSpec,
-                fetchTags: fetchTags,
+            await invoke('fetch', {
+                remote: toOptional(remote),
+                refSpec: toOptional(refSpec),
+                prune,
+                fetchTags,
             });
             progress.getState().setProgress('Finished fetching changes', false, 5000);
-            repoStore.getState().loadHistory();
-            // repoStore.getState().loadBranches();
-            // repoStore.getState().loadRemotes();
-            // repoStore.getState().loadTags();
         } catch (e) {
             progress.getState().setProgress('Failed fetching changes', false, 5000);
             throw e;
