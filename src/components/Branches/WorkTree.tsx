@@ -18,4 +18,5 @@ const WorkTreeSpan = styled.span`
     z-index: 3;
 `;
 
-export const WorkTree: React.FC<{title: string}> = props => <WorkTreeSpan title={props.title}>→</WorkTreeSpan>
+// TODO find a decent visualization of a work tree being the "main" tree, i.e. the one checked out in the common working copy path
+export const WorkTree: React.FC<{title: string, isOnCommonPath: boolean}> = props => <WorkTreeSpan title={props.title}>→</WorkTreeSpan>

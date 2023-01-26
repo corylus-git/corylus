@@ -326,7 +326,7 @@ const BranchNodeDisplay: React.FC<{
                     </UpstreamMissing>
                 )}
                 {props.branch.found && !props.branch.value.current && props.branch.value.worktree &&
-                    <WorkTree title={`This branch is checked out as a work tree at ${props.branch.value.worktree}`} />
+                    <WorkTree title={`This branch is checked out as a work tree at ${props.branch.value.worktree}`} isOnCommonPath={props.branch.value.isOnCommonPath} />
                 }
             </Branch>
         </>

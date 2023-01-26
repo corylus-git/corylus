@@ -1,27 +1,41 @@
-use git2::{build::CheckoutBuilder, BranchType, Oid};
+use git2::{build::CheckoutBuilder, BranchType, Oid, Repository};
 use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{
-    model::BranchInfo,
-    with_backend,
-    worktree::load_worktrees,
-    StateType,
-};
+use super::{model::BranchInfo, with_backend, worktree::load_worktrees, StateType};
 
 #[tauri::command]
 pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
     with_backend(state, |backend| {
         let branches = backend.repo.branches(None)?;
         let worktrees = load_worktrees(backend)?;
+        // TODO don't like the common_* code. Seems too complex
+        let common_path = backend
+            .repo
+            .path()
+            .to_str()
+            .and_then(|p| p.split("/.git/").next());
+        let common_branch = common_path.and_then(|cp| {
+            Repository::open(cp)
+                .map(|r| r.head().ok().and_then(|h| h.name().map(|n| n.to_owned())))
+                .ok()
+                .flatten()
+        });
         let result = branches.filter_map(|branch| {
             branch.ok().and_then(|b| {
                 let worktree = worktrees.iter().find(|wt| {
-                    wt.branch.as_ref().map_or(false, |wtb| wtb == b.0.get().name().unwrap_or(""))
+                    wt.branch
+                        .as_ref()
+                        .map_or(false, |wtb| wtb == b.0.get().name().unwrap_or(""))
                 });
-                BranchInfo::try_from(b).ok().map(|mut bi| {
-                    bi.worktree = worktree.map(|wt| wt.path.clone());
+                BranchInfo::try_from(&b).ok().map(|mut bi| {
+                    bi.worktree = if common_branch.as_deref() == b.0.get().name() {
+                        bi.is_on_common_path = true;
+                        common_path.map(|cp| cp.to_owned())
+                    } else {
+                        worktree.map(|wt| wt.path.clone())
+                    };
                     bi
                 })
             })

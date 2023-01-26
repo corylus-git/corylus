@@ -63,6 +63,10 @@ export interface BranchInfo {
      * the worktree directory this branch is checked out at
      */
     worktree?: string;
+    /**
+     *
+    */
+    isOnCommonPath: boolean;
 }
 
 /**
