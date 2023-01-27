@@ -7,28 +7,21 @@ import { Logger } from '../../util/logger';
 import { discardChanges } from '../../model/actions/repo';
 import { useDialog, DialogActions } from '../../model/state/dialogs';
 import { HoverableSpan } from '../StyleBase';
+import { ControlledMenu, ControlledMenuProps, MenuItem, useMenuState } from '@szhsin/react-menu';
 
-function openContextMenu(treeNode: IndexTreeNode, dialog: DialogActions) {
+const ContextMenu: React.FC<{ treeNode: IndexTreeNode, dialog: DialogActions } & ControlledMenuProps> = (props) => (
     // TODO
-    // const menu = Menu.buildFromTemplate([
-    //     {
-    //         label: `Discard changes to ${treeNode.path}`,
-    //         click: () => {
-    //             Logger().debug('IndexTree', 'Requesting to reset path', { node: treeNode });
-    //             discardChanges(treeNode);
-    //         },
-    //     },
-    //     {
-    //         label: `Add ${treeNode.path} to .gitignore`,
-    //         click: () => {
-    //             Logger().debug('IndexTree', 'Requesting new ignore list entry', { node: treeNode });
-    //             dialog.open({ type: 'add-ignore-list-item', path: treeNode.path });
-    //         },
-    //     },
-    // ]);
-    // Logger().silly('IndexTree', 'Open context menu', { node: treeNode });
-    // menu.popup({ window: getCurrentWindow() });
-}
+    <ControlledMenu {...props} portal>
+        <MenuItem onClick={() => {
+            Logger().debug('IndexTree', 'Requesting to reset path', { node: props.treeNode });
+            discardChanges(props.treeNode);
+        }}>Discard changes to {props.treeNode.path}</MenuItem>
+        <MenuItem onClick={() => {
+            Logger().debug('IndexTree', 'Requesting new ignore list entry', { node: props.treeNode });
+            props.dialog.open({ type: 'add-ignore-list-item', path: props.treeNode.path });
+        }}>Add {props.treeNode.path} to .gitignore</MenuItem>
+    </ControlledMenu>
+);
 
 export interface IndexTreeNode extends IndexStatus {
     /**
@@ -43,6 +36,39 @@ export interface IndexTreeProps {
     isIndex: boolean;
     onEntryDoubleClick?: (file: IndexTreeNode) => void;
     onEntryClick?: (path: IndexTreeNode) => void;
+}
+
+const IndexTreeNodeDisplay: React.FC<{ file: string, path: string[], meta?: IndexTreeNode, inIndex: boolean }> = (props) => {
+    const [menuProps, toggleMenu] = useMenuState();
+    const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
+    const dialog = useDialog();
+    return (
+        <>
+            {props.meta && <ContextMenu treeNode={props.meta} dialog={dialog} {...menuProps} anchorPoint={anchorPoint} onClose={() => toggleMenu(false)} />}
+            <HoverableSpan
+                title={`${props.path?.join('/') ?? ''}/${props.file}`}
+                style={{
+                    whiteSpace: 'nowrap',
+                }}
+                onContextMenu={(e) => {
+                    e.preventDefault();
+                    setAnchorPoint({ x: e.clientX, y: e.clientY });
+                    toggleMenu(true);
+                }}>
+                {props.meta && props.meta.type !== 'dir' && (
+                    <FileStatus
+                        isConflicted={props.meta.isConflicted}
+                        status={
+                            props.inIndex ? props.meta.indexStatus : props.meta.workdirStatus
+                        }
+                        style={{ fontSize: '80%', marginRight: '0.25rem' }}
+                    />
+                )}
+                {props.file}
+            </HoverableSpan>
+        </>
+    );
+
 }
 
 export const IndexTree: React.FC<IndexTreeProps> = (props) => {
@@ -65,7 +91,6 @@ export const IndexTree: React.FC<IndexTreeProps> = (props) => {
             }
         );
     }, [] as readonly TreeNode<IndexTreeNode>[]);
-    const dialog = useDialog();
     return (
         <>
             {tree.map((root) => (
@@ -73,27 +98,7 @@ export const IndexTree: React.FC<IndexTreeProps> = (props) => {
                     key={root.label}
                     root={root}
                     expanded
-                    label={(file, path, _, meta) => {
-                        return (
-                            <HoverableSpan
-                                title={`${path?.join('/') ?? ''}/${file}`}
-                                style={{
-                                    whiteSpace: 'nowrap',
-                                }}
-                                onContextMenu={() => meta && openContextMenu(meta, dialog)}>
-                                {meta && meta.type !== 'dir' && (
-                                    <FileStatus
-                                        isConflicted={meta.isConflicted}
-                                        status={
-                                            props.isIndex ? meta.indexStatus : meta.workdirStatus
-                                        }
-                                        style={{ fontSize: '80%', marginRight: '0.25rem' }}
-                                    />
-                                )}
-                                {file}
-                            </HoverableSpan>
-                        );
-                    }}
+                    label={(file, path, _, meta) => <IndexTreeNodeDisplay file={file} meta={meta} path={path} inIndex={props.isIndex} />}
                     onEntryDoubleClick={(meta) =>
                         meta && props.onEntryDoubleClick && props.onEntryDoubleClick(meta)
                     }

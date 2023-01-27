@@ -439,19 +439,20 @@ export const discardChanges = trackError(
     'discard changes',
     'discardChanges',
     async (node: IndexStatus): Promise<void> => {
-        switch (node.workdirStatus) {
-            case 'modified':
-            case 'deleted':
-            case 'unknown': // directories
-                await repoStore.getState().backend.restore(node.path);
-                break;
-            case 'untracked':
-                // TODO
-                // fs.unlinkSync(await join(repoStore.getState().backend.dir, node.path));
-                break;
-        }
+        await invoke('discard_changes', { path: node.path });
+        // switch (node.workdirStatus) {
+        //     case 'modified':
+        //     case 'deleted':
+        //     case 'unknown': // directories
+        //         await repoStore.getState().backend.restore(node.path);
+        //         break;
+        //     case 'untracked':
+        //         // TODO
+        //         // fs.unlinkSync(await join(repoStore.getState().backend.dir, node.path));
+        //         break;
+        // }
         // repoStore.getState().getStatus();
-        stagingArea.getState().deselectDiff();
+        // stagingArea.getState().deselectDiff();
     }
 );
 

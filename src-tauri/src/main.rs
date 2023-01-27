@@ -24,7 +24,7 @@ use crate::{
         diff::get_diff,
         get_graph_entries,
         history::{get_affected_branches, get_commit, get_commit_stats, get_graph, get_commits},
-        index::{commit, get_status, stage, unstage, apply_diff},
+        index::{commit, get_status, stage, unstage, apply_diff, discard_changes},
         remote::{get_remotes, push, fetch}, stash::{get_stashes, stash, get_stash_stats},
         branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch},
         worktree::{get_worktrees, checkout_worktree},
@@ -77,7 +77,8 @@ fn main() {
             get_tags,
             get_config,
             get_files,
-            apply_diff
+            apply_diff,
+            discard_changes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

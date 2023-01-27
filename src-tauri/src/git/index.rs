@@ -1,3 +1,6 @@
+use std::path::Path;
+
+use git2::build::CheckoutBuilder;
 use log::{error, debug};
 use tauri::Window;
 
@@ -99,6 +102,21 @@ pub async fn apply_diff(window: Window, state: StateType<'_>, diff: &str, revert
         backend.repo.set_index(&mut index)?;
         window.emit("status-changed", ())?;
         window.emit("diff-changed", ())?;
+        Ok(())
+    }).await
+}
+
+#[tauri::command]
+pub async fn discard_changes(window: Window, state: StateType<'_>, path: &str) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        let state = backend.repo.status_file(Path::new(path))?;
+        log::debug!("Discarding changes for {}. Current state: {:?}", path, state);
+        if state.is_wt_modified() || state.is_wt_new() {
+            let mut co = CheckoutBuilder::new();
+            co.path(path).force().update_index(false).remove_untracked(true);
+            backend.repo.checkout_head(Some(&mut co))?;
+        }
+        window.emit("status-changed", ())?;
         Ok(())
     }).await
 }
