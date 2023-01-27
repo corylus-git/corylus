@@ -5,8 +5,9 @@ import styled from 'styled-components';
 import { Tree, TreeNode } from '../util/Tree/Tree';
 import { TypeHeader } from './TypeHeader';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
-import { useStashes, repoStore } from '../../model/state/repo';
+import { useStashes } from '../../model/state/repo';
 import { invoke } from '@tauri-apps/api';
+import { ControlledMenu, ControlledMenuProps, MenuItem, useMenuState } from '@szhsin/react-menu';
 
 const StashDisplay = styled(HoverableDiv)`
     border-bottom: 1px dotted var(--border);
@@ -18,26 +19,32 @@ const RefDisplay = styled.span`
     margin-left: -0.5rem;
 `;
 
-function openContextMenu(dialog: DialogActions, stash: Stash) {
-    // TODO
-    // const menu = new Menu();
-    // menu.append(
-    //     new MenuItem({
-    //         label: `Apply ${stash.refName} to working copy`,
-    //         click: () => dialog.open({ type: 'request-stash-apply', stash: stash }),
-    //     })
-    // );
-    // menu.append(
-    //     new MenuItem({
-    //         label: `Delete ${stash.refName}`,
-    //         click: () =>
-    //             dialog.open({
-    //                 type: 'request-stash-drop',
-    //                 stash: stash,
-    //             }),
-    //     })
-    // );
-    // menu.popup({ window: getCurrentWindow() });
+const ContextMenu: React.FC<{ stash: Stash, dialog: DialogActions } & ControlledMenuProps> = (props) => (
+    <ControlledMenu {...props} portal>
+        <MenuItem onClick={() => props.dialog.open({ type: 'request-stash-apply', stash: props.stash })}>Apply {props.stash.refName} to working copy</MenuItem>
+        <MenuItem onClick={() =>
+            props.dialog.open({
+                type: 'request-stash-drop',
+                stash: props.stash,
+            })}>Delete {props.stash.refName}</MenuItem>
+    </ControlledMenu>
+);
+
+const StashEntry: React.FC<{ stash: Stash, dialog: DialogActions }> = (props) => {
+    const [menuProps, toggleMenu] = useMenuState();
+    const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
+    return <>
+        <ContextMenu stash={props.stash} dialog={props.dialog} {...menuProps} onClose={() => toggleMenu(false)} anchorPoint={anchorPoint} />
+        <StashDisplay
+            onClick={() => invoke('get_stash_stats', { oid: props.stash.oid })}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                setAnchorPoint({ x: e.clientX, y: e.clientY });
+                toggleMenu(true);
+            }}>
+            <RefDisplay>{props.stash.refName}</RefDisplay> {props.stash.message}
+        </StashDisplay>
+    </>
 }
 
 export const Stashes: React.FC = () => {
@@ -56,11 +63,7 @@ export const Stashes: React.FC = () => {
                     p.length === 0 ? (
                         <TypeHeader>{`${l}${o ? '' : ` (${stashes.length ?? 0})`}`}</TypeHeader>
                     ) : (
-                        <StashDisplay
-                            onClick={() => invoke('get_stash_stats', { oid: m!.oid })}
-                            onContextMenu={() => openContextMenu(dialog, m!)}>
-                            <RefDisplay>{m!.refName}</RefDisplay> {m!.message}
-                        </StashDisplay>
+                        <StashEntry stash={m!} dialog={dialog} />
                     )
                 }
                 root={{

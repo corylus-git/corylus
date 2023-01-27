@@ -112,7 +112,7 @@ export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps & { c
     width++;
     return (
         <>
-            <ContextMenu {...menuProps} anchorPoint={anchorPoint} refName={e.commit.oid} shortRef={e.commit.shortOid} currentBranch={undefined} onClose={() => toggleMenu(false)} />
+            <ContextMenu {...menuProps} anchorPoint={anchorPoint} refName={e.commit.oid} shortRef={e.commit.shortOid} currentBranch={props.currentBranch} onClose={() => toggleMenu(false)} />
             <CommitEntry
                 key={e.commit.oid}
                 style={props.style}

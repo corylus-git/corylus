@@ -1,6 +1,6 @@
 import * as React from 'react';
 import styled from 'styled-components';
-import { open, message } from '@tauri-apps/api/dialog';
+import { open } from '@tauri-apps/api/dialog';
 
 import { BranchInfo, RemoteMeta } from '../../model/stateObjects';
 import { TreeNode, Tree } from '../util/Tree/Tree';
@@ -20,7 +20,6 @@ import {
     useRemotes,
     useAffectedBranches,
     useBranches,
-    repoStore,
 } from '../../model/state/repo';
 import { StyledButton } from '../util/StyledButton';
 
