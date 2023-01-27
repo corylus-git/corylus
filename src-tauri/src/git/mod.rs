@@ -1,17 +1,17 @@
+pub mod branches;
+pub mod config;
 pub mod diff;
+pub mod files;
 pub mod graph;
 pub mod history;
 pub mod index;
 pub mod model;
 pub mod remote;
 pub mod stash;
-pub mod branches;
-pub mod worktree;
 pub mod tags;
-pub mod config;
-pub mod files;
+pub mod worktree;
 
-use std::sync::Arc;
+use std::{fs::OpenOptions, io::Write, sync::Arc};
 
 use git2::{DiffOptions, Oid, Repository, Sort};
 use log::info;
@@ -24,8 +24,9 @@ use self::{
     graph::calculate_graph_layout,
     history::map_commit,
     model::{
+        git::Commit,
         graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
-        BranchInfo, git::Commit,
+        BranchInfo,
     },
 };
 
@@ -175,7 +176,45 @@ pub fn is_git_dir(name: &str) -> bool {
     Repository::open(name).is_ok()
 }
 
-#[derive(Deserialize, Serialize, PartialEq,Eq)]
+#[tauri::command]
+pub async fn add_to_gitignore(
+    state: StateType<'_>,
+    window: Window,
+    pattern: &str,
+) -> Result<(), BackendError> {
+    with_backend(state, |backend| {
+        let mut ignore_file_path = backend.repo.path().to_owned();
+        if ignore_file_path.ends_with(".git") {
+            ignore_file_path = ignore_file_path
+                .parent()
+                .ok_or(BackendError {
+                    message: "Could not find repository root path.".to_owned(),
+                })?
+                .to_path_buf();
+        }
+        ignore_file_path = ignore_file_path.join(".gitignore");
+        let mut ignore_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(ignore_file_path)
+            .map_err(|e| BackendError {
+                message: e.to_string(),
+            })?;
+        ignore_file
+            .write(format!("{}\n", pattern).as_bytes())
+            .map_err(|e| BackendError {
+                message: e.to_string(),
+            })?;
+        ignore_file.flush().map_err(|e| BackendError {
+            message: e.to_string(),
+        })?;
+        window.emit("status-changed", ())?;
+        Ok(())
+    })
+    .await
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffSourceType {
     Workdir,

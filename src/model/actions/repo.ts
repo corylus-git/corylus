@@ -515,10 +515,7 @@ export const addToGitIgnore = trackError(
     'addToGitIgnore',
     async (pattern: string): Promise<void> => {
         Logger().debug('addToGitIgnore', 'Adding pattern to .gitignore', { pattern });
-        const p = await join(repoStore.getState().backend.dir, '.gitignore');
-        // TODO
-        // await fs.promises.appendFile(p, `${pattern}\n`);
-        // repoStore.getState().getStatus();
+        await invoke('add_to_gitignore', { pattern });
     }
 );
 

@@ -22,7 +22,7 @@ use tauri::async_runtime::Mutex;
 use crate::{
     git::{
         diff::get_diff,
-        get_graph_entries,
+        get_graph_entries, add_to_gitignore,
         history::{get_affected_branches, get_commit, get_commit_stats, get_graph, get_commits},
         index::{commit, get_status, stage, unstage, apply_diff, discard_changes},
         remote::{get_remotes, push, fetch}, stash::{get_stashes, stash, get_stash_stats},
@@ -78,7 +78,8 @@ fn main() {
             get_config,
             get_files,
             apply_diff,
-            discard_changes
+            discard_changes,
+            add_to_gitignore
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
