@@ -1,3 +1,4 @@
+import { ControlledMenu, ControlledMenuProps, MenuItem } from '@szhsin/react-menu';
 import { invoke } from '@tauri-apps/api';
 import * as React from 'react';
 import { selectCommit } from '../../model/actions/repo';
@@ -11,66 +12,6 @@ import { Maybe } from '../../util/maybe';
 import { SearchBox } from '../shared/SearchBox';
 import { ListSelector } from '../util/SelectableList';
 import { GraphRenderer } from './GraphRenderer';
-
-function openContextMenu(
-    dialog: DialogActions,
-    ref: string,
-    shortRef: string,
-    currentBranch: Maybe<BranchInfo>
-) {
-    // TODO
-    // const menu = Menu.buildFromTemplate([
-    //     {
-    //         label: `Create branch from ${shortRef}`,
-    //         click: () =>
-    //             dialog.open({
-    //                 type: 'request-new-branch',
-    //                 subType: 'commit',
-    //                 source: just(ref),
-    //                 branchPrefix: nothing,
-    //             }),
-    //     },
-    //     {
-    //         label: `Merge ${shortRef} into ${currentBranch.found && currentBranch.value.refName}`,
-    //         click: () => dialog.open({ type: 'request-merge', source: just(ref) }),
-    //     },
-    //     {
-    //         label: `Create tag at ${shortRef}`,
-    //         click: () => dialog.open({ type: 'request-create-tag', ref: ref }),
-    //     },
-    //     {
-    //         label: 'Rebase current branch here',
-    //         click: () => dialog.open({ type: 'rebase', target: ref }),
-    //     },
-    //     {
-    //         label: 'Interactively rebase current branch here',
-    //         click: () => dialog.open({ type: 'interactive-rebase', target: ref }),
-    //     },
-    // ]);
-
-    // if (currentBranch.found && currentBranch.value.head !== ref) {
-    //     menu.append(
-    //         new MenuItem({
-    //             label: `Checkout ${shortRef} as detached HEAD`,
-    //             click: () => changeBranch(ref),
-    //         })
-    //     );
-    // }
-    // if (currentBranch.found) {
-    //     menu.append(
-    //         new MenuItem({
-    //             label: `Reset ${currentBranch.found && currentBranch.value.refName} to ${shortRef}`,
-    //             click: () =>
-    //                 dialog.open({
-    //                     type: 'request-branch-reset',
-    //                     branch: currentBranch.value.refName,
-    //                     toRef: ref,
-    //                 }),
-    //         })
-    //     );
-    // }
-    // menu.popup({ window: getCurrentWindow() });
-}
 
 function matchCommit(c: Commit, searchTerm: string): boolean {
     return (

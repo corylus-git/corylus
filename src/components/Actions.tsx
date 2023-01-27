@@ -153,7 +153,6 @@ const BranchButton: React.FC = () => {
 };
 
 export const Actions: React.FC = () => {
-    const branches = useBranches();
     const currentBranch = useCurrentBranch();
     const dialog = useDialog();
     return (
