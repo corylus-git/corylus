@@ -12,7 +12,6 @@ import { Maybe, nothing, just } from '../../util/maybe';
 import { saveManualMerge } from '../../model/actions/repo';
 import { useStagingArea } from '../../model/state/stagingArea';
 import { IConflictBlock } from './util/blocks';
-import mime from 'mime-types';
 
 const ManualMergeViewContainer = styled.div`
     z-index: 20;

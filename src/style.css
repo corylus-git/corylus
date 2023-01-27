@@ -14,7 +14,7 @@
   --contains-commit: #0074ad;
   --conflict-text: #101010;
   --code: hsl(var(--hue), 0%, calc(100% - var(--lightness)));
-  --notify: hsl(calc(var(--hue) - 90), 100%, calc(50% - (var(--lightness) - 50%) / 1.7));
+  --notify: hsl(calc(var(--hue) - 91), 100%, calc(50% - (var(--lightness) - 50%) / 1.7));
 
   /* colors used in the conflict display */
   --diff-conflict-ours-value: 48, 48, 144;

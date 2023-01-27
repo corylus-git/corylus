@@ -1,6 +1,5 @@
 import * as React from 'react';
 import styled from 'styled-components';
-import mime from 'mime-types';
 
 import { Commit, CommitStats, DiffStat, formatTimestamp } from '../../model/stateObjects';
 import '../../style/app.css';

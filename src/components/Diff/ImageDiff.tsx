@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import pixelmatch from 'pixelmatch';
 import styled from 'styled-components';
 import { useAsync } from 'react-use';
-import mime from 'mime-types';
 
 import { useRepo } from '../../model/state/repo';
 import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
