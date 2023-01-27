@@ -127,13 +127,14 @@ export const push = trackError(
 export const createBranch = trackError(
     'create branch',
     'createBranch',
-    async (name: string, source: string, checkout: boolean): Promise<void> => {
+    async (name: string, source: string, sourceType: 'Branch' | 'Commit', checkout: boolean): Promise<void> => {
         Logger().info('createBranch', 'Creating new branch', {
-            name: name,
-            source: source,
-            checkout: checkout,
+            name,
+            source,
+            sourceType,
+            checkout,
         });
-        await await invoke('create_branch', { name, source, checkout });
+        await await invoke('create_branch', { name, source, sourceType, checkout });
         Logger().info('createBranch', 'Success');
     }
 );
