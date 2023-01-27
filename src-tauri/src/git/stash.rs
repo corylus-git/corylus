@@ -55,7 +55,9 @@ pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendErr
     .await
 }
 
-fn get_stashes_data(backend: &mut GitBackend) -> Result<Vec<(usize, String, git2::Oid)>, BackendError> {
+fn get_stashes_data(
+    backend: &mut GitBackend,
+) -> Result<Vec<(usize, String, git2::Oid)>, BackendError> {
     let mut stashes_data = vec![];
     backend.repo.stash_foreach(|idx, message, oid| {
         stashes_data.push((idx, message.to_owned(), oid.to_owned()));
@@ -117,6 +119,18 @@ pub async fn get_stash_stats(
     .await
 }
 
+fn find_stash_idx(oid: &str, backend: &mut GitBackend) -> Result<usize, BackendError> {
+    let id = Oid::from_str(oid)?;
+    let stashes = get_stashes_data(backend)?;
+    stashes
+        .iter()
+        .find(|(_, _, stash_id)| stash_id == &id)
+        .map(|(idx, _, _)| *idx)
+        .ok_or(BackendError {
+            message: "Could not find selected stash".to_owned(),
+        })
+}
+
 #[tauri::command]
 pub async fn apply_stash(
     state: StateType<'_>,
@@ -125,25 +139,33 @@ pub async fn apply_stash(
     delete_after_apply: bool,
 ) -> Result<(), BackendError> {
     with_backend_mut(state, |backend| {
-        let id = Oid::from_str(oid)?;
+        let stash_idx = find_stash_idx(oid, backend)?;
         let mut opts = StashApplyOptions::new();
         opts.reinstantiate_index();
-        let stashes = get_stashes_data(backend)?;
-        let stash_idx = stashes
-            .iter()
-            .find(|(_, _, stash_id)| stash_id == &id)
-            .map(|(idx, _, _)| *idx)
-            .ok_or(BackendError {
-                message: "Could not find selected stash".to_owned(),
-            })?;
         if delete_after_apply {
-        backend.repo.stash_pop(stash_idx, Some(&mut opts))?;
-        }
-        else {
+            backend.repo.stash_pop(stash_idx, Some(&mut opts))?;
+        } else {
             backend.repo.stash_apply(stash_idx, Some(&mut opts))?;
         }
         window.emit("stashes-changed", ())?;
         window.emit("status-changed", ())?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn drop_stash(
+    state: StateType<'_>,
+    window: Window,
+    oid: &str,
+) -> Result<(), BackendError> {
+    with_backend_mut(state, |backend| {
+        let mut opts = StashApplyOptions::new();
+        opts.reinstantiate_index();
+        let stash_idx = find_stash_idx(oid, backend)?;
+        backend.repo.stash_drop(stash_idx)?;
+        window.emit("stashes-changed", ())?;
         Ok(())
     })
     .await

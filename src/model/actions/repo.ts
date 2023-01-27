@@ -375,9 +375,8 @@ export const dropStash = trackError(
         Logger().debug('dropStash', 'Dropping stash', {
             stash: stash,
         });
-        await repoStore.getState().backend.dropStash(stash);
+        await invoke('drop_stash', { oid: stash.oid });
         Logger().debug('dropStash', 'Success');
-        // repoStore.getState().getStatus();
     }
 );
 
