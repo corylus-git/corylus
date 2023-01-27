@@ -363,9 +363,8 @@ export const applyStash = trackError(
             stash: stash,
             deleteAfterApply: deleteAfterApply,
         });
-        await repoStore.getState().backend.applyStash(stash, deleteAfterApply);
+        await invoke('apply_stash', {oid: stash.oid, deleteAfterApply});
         Logger().debug('applyStash', 'Success');
-        // repoStore.getState().getStatus();
     }
 );
 

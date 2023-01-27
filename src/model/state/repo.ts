@@ -245,7 +245,7 @@ export const useRemotes = (): readonly RemoteMeta[] =>
 export const useStashes = (): UseQueryResult<readonly Stash[]> =>
     useQuery('stashes', () => invoke<readonly Stash[]>('get_stashes'));
 
-listen('stashed_changed', (_) => queryClient.invalidateQueries('get_stashes'));
+listen('stashes-changed', (_) => queryClient.invalidateQueries('stashes'));
 
 /**
  * get the current pending commit (e.g. after a failed merge)

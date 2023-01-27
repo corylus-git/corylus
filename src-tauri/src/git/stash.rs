@@ -1,12 +1,12 @@
-use git2::{DiffOptions, Oid, StashFlags};
+use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
 
 use crate::error::BackendError;
 
 use super::{
     history::map_diff,
-    model::git::{Commit, StashData, CommitStats, StashStatsData},
-    with_backend, with_backend_mut, StateType,
+    model::git::{Commit, CommitStats, StashData, StashStatsData},
+    with_backend, with_backend_mut, GitBackend, StateType,
 };
 
 #[tauri::command]
@@ -26,8 +26,8 @@ pub async fn stash(
                 None
             },
         )?;
-        window.emit("stashed_changed", {})?;
-        window.emit("status_changed", ())?;
+        window.emit("stashes-changed", {})?;
+        window.emit("status-changed", ())?;
         Ok(())
     })
     .await
@@ -36,12 +36,8 @@ pub async fn stash(
 #[tauri::command]
 pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendError> {
     with_backend_mut(state, |backend| {
-        let mut stashes_data = vec![];
-        backend.repo.stash_foreach(|idx, message, oid| {
-            stashes_data.push((idx, message.to_owned(), oid.to_owned()));
-            true
-        })?;
-        stashes_data
+        let stashes = get_stashes_data(backend)?;
+        stashes
             .iter()
             .map(|(idx, _message, oid)| {
                 let commit = backend.repo.find_commit(*oid)?;
@@ -54,9 +50,18 @@ pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendErr
                     author: commit.author().into(),
                 }))
             })
-            .collect()
+            .collect::<Result<Vec<Commit>, BackendError>>()
     })
     .await
+}
+
+fn get_stashes_data(backend: &mut GitBackend) -> Result<Vec<(usize, String, git2::Oid)>, BackendError> {
+    let mut stashes_data = vec![];
+    backend.repo.stash_foreach(|idx, message, oid| {
+        stashes_data.push((idx, message.to_owned(), oid.to_owned()));
+        true
+    })?;
+    Ok(stashes_data)
 }
 
 #[tauri::command]
@@ -107,6 +112,38 @@ pub async fn get_stash_stats(
                 untracked: untracked_stats,
             }),
         )?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn apply_stash(
+    state: StateType<'_>,
+    window: Window,
+    oid: &str,
+    delete_after_apply: bool,
+) -> Result<(), BackendError> {
+    with_backend_mut(state, |backend| {
+        let id = Oid::from_str(oid)?;
+        let mut opts = StashApplyOptions::new();
+        opts.reinstantiate_index();
+        let stashes = get_stashes_data(backend)?;
+        let stash_idx = stashes
+            .iter()
+            .find(|(_, _, stash_id)| stash_id == &id)
+            .map(|(idx, _, _)| *idx)
+            .ok_or(BackendError {
+                message: "Could not find selected stash".to_owned(),
+            })?;
+        if delete_after_apply {
+        backend.repo.stash_pop(stash_idx, Some(&mut opts))?;
+        }
+        else {
+            backend.repo.stash_apply(stash_idx, Some(&mut opts))?;
+        }
+        window.emit("stashes-changed", ())?;
+        window.emit("status-changed", ())?;
         Ok(())
     })
     .await
