@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use git2::build::CheckoutBuilder;
+use git2::{build::CheckoutBuilder, Status};
 use log::{error, debug};
 use tauri::Window;
 
@@ -109,7 +109,15 @@ pub async fn apply_diff(window: Window, state: StateType<'_>, diff: &str, revert
 #[tauri::command]
 pub async fn discard_changes(window: Window, state: StateType<'_>, path: &str) -> Result<(), BackendError> {
     with_backend(state, |backend| {
-        let state = backend.repo.status_file(Path::new(path))?;
+        let p = Path::new(path);
+        let state = if p.is_file() {
+          backend.repo.status_file(p)?
+        } else {
+            // This is not ideal as directories are actually not tracked in Git, but we're forcing
+            // the code below to recognize the dir as changed in order to discard all changes
+            // underneath the path
+            Status::WT_MODIFIED
+        };
         log::debug!("Discarding changes for {}. Current state: {:?}", path, state);
         if state.is_wt_modified() || state.is_wt_new() {
             let mut co = CheckoutBuilder::new();
