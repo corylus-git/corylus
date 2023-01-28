@@ -86,10 +86,10 @@ pub async fn delete_branch(
     .await
 }
 
-#[derive(Serialize, Deserialize, )]
+#[derive(Serialize, Deserialize)]
 pub enum SourceType {
     Branch,
-    Commit
+    Commit,
 }
 
 #[tauri::command]
@@ -98,19 +98,17 @@ pub async fn create_branch(
     window: Window,
     name: &str,
     source: &str,
-    source_type: SourceType, 
+    source_type: SourceType,
     checkout: bool,
 ) -> Result<(), BackendError> {
     with_backend(state, |backend| {
         let source_commit = match source_type {
-            SourceType::Branch =>  
-            backend
-            .repo
-            .find_branch(source, git2::BranchType::Local)?
-            .into_reference()
-            .peel_to_commit()?,
-            SourceType::Commit => 
-            backend.repo.find_commit(Oid::from_str(source)?)?,
+            SourceType::Branch => backend
+                .repo
+                .find_branch(source, git2::BranchType::Local)?
+                .into_reference()
+                .peel_to_commit()?,
+            SourceType::Commit => backend.repo.find_commit(Oid::from_str(source)?)?,
         };
         let branch = backend.repo.branch(name, &source_commit, false)?;
         if checkout {
