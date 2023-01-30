@@ -176,9 +176,7 @@ export const abortMerge = trackError(
     'abort merge',
     'abortMerge',
     async (): Promise<void> => {
-        await repoStore.getState().backend.abortMerge();
-        stagingArea.getState().deselectConflictedFile();
-        stagingArea.getState().deselectDiff();
+        await invoke('abort_merge', {});
         toast('Merge aborted', { type: 'success' });
         // repoStore.getState().getStatus();
     }

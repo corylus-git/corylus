@@ -45,3 +45,22 @@ pub async fn merge(
     })
     .await
 }
+
+#[tauri::command]
+pub async fn abort_merge(
+    state: StateType<'_>,
+    window: Window
+) -> Result<(), BackendError>
+{
+    with_backend_mut(state, |backend| {
+        // TODO there is actually a reset mode --merge in the Git CLI which is currently not
+        // implemented by libgit2 (and therefore git2-rs) -> evaluate in which cases this might
+        // present a problem and if we can warn users about these
+        let head = backend.repo.head()?.peel_to_commit()?;
+        let mut checkout_opts = CheckoutBuilder::new();
+        checkout_opts.safe();
+        backend.repo.reset(head.as_object(), git2::ResetType::Hard, Some(&mut checkout_opts))?;
+        window.emit("status-changed", ())?;
+        Ok(())
+    }).await
+}

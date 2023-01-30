@@ -31,7 +31,7 @@ use crate::{
         tags::get_tags,
         config::get_config,
         files::get_files,
-        merge::merge
+        merge::{merge, abort_merge}
     },
     settings::get_settings, log::send_log,
 };
@@ -83,7 +83,8 @@ fn main() {
             apply_diff,
             discard_changes,
             add_to_gitignore,
-            merge
+            merge,
+            abort_merge
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
