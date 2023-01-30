@@ -6,7 +6,7 @@ use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{model::index::IndexStatus, with_backend, StateType, with_backend_mut};
+use super::{model::index::IndexStatus, with_backend, StateType, with_backend_mut, GitBackend};
 
 #[tauri::command]
 pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>, BackendError> {
@@ -52,6 +52,17 @@ pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> Result
 #[tauri::command]
 pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: bool) -> Result<(), BackendError> {
     with_backend_mut(state, |backend| {
+        do_commit(backend, window, message, amend)
+   })
+    .await
+    .map_err(|e| {
+        // TODO replace this with .inspect_err() as it becomes stable
+        error!("Could not commit. {}", e); 
+        e
+    })
+}
+
+pub fn do_commit(backend: &mut GitBackend, window: Window, message: &str, amend: bool) -> Result<(), BackendError> {
         let tree_id = backend.repo.index()?.write_tree()?;
         {
             backend.repo.index()?.write()?;
@@ -83,14 +94,7 @@ pub async fn commit(window: Window, state: StateType<'_>, message: &str, amend: 
         window.emit("status-changed", ())?;
         window.emit("branches-changed", ())?;
         Ok(())
-    })
-    .await
-    .map_err(|e| {
-        // TODO replace this with .inspect_err() as it becomes stable
-        error!("Could not commit. {}", e); 
-        e
-    })
-}
+} 
 
 #[tauri::command]
 pub async fn apply_diff(window: Window, state: StateType<'_>, diff: &str, revert: bool) -> Result<(), BackendError> {

@@ -1,5 +1,5 @@
 use git2::Signature;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 use crate::error::BackendError;
 
@@ -519,4 +519,11 @@ pub struct Tag {
     pub tagged_oid: String
 }
 
-
+/**
+ * The source type for a branch/merge
+ */
+#[derive(Serialize, Deserialize)]
+pub enum SourceType {
+    Branch,
+    Commit,
+}

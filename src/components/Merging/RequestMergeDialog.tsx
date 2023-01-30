@@ -10,8 +10,6 @@ import { StyledDialog } from '../util/StyledDialog';
 
 /**
  * Open the merge configuration dialog
- *
- * @param props The properties of the dialog component
  */
 export const RequestMergeDialog: React.FC = () => {
     const { data: branches } = useBranches();
@@ -26,7 +24,7 @@ export const RequestMergeDialog: React.FC = () => {
                         from: from.found ? from.value : '',
                         noFF: false,
                     }}
-                    onSubmit={(values, { setSubmitting }) => {
+                    onSubmit={(values) => {
                         merge(values.from, values.noFF);
                         dialog.close();
                     }}

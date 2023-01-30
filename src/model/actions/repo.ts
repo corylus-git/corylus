@@ -165,32 +165,12 @@ export const deleteBranch = trackError(
     }
 );
 
-export const merge = async (from: string, noFF: boolean): Promise<void> => {
-    try {
-        await repoStore.getState().backend.merge(from, noFF);
-        // // repoStore.getState().loadBranches();
-        repoStore.getState().loadHistory();
-    } catch (e: any) {
-        // TODO
-        // if (e.git && ((e.git as MergeResult)?.conflicts?.length ?? 0 !== 0)) {
-        //     toast.error(
-        //         'Merge failed due to conflicted files. Please review the conflicts and continue or abort the merge',
-        //         { autoClose: false }
-        //     );
-        // } else if (e.task) {
-        //     toast.error(structuredToast('Merge aborted.', e.message.split(/\n/)), {
-        //         autoClose: false,
-        //     });
-        // } else {
-        //     toast.error(`Merge failed with an unknown error: ${e.result}`, {
-        //         autoClose: false,
-        //     });
-        // }
-        throw e;
-    } finally {
-        // repoStore.getState().getStatus();
-    }
-};
+export const merge = trackError(
+    'merge',
+    'merge',
+    async (from: string, noFF: boolean): Promise<void> => {
+        await invoke('merge', { from, noFastForward: noFF });
+ });
 
 export const abortMerge = trackError(
     'abort merge',

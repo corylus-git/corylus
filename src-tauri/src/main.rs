@@ -30,7 +30,8 @@ use crate::{
         worktree::{get_worktrees, checkout_worktree},
         tags::get_tags,
         config::get_config,
-        files::get_files
+        files::get_files,
+        merge::merge
     },
     settings::get_settings, log::send_log,
 };
@@ -81,7 +82,8 @@ fn main() {
             get_files,
             apply_diff,
             discard_changes,
-            add_to_gitignore
+            add_to_gitignore,
+            merge
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

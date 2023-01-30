@@ -4,7 +4,7 @@ use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{model::BranchInfo, with_backend, worktree::load_worktrees, StateType};
+use super::{model::{BranchInfo, git::SourceType}, with_backend, worktree::load_worktrees, StateType};
 
 #[tauri::command]
 pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
@@ -84,12 +84,6 @@ pub async fn delete_branch(
         Ok(())
     })
     .await
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum SourceType {
-    Branch,
-    Commit,
 }
 
 #[tauri::command]
