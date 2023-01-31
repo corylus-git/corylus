@@ -5,16 +5,16 @@ pub mod files;
 pub mod graph;
 pub mod history;
 pub mod index;
+pub mod merge;
 pub mod model;
 pub mod remote;
 pub mod stash;
 pub mod tags;
 pub mod worktree;
-pub mod merge;
 
 use std::{fs::OpenOptions, io::Write, sync::Arc};
 
-use git2::{DiffOptions, Oid, Repository, Sort};
+use git2::{DiffOptions, Oid, Repository};
 use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
@@ -22,11 +22,9 @@ use tauri::{async_runtime::Mutex, Window};
 use crate::{error::BackendError, settings::Settings};
 
 use self::{
-    graph::calculate_graph_layout,
-    history::map_commit,
+    history::do_get_graph,
     model::{
-        git::Commit,
-        graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
+        graph::{GraphLayoutData, LayoutListEntry, GraphChangeData},
         BranchInfo,
     },
 };
@@ -56,39 +54,39 @@ impl GitBackend {
         })?)
     }
 
-    pub fn load_history(&mut self, window: &Window) -> Result<(), BackendError> {
-        let mut revwalk = self.repo.revwalk().unwrap(); // TODO
-        revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
-        revwalk.push_glob("heads/*")?;
-        let commits: Vec<Commit> = revwalk
-            .filter_map(|c| {
-                c.ok().map(|oid| {
-                    self.repo
-                        .find_commit(oid)
-                        .ok()
-                        .map(|commit| map_commit(&commit, false).unwrap()) // TODO this should not reference into the child
-                })
-            })
-            .map(|e| e.unwrap())
-            .collect();
-        self.graph = calculate_graph_layout(commits);
-        window.emit(
-            "historyChanged",
-            GraphChangeData {
-                total: self.graph.lines.len(),
-                change_start_idx: 0,
-                change_end_idx: self.graph.lines.len(),
-            },
-        )?;
-        window.emit("graphChanged", &self.graph)?;
-        Ok(())
-    }
-
-    pub fn load_repo_data(&mut self, window: &Window) -> Result<(), BackendError> {
-        self.load_history(window)?;
-        Ok(())
-    }
-
+    // pub fn load_history(&mut self, window: &Window) -> Result<(), BackendError> {
+    //     let mut revwalk = self.repo.revwalk().unwrap(); // TODO
+    //     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
+    //     revwalk.push_glob("heads/*")?;
+    //     let commits: Vec<Commit> = revwalk
+    //         .filter_map(|c| {
+    //             c.ok().map(|oid| {
+    //                 self.repo
+    //                     .find_commit(oid)
+    //                     .ok()
+    //                     .map(|commit| map_commit(&commit, false).unwrap()) // TODO this should not reference into the child
+    //             })
+    //         })
+    //         .map(|e| e.unwrap())
+    //         .collect();
+    //     self.graph = calculate_graph_layout(commits);
+    //     window.emit(
+    //         "historyChanged",
+    //         GraphChangeData {
+    //             total: self.graph.lines.len(),
+    //             change_start_idx: 0,
+    //             change_end_idx: self.graph.lines.len(),
+    //         },
+    //     )?;
+    //     window.emit("graphChanged", &self.graph)?;
+    //     Ok(())
+    // }
+    //
+    // pub fn load_repo_data(&mut self, window: &Window) -> Result<(), BackendError> {
+    //     self.load_history(window)?;
+    //     Ok(())
+    // }
+    //
     fn load_diff(
         &self,
         commit_id: Option<&str>,
@@ -162,14 +160,24 @@ pub async fn git_open(
     path: &str,
 ) -> Result<(), BackendError> {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
-    with_state_mut(state, |s| {
-        s.git = Some(GitBackend::new(path)?);
-        // TODO spawn of extra thread and possibly lock inside the backend
-        s.git.as_mut().map(|r| r.load_repo_data(&window));
-        info!("Successfully opened repo at {}", path);
-        Ok(())
-    })
-    .await
+    let mut s = state.lock().await;
+    s.git = Some(GitBackend::new(path)?);
+    // TODO spawn of extra thread and possibly lock inside the backend
+    info!("Successfully opened repo at {}", path);
+    if let Some(backend) = s.git.as_mut() {
+        backend.graph = do_get_graph(backend, None)?;
+        log::debug!("Graph changed. Emitting event. {}", backend.graph.lines.len());
+        window.emit("graphChanged", &backend.graph)?;
+        window.emit(
+            "historyChanged",
+            GraphChangeData {
+                total: backend.graph.lines.len(),
+                change_start_idx: 0,
+                change_end_idx: backend.graph.lines.len(),
+            },
+        )?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -233,7 +241,7 @@ pub async fn with_state<F: FnOnce(&AppState) -> Result<R, E>, R, E>(
 }
 
 pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(
-    state: StateType<'_>,
+    state: &StateType<'_>,
     op: F,
 ) -> Result<R, E> {
     let mut state_guard = state.lock().await;

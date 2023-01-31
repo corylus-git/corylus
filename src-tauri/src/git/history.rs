@@ -14,7 +14,7 @@ use super::{
         },
         graph::GraphLayoutData,
     },
-    with_backend, with_backend_mut, StateType,
+    with_backend, with_backend_mut, GitBackend, StateType,
 };
 
 fn replace_in_history(
@@ -93,19 +93,23 @@ fn build_adjecency_map(commits: &Vec<Commit>) -> HashMap<String, Vec<String>> {
     result
 }
 
-fn has_indirect_path(graph: &HashMap<String, Vec<String>>, start: &str, end: &str, is_start: bool) -> bool {
+fn has_indirect_path(
+    graph: &HashMap<String, Vec<String>>,
+    start: &str,
+    end: &str,
+    is_start: bool,
+) -> bool {
     let neighbors = graph.get(start);
     if let Some(n) = neighbors {
         for neighbor in n {
             if neighbor == end {
-                return !is_start // paths only count if this is an indirect path
+                return !is_start; // paths only count if this is an indirect path
             } else if has_indirect_path(graph, neighbor, end, false) {
-                return true
+                return true;
             }
         }
         false
-    }
-    else {
+    } else {
         false
     }
 }
@@ -127,8 +131,7 @@ fn transitive_reduction(commits: Vec<Commit>) -> Vec<Commit> {
                 data.parents = simplified_parents;
                 result.push(Commit::Commit(data));
             }
-        }
-        else {
+        } else {
             result.push(commit);
         }
     }
@@ -141,7 +144,8 @@ pub fn load_history(
 ) -> Result<Vec<Commit>, BackendError> {
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
-    revwalk.push_glob("heads/*")?;
+    revwalk.push_glob("heads")?;
+    revwalk.push_glob("remotes")?;
 
     let ps = Pathspec::new(pathspec)?;
     let mut diffopts = DiffOptions::new();
@@ -154,7 +158,7 @@ pub fn load_history(
     for current in revwalk {
         let commit = current.and_then(|oid| repo.find_commit(oid))?;
         let output = map_commit(&commit, false)?;
-        if has_changes(&commit, &ps, &mut diffopts, repo)? {
+        if pathspec.is_none() || has_changes(&commit, &ps, &mut diffopts, repo)? {
             internal_history.push(output);
         } else {
             internal_history = replace_in_history(
@@ -165,7 +169,12 @@ pub fn load_history(
         }
     }
 
-    Ok(transitive_reduction(internal_history))
+    Ok(if pathspec.is_some() {
+        // do not reduce for full graphs as this algorithm is currently really inefficient
+        transitive_reduction(internal_history)
+    } else {
+        internal_history
+    })
 }
 
 #[tauri::command]
@@ -181,18 +190,25 @@ pub async fn get_graph(
     state: StateType<'_>,
     pathspec: Option<&str>,
 ) -> Result<GraphLayoutData, BackendError> {
-    with_backend(state, |backend| {
-        let commits = load_history(&backend.repo, pathspec)?;
-        Ok(calculate_graph_layout(commits))
-    })
-    .await
+    with_backend(state, |backend| do_get_graph(backend, pathspec)).await
+}
+
+pub fn do_get_graph(
+    backend: &GitBackend,
+    pathspec: Option<&str>,
+) -> Result<GraphLayoutData, BackendError> {
+    let commits = load_history(&backend.repo, pathspec)?;
+    Ok(calculate_graph_layout(commits))
 }
 
 #[tauri::command]
-pub async fn get_commit(state: StateType<'_>, ref_name_or_oid: &str) -> Result<Commit, BackendError> {
+pub async fn get_commit(
+    state: StateType<'_>,
+    ref_name_or_oid: &str,
+) -> Result<Commit, BackendError> {
     with_backend(state, |backend| {
-        let parsed_oid =
-            Oid::from_str(ref_name_or_oid).or_else(|_| backend.repo.refname_to_id(ref_name_or_oid))?;
+        let parsed_oid = Oid::from_str(ref_name_or_oid)
+            .or_else(|_| backend.repo.refname_to_id(ref_name_or_oid))?;
         let commit = backend.repo.find_commit(parsed_oid)?;
         map_commit(&commit, false)
     })
