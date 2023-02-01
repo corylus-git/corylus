@@ -4,7 +4,7 @@ use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{model::{BranchInfo, git::SourceType}, with_backend, worktree::load_worktrees, StateType};
+use super::{model::{BranchInfo, git::SourceType, get_upstream}, with_backend, worktree::load_worktrees, StateType};
 
 #[tauri::command]
 pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
@@ -23,7 +23,8 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, Backe
                 .ok()
                 .flatten()
         });
-        let result = branches.filter_map(|branch| {
+ 
+       let result = branches.filter_map(|branch| {
             branch.ok().and_then(|b| {
                 let worktree = worktrees.iter().find(|wt| {
                     wt.branch
@@ -37,11 +38,12 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, Backe
                     } else {
                         worktree.map(|wt| wt.path.clone())
                     };
-                    bi
+                    bi.upstream = get_upstream(&b.0, &backend.repo)?;
+                    Ok(bi)
                 })
             })
         });
-        Ok(result.collect())
+        result.collect()
     })
     .await
 }

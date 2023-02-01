@@ -4,7 +4,38 @@ pub mod graph;
 pub mod index;
 pub mod remote;
 
+use git2::{Branch, ErrorCode, Repository};
+
 use crate::error::BackendError;
+
+/**
+ * information about an upstream branch
+ */
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpstreamInfo {
+    /**
+     * The name of the remote this upstream is located at
+     */
+    pub remote_name: String,
+    /**
+     * The ref name of the upstream branch
+     */
+    pub ref_name: String,
+    /**
+     * indicates, that the upstream branch is no longer available, e.g. after being deleted
+     * remotely and purged on fetch
+     */
+    pub upstream_missing: bool,
+    /**
+     * how many commits are on the local branch not found on the remote
+     */
+    pub ahead: usize,
+    /**
+     * how many commits are on the remote branch, not found on the local
+     */
+    pub behind: usize,
+}
 
 /**
  * Information about a single branch
@@ -31,7 +62,7 @@ pub struct BranchInfo {
     /**
      * The upstream tracking branch, if any
      */
-    // upstream?: UpstreamInfo;
+    pub upstream: Option<UpstreamInfo>,
     /**
      * For remote branches: which local branch tracks this remote branch?
      */
@@ -58,12 +89,8 @@ impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
             Ok(BranchInfo {
                 ref_name: branch_name,
                 current: branch.0.is_head(),
-                head: branch
-                    .0
-                    .get()
-                    .peel_to_commit()?
-                    .id()
-                    .to_string(),
+                upstream: None,
+                head: branch.0.get().peel_to_commit()?.id().to_string(),
                 remote,
                 tracked_by: None,
                 is_detached: false,
@@ -74,6 +101,46 @@ impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
             Err(BackendError {
                 message: "Could not tranform branch".to_owned(),
             })
+        }
+    }
+}
+
+pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<UpstreamInfo>, BackendError> {
+    if branch
+        .get()
+        .name()
+        .map_or(false, |n| n.starts_with("refs/remotes"))
+    {
+        return Ok(None); // remote branches do not have an upstream
+    }
+    let upstream = branch.upstream();
+    match upstream {
+        Err(error) => {
+            if error.code() == ErrorCode::NotFound {
+                Ok(None)
+            } else {
+                log::error!("Cannot get upstream: {}", error);
+                Err(error.into())
+            }
+        }
+        Ok(u) => {
+            let (ahead, behind) = repo.graph_ahead_behind(
+                branch.get().peel_to_commit()?.id(),
+                u.get().peel_to_commit()?.id(),
+            )?;
+            Ok(Some(UpstreamInfo {
+                ahead,
+                behind,
+                ref_name: u
+                    .get()
+                    .name()
+                    .ok_or(BackendError {
+                        message: "Cannot reference upstream branch without name".to_owned(),
+                    })?
+                    .to_owned(),
+                upstream_missing: false,
+                remote_name: "<invalid>".to_owned(),
+            }))
         }
     }
 }
