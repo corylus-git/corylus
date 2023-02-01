@@ -138,8 +138,9 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                         message: "Cannot reference upstream branch without name".to_owned(),
                     })?
                     .to_owned(),
-                upstream_missing: false,
-                remote_name: "<invalid>".to_owned(),
+                upstream_missing: false, // TODO how do we detect a deleted upstream?
+                remote_name: "<invalid>".to_owned(), // TODO this will probably need upstream
+                // support, as we currently don't have access to git_branch__remote_name
             }))
         }
     }

@@ -1,5 +1,4 @@
 use git2::{build::CheckoutBuilder, BranchType, Oid, Repository};
-use serde::{Deserialize, Serialize};
 use tauri::Window;
 
 use crate::error::BackendError;

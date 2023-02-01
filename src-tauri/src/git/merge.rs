@@ -1,12 +1,9 @@
-use git2::{
-    build::CheckoutBuilder, AnnotatedCommit, Commit, MergeAnalysis, MergeOptions, Object,
-    Reference, Repository,
-};
+use git2::{build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository};
 use tauri::Window;
 
 use crate::error::BackendError;
 
-use super::{index::do_commit, with_backend_mut, GitBackend, StateType};
+use super::{index::do_commit, with_backend_mut, StateType};
 
 #[tauri::command]
 pub async fn merge(
