@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Sort};
 use tauri::Window;
 
-use crate::error::BackendError;
+use crate::error::{BackendError, Result, DefaultResult};
 
 use super::{
     graph::calculate_graph_layout,
@@ -55,7 +55,7 @@ fn has_changes(
     ps: &Pathspec,
     diffopts: &mut DiffOptions,
     repo: &git2::Repository,
-) -> Result<bool, BackendError> {
+) -> Result<bool> {
     let parents = commit.parent_count();
     if parents == 0 {
         let tree = commit.tree()?;
@@ -141,7 +141,7 @@ fn transitive_reduction(commits: Vec<Commit>) -> Vec<Commit> {
 pub fn load_history(
     repo: &git2::Repository,
     pathspec: Option<&str>,
-) -> Result<Vec<Commit>, BackendError> {
+) -> Result<Vec<Commit>> {
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
     revwalk.push_glob("heads")?;
@@ -181,7 +181,7 @@ pub fn load_history(
 pub async fn get_commits(
     state: StateType<'_>,
     pathspec: Option<&str>,
-) -> Result<Vec<Commit>, BackendError> {
+) -> Result<Vec<Commit>> {
     with_backend(state, |backend| load_history(&backend.repo, pathspec)).await
 }
 
@@ -189,14 +189,14 @@ pub async fn get_commits(
 pub async fn get_graph(
     state: StateType<'_>,
     pathspec: Option<&str>,
-) -> Result<GraphLayoutData, BackendError> {
+) -> Result<GraphLayoutData> {
     with_backend(state, |backend| do_get_graph(backend, pathspec)).await
 }
 
 pub fn do_get_graph(
     backend: &GitBackend,
     pathspec: Option<&str>,
-) -> Result<GraphLayoutData, BackendError> {
+) -> Result<GraphLayoutData> {
     let commits = load_history(&backend.repo, pathspec)?;
     Ok(calculate_graph_layout(commits))
 }
@@ -205,7 +205,7 @@ pub fn do_get_graph(
 pub async fn get_commit(
     state: StateType<'_>,
     ref_name_or_oid: &str,
-) -> Result<Commit, BackendError> {
+) -> Result<Commit> {
     with_backend(state, |backend| {
         let parsed_oid = Oid::from_str(ref_name_or_oid)
             .or_else(|_| backend.repo.refname_to_id(ref_name_or_oid))?;
@@ -220,7 +220,7 @@ pub async fn get_commit_stats(
     state: StateType<'_>,
     window: Window,
     oid: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let commit =
             Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
@@ -261,7 +261,7 @@ pub async fn get_commit_stats(
 pub async fn get_affected_branches(
     state: StateType<'_>,
     oid: String,
-) -> Result<Vec<String>, BackendError> {
+) -> Result<Vec<String>> {
     with_backend(state, |backend| {
         let parsed_oid = Oid::from_str(&oid)?;
         let affected_branches = backend.branches.iter().filter(|&b| {
@@ -310,7 +310,7 @@ pub fn map_diff(diff: &git2::Diff) -> Vec<DiffStat> {
         .collect()
 }
 
-pub fn map_commit(commit: &git2::Commit, is_stash: bool) -> Result<Commit, BackendError> {
+pub fn map_commit(commit: &git2::Commit, is_stash: bool) -> Result<Commit> {
     if is_stash {
         Ok(Commit::Stash(StashData::try_from(commit)?))
     } else {

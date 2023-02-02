@@ -1,9 +1,9 @@
-use crate::error::BackendError;
+use crate::error::Result;
 
 use super::{model::config::{GitConfigEntry, GitConfigLevel}, StateType, with_backend};
 
 #[tauri::command]
-pub async fn get_config(state: StateType<'_>) -> Result<Vec<GitConfigEntry>, BackendError>
+pub async fn get_config(state: StateType<'_>) -> Result<Vec<GitConfigEntry>>
 {
     with_backend(state, |backend| {
         let mut config = vec![];

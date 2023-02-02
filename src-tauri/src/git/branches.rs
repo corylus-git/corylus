@@ -1,12 +1,12 @@
 use git2::{build::CheckoutBuilder, BranchType, Oid, Repository};
 use tauri::Window;
 
-use crate::error::BackendError;
+use crate::error::{BackendError, DefaultResult, Result};
 
 use super::{model::{BranchInfo, git::SourceType, get_upstream}, with_backend, worktree::load_worktrees, StateType};
 
 #[tauri::command]
-pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, BackendError> {
+pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>> {
     with_backend(state, |backend| {
         let branches = backend.repo.branches(None)?;
         let worktrees = load_worktrees(backend)?;
@@ -48,7 +48,7 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>, Backe
 }
 
 #[tauri::command]
-pub async fn get_unmerged_branches(state: StateType<'_>) -> Result<Vec<String>, BackendError> {
+pub async fn get_unmerged_branches(state: StateType<'_>) -> Result<Vec<String>> {
     with_backend(state, |backend| {
         let head = backend.repo.head()?.resolve()?.peel_to_commit()?.id();
         Ok(backend
@@ -73,7 +73,7 @@ pub async fn delete_branch(
     window: Window,
     branch: &str,
     remove_remote: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let mut branch = backend.repo.find_branch(branch, git2::BranchType::Local)?;
         if remove_remote {
@@ -95,7 +95,7 @@ pub async fn create_branch(
     source: &str,
     source_type: SourceType,
     checkout: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let source_commit = match source_type {
             SourceType::Branch => backend
@@ -132,7 +132,7 @@ pub async fn change_branch(
     window: Window,
     name: &str,
     remote: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let reference = backend
             .repo

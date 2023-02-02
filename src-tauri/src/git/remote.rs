@@ -2,12 +2,12 @@ use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions};
 use log::debug;
 use tauri::Window;
 
-use crate::error::BackendError;
+use crate::error::{BackendError, DefaultResult, Result};
 
 use super::{model::remote::RemoteMeta, with_backend, with_backend_mut, StateType};
 
 #[tauri::command]
-pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>, BackendError> {
+pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>> {
     with_backend(state, |backend| {
         let remote_names = backend.repo.remotes()?;
         let remotes = remote_names
@@ -40,7 +40,7 @@ pub async fn push(
     _set_upstream: Option<bool>,
     _force: Option<bool>,
     _push_tags: Option<bool>,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let mut remote = backend.repo.find_remote(&remote)?;
         let mut branch_ref = branch.map(|b| format!("refs/heads/{}", b));
@@ -74,13 +74,13 @@ pub async fn fetch(
     ref_spec: Option<&str>,
     prune: bool,
     fetch_tags: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         backend
             .repo
             .remotes()?
             .iter()
-            .try_for_each(|remote_name| -> Result<(), BackendError> {
+            .try_for_each(|remote_name| -> DefaultResult {
                 if let Some(name) = remote_name {
                     if remote.is_none() || remote.unwrap() == name {
                         debug!("Fetching changes from remote {}", name);
@@ -107,3 +107,8 @@ pub async fn fetch(
     })
     .await
 }
+//
+// #[tauri::command]
+// pub async fn pull(
+// ) -> Result<>
+//

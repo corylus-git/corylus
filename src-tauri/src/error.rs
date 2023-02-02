@@ -37,9 +37,13 @@ impl Error for BackendError {
 }
 
 impl Serialize for BackendError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
         serializer.serialize_str(&self.message) // TODO for now we're just serializing the message to stay compatible with the GUI. May change later
     }
 }
+
+pub type Result<T> = std::result::Result<T, BackendError>;
+
+pub type DefaultResult = Result<()>;

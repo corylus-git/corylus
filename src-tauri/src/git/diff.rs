@@ -2,7 +2,7 @@ use std::{fs::read, path::Path, convert::TryFrom};
 
 use git2::{Oid, Patch};
 
-use crate::error::BackendError;
+use crate::error::{BackendError, Result};
 
 use super::{
     model::git::{Diff, FileDiff},
@@ -17,7 +17,7 @@ pub async fn get_diff(
     to_parent: Option<&str>,
     path: Option<&str>,
     untracked: Option<bool>,
-) -> Result<Vec<FileDiff>, BackendError> {
+) -> Result<Vec<FileDiff>> {
     with_backend(state, |backend| match &source {
         DiffSourceType::Commit => {
             let parent = to_parent.map(|p| p.to_owned()).or_else(|| {

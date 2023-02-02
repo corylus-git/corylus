@@ -1,7 +1,7 @@
 use git2::{build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository};
 use tauri::Window;
 
-use crate::error::BackendError;
+use crate::error::{Result, DefaultResult, BackendError};
 
 use super::{index::do_commit, with_backend_mut, StateType};
 
@@ -11,7 +11,7 @@ pub async fn merge(
     window: Window,
     from: &str,
     no_fast_forward: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let (is_branch, source_obj, source_commit) = get_source_ref(&backend.repo, from)?;
         // limit the lifetime of the backend borrow to not collide with do_commit below
@@ -54,7 +54,7 @@ pub async fn merge(
 fn get_source_ref<'repo>(
     repo: &'repo Repository,
     from: &str,
-) -> Result<(bool, Object<'repo>, AnnotatedCommit<'repo>), BackendError> {
+) -> Result<(bool, Object<'repo>, AnnotatedCommit<'repo>)> {
     let (source_obj, source_ref) = repo.revparse_ext(from)?;
     let is_branch = source_ref.map_or(false, |r| r.is_branch());
     let source_commit = repo.find_annotated_commit(source_obj.id())?;
@@ -66,7 +66,7 @@ fn fast_forward(
     repo: &Repository,
     target: &Object,
     target_ref_name: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     let mut checkout_opts = CheckoutBuilder::new();
     checkout_opts.safe();
     repo.checkout_tree(target, Some(&mut checkout_opts))?;
@@ -77,7 +77,7 @@ fn fast_forward(
 }
 
 #[tauri::command]
-pub async fn abort_merge(state: StateType<'_>, window: Window) -> Result<(), BackendError> {
+pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult {
     with_backend_mut(state, |backend| {
         // TODO there is actually a reset mode --merge in the Git CLI which is currently not
         // implemented by libgit2 (and therefore git2-rs) -> evaluate in which cases this might

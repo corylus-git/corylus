@@ -19,7 +19,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
 
-use crate::{error::BackendError, settings::Settings};
+use crate::{error::{BackendError, DefaultResult}, settings::Settings};
 
 use self::{
     history::do_get_graph,
@@ -54,7 +54,7 @@ impl GitBackend {
         })?)
     }
 
-    // pub fn load_history(&mut self, window: &Window) -> Result<(), BackendError> {
+    // pub fn load_history(&mut self, window: &Window) -> DefaultResult {
     //     let mut revwalk = self.repo.revwalk().unwrap(); // TODO
     //     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
     //     revwalk.push_glob("heads/*")?;
@@ -82,7 +82,7 @@ impl GitBackend {
     //     Ok(())
     // }
     //
-    // pub fn load_repo_data(&mut self, window: &Window) -> Result<(), BackendError> {
+    // pub fn load_repo_data(&mut self, window: &Window) -> DefaultResult {
     //     self.load_history(window)?;
     //     Ok(())
     // }
@@ -158,7 +158,7 @@ pub async fn git_open(
     state: StateType<'_>,
     window: Window,
     path: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
     let mut s = state.lock().await;
     s.git = Some(GitBackend::new(path)?);
@@ -190,7 +190,7 @@ pub async fn add_to_gitignore(
     state: StateType<'_>,
     window: Window,
     pattern: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let mut ignore_file_path = backend.repo.path().to_owned();
         if ignore_file_path.ends_with(".git") {
@@ -232,7 +232,7 @@ pub enum DiffSourceType {
     Stash,
 }
 
-pub async fn with_state<F: FnOnce(&AppState) -> Result<R, E>, R, E>(
+pub async fn with_state<F: FnOnce(&AppState) -> std::result::Result<R, E>, R, E>(
     state: StateType<'_>,
     op: F,
 ) -> Result<R, E> {
@@ -240,7 +240,7 @@ pub async fn with_state<F: FnOnce(&AppState) -> Result<R, E>, R, E>(
     op(&state_guard)
 }
 
-pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(
+pub async fn with_state_mut<F: FnOnce(&mut AppState) -> std::result::Result<R, E>, R, E>(
     state: &StateType<'_>,
     op: F,
 ) -> Result<R, E> {
@@ -248,7 +248,7 @@ pub async fn with_state_mut<F: FnOnce(&mut AppState) -> Result<R, E>, R, E>(
     op(&mut state_guard)
 }
 
-pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
+pub async fn with_backend<F: FnOnce(&GitBackend) -> std::result::Result<R, BackendError>, R>(
     state: StateType<'_>,
     op: F,
 ) -> Result<R, BackendError> {
@@ -260,7 +260,7 @@ pub async fn with_backend<F: FnOnce(&GitBackend) -> Result<R, BackendError>, R>(
     }
 }
 
-pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> Result<R, BackendError>, R>(
+pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> std::result::Result<R, BackendError>, R>(
     state: StateType<'_>,
     op: F,
 ) -> Result<R, BackendError> {

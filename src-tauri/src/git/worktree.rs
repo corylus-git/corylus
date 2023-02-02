@@ -3,17 +3,17 @@ use std::path::Path;
 
 use git2::{Reference, Repository, WorktreeAddOptions};
 
-use crate::error::BackendError;
+use crate::error::{BackendError, Result, DefaultResult};
 
 use super::model::git::Worktree;
 use super::{with_backend, GitBackend, StateType};
 
 #[tauri::command]
-pub async fn get_worktrees(state: StateType<'_>) -> Result<Vec<Worktree>, BackendError> {
+pub async fn get_worktrees(state: StateType<'_>) -> Result<Vec<Worktree>> {
     with_backend(state, load_worktrees).await
 }
 
-pub fn load_worktrees(backend: &GitBackend) -> Result<Vec<Worktree>, BackendError> {
+pub fn load_worktrees(backend: &GitBackend) -> Result<Vec<Worktree>> {
     Ok(backend
         .repo
         .worktrees()?
@@ -50,7 +50,7 @@ pub async fn checkout_worktree(
     state: StateType<'_>,
     ref_name: &str,
     path: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let reference = backend.repo.find_reference(ref_name)?;
 

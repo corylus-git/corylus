@@ -1,10 +1,10 @@
-use crate::error::BackendError;
+use crate::error::Result;
 
 use super::model::git::Tag;
 use super::{with_backend, StateType};
 
 #[tauri::command]
-pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>, BackendError> {
+pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>> {
     with_backend(state, |backend| {
         let mut tags = Vec::<Tag>::new();
         backend.repo.tag_foreach(|tag_id, tag_name| {

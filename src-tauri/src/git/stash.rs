@@ -1,7 +1,7 @@
 use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
 
-use crate::error::BackendError;
+use crate::error::{BackendError, Result, DefaultResult};
 
 use super::{
     history::map_diff,
@@ -15,7 +15,7 @@ pub async fn stash(
     window: Window,
     message: Option<&str>,
     untracked: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         backend.repo.stash_save2(
             &backend.repo.signature()?,
@@ -34,7 +34,7 @@ pub async fn stash(
 }
 
 #[tauri::command]
-pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendError> {
+pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>> {
     with_backend_mut(state, |backend| {
         let stashes = get_stashes_data(backend)?;
         stashes
@@ -50,14 +50,14 @@ pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>, BackendErr
                     author: commit.author().into(),
                 }))
             })
-            .collect::<Result<Vec<Commit>, BackendError>>()
+            .collect::<Result<Vec<Commit>>>()
     })
     .await
 }
 
 fn get_stashes_data(
     backend: &mut GitBackend,
-) -> Result<Vec<(usize, String, git2::Oid)>, BackendError> {
+) -> Result<Vec<(usize, String, git2::Oid)>> {
     let mut stashes_data = vec![];
     backend.repo.stash_foreach(|idx, message, oid| {
         stashes_data.push((idx, message.to_owned(), oid.to_owned()));
@@ -71,7 +71,7 @@ pub async fn get_stash_stats(
     state: StateType<'_>,
     window: Window,
     oid: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let stash_commit =
             Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
@@ -119,7 +119,7 @@ pub async fn get_stash_stats(
     .await
 }
 
-fn find_stash_idx(oid: &str, backend: &mut GitBackend) -> Result<usize, BackendError> {
+fn find_stash_idx(oid: &str, backend: &mut GitBackend) -> Result<usize> {
     let id = Oid::from_str(oid)?;
     let stashes = get_stashes_data(backend)?;
     stashes
@@ -137,7 +137,7 @@ pub async fn apply_stash(
     window: Window,
     oid: &str,
     delete_after_apply: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let stash_idx = find_stash_idx(oid, backend)?;
         let mut opts = StashApplyOptions::new();
@@ -159,7 +159,7 @@ pub async fn drop_stash(
     state: StateType<'_>,
     window: Window,
     oid: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let mut opts = StashApplyOptions::new();
         opts.reinstantiate_index();

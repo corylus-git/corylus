@@ -4,12 +4,12 @@ use git2::{build::CheckoutBuilder, Status};
 use log::{debug, error};
 use tauri::Window;
 
-use crate::error::BackendError;
+use crate::error::{Result, DefaultResult};
 
 use super::{model::index::IndexStatus, with_backend, with_backend_mut, GitBackend, StateType, history::load_history};
 
 #[tauri::command]
-pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>, BackendError> {
+pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
     with_backend(state, |backend| {
         let statuses = backend.repo.statuses(None)?;
 
@@ -25,7 +25,7 @@ pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>, Backen
 }
 
 #[tauri::command]
-pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> Result<(), BackendError> {
+pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
         let mut index = backend.repo.index()?;
         index.add_all([path], git2::IndexAddOption::DEFAULT, None)?;
@@ -36,7 +36,7 @@ pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> Result<(
 }
 
 #[tauri::command]
-pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> Result<(), BackendError> {
+pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
         let head = backend.repo.head()?.peel_to_commit()?;
         log::debug!("Unstaging {}", path);
@@ -55,7 +55,7 @@ pub async fn commit(
     state: StateType<'_>,
     message: &str,
     amend: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend_mut(state, |backend| do_commit(backend, window, message, amend))
         .await
         .map_err(|e| {
@@ -70,7 +70,7 @@ pub fn do_commit(
     window: Window,
     message: &str,
     amend: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     let tree_id = backend.repo.index()?.write_tree()?;
     {
         backend.repo.index()?.write()?;
@@ -104,7 +104,7 @@ pub async fn apply_diff(
     state: StateType<'_>,
     diff: &str,
     revert: bool,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         log::debug!("Applying diff to index: {}", diff);
         let diff = git2::Diff::from_buffer(diff.as_bytes())?;
@@ -123,7 +123,7 @@ pub async fn discard_changes(
     window: Window,
     state: StateType<'_>,
     path: &str,
-) -> Result<(), BackendError> {
+) -> DefaultResult {
     with_backend(state, |backend| {
         let p = Path::new(path);
         let state = if p.is_file() {

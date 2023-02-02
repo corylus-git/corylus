@@ -6,7 +6,7 @@ pub mod remote;
 
 use git2::{Branch, ErrorCode, Repository};
 
-use crate::error::BackendError;
+use crate::error::{BackendError, Result};
 
 /**
  * information about an upstream branch
@@ -84,7 +84,7 @@ pub struct BranchInfo {
 
 impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
     type Error = BackendError;
-    fn try_from(branch: &(git2::Branch, git2::BranchType)) -> Result<Self, Self::Error> {
+    fn try_from(branch: &(git2::Branch, git2::BranchType)) -> std::result::Result<Self, Self::Error> {
         if let Some((remote, branch_name)) = split_branch_name(branch) {
             Ok(BranchInfo {
                 ref_name: branch_name,
@@ -105,7 +105,7 @@ impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
     }
 }
 
-pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<UpstreamInfo>, BackendError> {
+pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<UpstreamInfo>> {
     if branch
         .get()
         .name()
