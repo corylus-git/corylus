@@ -11,7 +11,7 @@ use crate::error::{BackendError, Result};
 /**
  * information about an upstream branch
  */
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpstreamInfo {
     /**
@@ -40,7 +40,7 @@ pub struct UpstreamInfo {
 /**
  * Information about a single branch
  */
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchInfo {
     /**
@@ -84,7 +84,9 @@ pub struct BranchInfo {
 
 impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
     type Error = BackendError;
-    fn try_from(branch: &(git2::Branch, git2::BranchType)) -> std::result::Result<Self, Self::Error> {
+    fn try_from(
+        branch: &(git2::Branch, git2::BranchType),
+    ) -> std::result::Result<Self, Self::Error> {
         if let Some((remote, branch_name)) = split_branch_name(branch) {
             Ok(BranchInfo {
                 ref_name: branch_name,
@@ -128,22 +130,41 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                 branch.get().peel_to_commit()?.id(),
                 u.get().peel_to_commit()?.id(),
             )?;
+            let remote_name = get_remote_name(
+                    u.get().name().ok_or(BackendError {
+                        message: "Cannot get remote name from non-existent branch name".to_owned(),
+                    })?,
+                    repo,
+                )?;
             Ok(Some(UpstreamInfo {
                 ahead,
                 behind,
                 ref_name: u
-                    .get()
-                    .name()
+                    .name()?
                     .ok_or(BackendError {
                         message: "Cannot reference upstream branch without name".to_owned(),
                     })?
+                    .split_at(remote_name.len() + 1)
+                    .1
                     .to_owned(),
                 upstream_missing: false, // TODO how do we detect a deleted upstream?
-                remote_name: "<invalid>".to_owned(), // TODO this will probably need upstream
-                // support, as we currently don't have access to git_branch__remote_name
+                remote_name,
             }))
         }
     }
+}
+
+fn get_remote_name(branch_name: &str, repo: &Repository) -> Result<String> {
+    let remotes = repo.remotes()?;
+    let mut valid_remotes: Vec<&str> = remotes.iter().flatten().collect();
+    valid_remotes.sort_unstable_by_key(|r| r.len());
+    valid_remotes
+        .iter()
+        .find(|&r| branch_name.contains(r))
+        .map(|&r| r.to_owned())
+        .ok_or(BackendError {
+            message: "Could not find fitting remote for given branch".to_owned(),
+        })
 }
 
 fn split_branch_name(

@@ -42,7 +42,9 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>> {
                 })
             })
         });
-        result.collect()
+        let results: Result<Vec<BranchInfo>> = result.collect();
+        log::debug!("Branches: {:?}", results);
+        results
     })
     .await
 }
