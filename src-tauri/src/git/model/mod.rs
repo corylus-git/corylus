@@ -131,11 +131,11 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                 u.get().peel_to_commit()?.id(),
             )?;
             let remote_name = get_remote_name(
-                    u.get().name().ok_or(BackendError {
-                        message: "Cannot get remote name from non-existent branch name".to_owned(),
-                    })?,
-                    repo,
-                )?;
+                u.get().name().ok_or(BackendError {
+                    message: "Cannot get remote name from non-existent branch name".to_owned(),
+                })?,
+                repo,
+            )?;
             Ok(Some(UpstreamInfo {
                 ahead,
                 behind,
@@ -155,16 +155,12 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
 }
 
 fn get_remote_name(branch_name: &str, repo: &Repository) -> Result<String> {
-    let remotes = repo.remotes()?;
-    let mut valid_remotes: Vec<&str> = remotes.iter().flatten().collect();
-    valid_remotes.sort_unstable_by_key(|r| r.len());
-    valid_remotes
-        .iter()
-        .find(|&r| branch_name.contains(r))
-        .map(|&r| r.to_owned())
+    Ok(repo.branch_remote_name(branch_name)?
+        .as_str()
         .ok_or(BackendError {
-            message: "Could not find fitting remote for given branch".to_owned(),
-        })
+            message: format!("Invalid remote name in {}", branch_name),
+        })?
+        .to_owned())
 }
 
 fn split_branch_name(
