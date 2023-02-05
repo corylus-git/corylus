@@ -59,9 +59,7 @@ pub async fn checkout_worktree(
         let name = target_path
             .file_name()
             .and_then(|n| n.to_str())
-            .ok_or(BackendError {
-                message: "Could not derive worktree name from path".to_owned(),
-            })?;
+            .ok_or(BackendError::new("Could not derive worktree name from path"))?;
         log::debug!(
             "Creating worktree with name {} from {} at {}",
             ref_name,
@@ -72,15 +70,11 @@ pub async fn checkout_worktree(
         if target_path.exists() {
             if fs::read_dir(target_path)
                 .map(|d| d.count() != 0)
-                .map_err(|e| BackendError {
-                    message: format!("Could not read target directory. {}", e),
-                })?
+                .map_err(|e| BackendError::new(format!("Could not read target directory. {}", e)))?
             {
-                return Err(BackendError {
-                    message: "Cannot create worktree in non-empty directory.".to_owned(),
-                });
+                return Err(BackendError::new("Cannot create worktree in non-empty directory."));
             }
-            fs::remove_dir(target_path).map_err(|e| BackendError {message: format!("Could not remove and recreate target directory. {}", e)})?;
+            fs::remove_dir(target_path).map_err(|e| BackendError::new(format!("Could not remove and recreate target directory. {}", e)))?;
         }
         let worktree = backend.repo.worktree(name, target_path, Some(&options))?;
         let r = Repository::open_from_worktree(&worktree)?;

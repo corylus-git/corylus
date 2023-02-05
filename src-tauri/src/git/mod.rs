@@ -196,9 +196,9 @@ pub async fn add_to_gitignore(
         if ignore_file_path.ends_with(".git") {
             ignore_file_path = ignore_file_path
                 .parent()
-                .ok_or(BackendError {
-                    message: "Could not find repository root path.".to_owned(),
-                })?
+                .ok_or(BackendError::new(
+                    "Could not find repository root path.".to_owned()
+                ))?
                 .to_path_buf();
         }
         ignore_file_path = ignore_file_path.join(".gitignore");
@@ -206,17 +206,17 @@ pub async fn add_to_gitignore(
             .create(true)
             .append(true)
             .open(ignore_file_path)
-            .map_err(|e| BackendError {
-                message: e.to_string(),
-            })?;
+            .map_err(|e| BackendError::new(
+                e.to_string()
+            ))?;
         ignore_file
             .write(format!("{}\n", pattern).as_bytes())
-            .map_err(|e| BackendError {
-                message: e.to_string(),
-            })?;
-        ignore_file.flush().map_err(|e| BackendError {
-            message: e.to_string(),
-        })?;
+            .map_err(|e| BackendError::new(
+                e.to_string()
+            ))?;
+        ignore_file.flush().map_err(|e| BackendError::new(
+            e.to_string()
+        ))?;
         window.emit("status-changed", ())?;
         Ok(())
     })

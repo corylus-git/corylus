@@ -95,6 +95,7 @@ pub fn do_commit(
     load_history(&backend.repo, None)?;
     window.emit("status-changed", ())?;
     window.emit("branches-changed", ())?;
+    window.emit("history-changed", ())?;
     Ok(())
 }
 

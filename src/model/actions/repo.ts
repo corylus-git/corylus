@@ -441,8 +441,7 @@ export const remoteCheckout = trackError(
             remote,
             local,
         });
-        await repoStore.getState().backend.checkout(`${remote.remote}/${remote.refName}`, local);
-        // repoStore.getState().loadBranches();
+        await invoke('checkout', { refName: `${remote.remote}/${remote.refName}`, local});
     }
 );
 

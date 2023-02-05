@@ -40,9 +40,9 @@ impl TryFrom<git2::StatusEntry<'_>> for IndexStatus {
         Ok(Self {
             path: value
                 .path()
-                .ok_or(BackendError {
-                    message: "Cannot get index status for entry without path".to_string(),
-                })?
+                .ok_or(BackendError::new(
+                    "Cannot get index status for entry without path",
+                ))?
                 .into(),
             workdir_status: get_workdir_status(&value),
             index_status: get_index_status(&value),

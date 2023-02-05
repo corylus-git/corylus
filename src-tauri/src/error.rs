@@ -1,16 +1,18 @@
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, backtrace::Backtrace};
 
 use serde::Serialize;
 
 #[derive(Debug)]
 pub struct BackendError {
-    pub message: String
+    pub message: String,
+    pub backtrace: String,
 }
 
 impl BackendError {
-    pub fn new(message: &str) -> Self {
+    pub fn new<S: Into<String>>(message: S) -> Self {
         Self {
-            message: message.to_string()
+            message: message.into(),
+            backtrace: format!("{}", Backtrace::capture())
         }
     }
 }

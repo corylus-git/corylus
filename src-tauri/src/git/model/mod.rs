@@ -100,28 +100,34 @@ impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
                 is_on_common_path: false,
             })
         } else {
-            Err(BackendError {
-                message: "Could not tranform branch".to_owned(),
-            })
+            Err(BackendError::new("Could not tranform branch".to_owned()))
         }
     }
 }
 
 pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<UpstreamInfo>> {
-    let branch_ref_name = branch.get().name().ok_or(BackendError {
-        message: format!(
-            "Failed to get reference for branch {}",
-            branch.name()?.unwrap_or("<no branch name>")
-        ),
-    })?;
+    let branch_ref_name = branch.get().name().ok_or(BackendError::new(format!(
+        "Failed to get reference for branch {}",
+        branch.name()?.unwrap_or("<no branch name>")
+    )))?;
     if branch_ref_name.starts_with("refs/remotes") {
         return Ok(None); // remote branches do not have an upstream
     }
     let upstream = branch.upstream();
-    let upstream_name_buf = repo.branch_upstream_name(branch_ref_name)?;
-    let upstream_name = upstream_name_buf.as_str().ok_or(BackendError {
-        message: format!("Invalid upstream name for branch {}", branch_ref_name),
-    })?;
+    log::trace!("Getting upstream name for {}", branch_ref_name);
+    let upstream_name_buf = repo.branch_upstream_name(branch_ref_name);
+    let upstream_name = match upstream_name_buf {
+        Ok(unb) => unb.as_str().map_or_else(
+            || Err(
+                BackendError::new(format!(
+                    "Invalid upstream name for branch {}",
+                    branch_ref_name
+                ))
+            ),
+            |v| Ok(v.to_owned()),
+        )?,
+        Err(e) => Err(e)?,
+    };
 
     log::debug!(
         "Branch: {:?}, upstream branch: {:?}",
@@ -131,10 +137,7 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
     match upstream {
         Err(error) => {
             if error.code() == ErrorCode::NotFound {
-             let remote_name = get_remote_name(
-                upstream_name,
-                repo,
-            )?;
+                let remote_name = get_remote_name(&upstream_name, repo)?;
                 Ok(Some(UpstreamInfo {
                     ref_name: upstream_name.split_at(remote_name.len() + 1).1.to_owned(),
                     upstream_missing: true,
@@ -153,9 +156,9 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                 u.get().peel_to_commit()?.id(),
             )?;
             let remote_name = get_remote_name(
-                u.get().name().ok_or(BackendError {
-                    message: "Cannot get remote name from non-existent branch name".to_owned(),
-                })?,
+                u.get().name().ok_or_else(|| BackendError::new(
+                    "Cannot get remote name from non-existent branch name".to_owned(),
+                ))?,
                 repo,
             )?;
             Ok(Some(UpstreamInfo {
@@ -163,9 +166,9 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                 behind,
                 ref_name: u
                     .name()?
-                    .ok_or(BackendError {
-                        message: "Cannot reference upstream branch without name".to_owned(),
-                    })?
+                    .ok_or_else(|| BackendError::new(
+                        "Cannot reference upstream branch without name".to_owned(),
+                    ))?
                     .split_at(remote_name.len() + 1)
                     .1
                     .to_owned(),
@@ -180,9 +183,10 @@ fn get_remote_name(branch_name: &str, repo: &Repository) -> Result<String> {
     Ok(repo
         .branch_remote_name(branch_name)?
         .as_str()
-        .ok_or(BackendError {
-            message: format!("Invalid remote name in {}", branch_name),
-        })?
+        .ok_or_else(|| BackendError::new(format!(
+            "Invalid remote name in {}",
+            branch_name
+        )))?
         .to_owned())
 }
 

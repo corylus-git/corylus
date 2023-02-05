@@ -34,7 +34,7 @@ pub async fn merge(
             )?;
             if backend.repo.index()?.has_conflicts() {
                 window.emit("status-changed", ())?;
-                return Err(BackendError { message: "Merge cannot be committed due to conflicts. Please check the index for details.".to_owned()});
+                return Err(BackendError::new("Merge cannot be committed due to conflicts. Please check the index for details."));
             }
             let message = if is_branch {
                 format!("Merge branch '{}' into {}", from, "<todo>")

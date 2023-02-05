@@ -1,7 +1,7 @@
 use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
 
-use crate::error::{BackendError, Result, DefaultResult};
+use crate::error::{BackendError, DefaultResult, Result};
 
 use super::{
     history::map_diff,
@@ -55,9 +55,7 @@ pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>> {
     .await
 }
 
-fn get_stashes_data(
-    backend: &mut GitBackend,
-) -> Result<Vec<(usize, String, git2::Oid)>> {
+fn get_stashes_data(backend: &mut GitBackend) -> Result<Vec<(usize, String, git2::Oid)>> {
     let mut stashes_data = vec![];
     backend.repo.stash_foreach(|idx, message, oid| {
         stashes_data.push((idx, message.to_owned(), oid.to_owned()));
@@ -67,11 +65,7 @@ fn get_stashes_data(
 }
 
 #[tauri::command]
-pub async fn get_stash_stats(
-    state: StateType<'_>,
-    window: Window,
-    oid: &str,
-) -> DefaultResult {
+pub async fn get_stash_stats(state: StateType<'_>, window: Window, oid: &str) -> DefaultResult {
     with_backend(state, |backend| {
         let stash_commit =
             Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
@@ -126,9 +120,7 @@ fn find_stash_idx(oid: &str, backend: &mut GitBackend) -> Result<usize> {
         .iter()
         .find(|(_, _, stash_id)| stash_id == &id)
         .map(|(idx, _, _)| *idx)
-        .ok_or(BackendError {
-            message: "Could not find selected stash".to_owned(),
-        })
+        .ok_or_else(|| BackendError::new("Could not find selected stash"))
 }
 
 #[tauri::command]
@@ -155,11 +147,7 @@ pub async fn apply_stash(
 }
 
 #[tauri::command]
-pub async fn drop_stash(
-    state: StateType<'_>,
-    window: Window,
-    oid: &str,
-) -> DefaultResult {
+pub async fn drop_stash(state: StateType<'_>, window: Window, oid: &str) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let mut opts = StashApplyOptions::new();
         opts.reinstantiate_index();
