@@ -113,20 +113,30 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
     if branch_ref_name.starts_with("refs/remotes") {
         return Ok(None); // remote branches do not have an upstream
     }
+    let upstream_name_buf = repo.branch_upstream_name(branch_ref_name);
+    if let Err(e) = upstream_name_buf {
+        return if e.code() == ErrorCode::NotFound {
+            Ok(None)
+        } else {
+            Err(e.into())
+        };
+    }
+
     let upstream = branch.upstream();
     log::trace!("Getting upstream name for {}", branch_ref_name);
-    let upstream_name_buf = repo.branch_upstream_name(branch_ref_name);
-    let upstream_name = match upstream_name_buf {
-        Ok(unb) => unb.as_str().map_or_else(
-            || Err(
-                BackendError::new(format!(
+    let upstream_name = if let Ok(unb) = upstream_name_buf {
+        unb.as_str().map_or_else(
+            || {
+                Err(BackendError::new(format!(
                     "Invalid upstream name for branch {}",
                     branch_ref_name
-                ))
-            ),
+                )))
+            },
             |v| Ok(v.to_owned()),
-        )?,
-        Err(e) => Err(e)?,
+        )?
+    }
+    else {
+        return Err(BackendError::new("Upstream name cannot be Error here"));
     };
 
     log::debug!(
@@ -156,9 +166,11 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                 u.get().peel_to_commit()?.id(),
             )?;
             let remote_name = get_remote_name(
-                u.get().name().ok_or_else(|| BackendError::new(
-                    "Cannot get remote name from non-existent branch name".to_owned(),
-                ))?,
+                u.get().name().ok_or_else(|| {
+                    BackendError::new(
+                        "Cannot get remote name from non-existent branch name".to_owned(),
+                    )
+                })?,
                 repo,
             )?;
             Ok(Some(UpstreamInfo {
@@ -166,9 +178,11 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                 behind,
                 ref_name: u
                     .name()?
-                    .ok_or_else(|| BackendError::new(
-                        "Cannot reference upstream branch without name".to_owned(),
-                    ))?
+                    .ok_or_else(|| {
+                        BackendError::new(
+                            "Cannot reference upstream branch without name".to_owned(),
+                        )
+                    })?
                     .split_at(remote_name.len() + 1)
                     .1
                     .to_owned(),
@@ -183,10 +197,7 @@ fn get_remote_name(branch_name: &str, repo: &Repository) -> Result<String> {
     Ok(repo
         .branch_remote_name(branch_name)?
         .as_str()
-        .ok_or_else(|| BackendError::new(format!(
-            "Invalid remote name in {}",
-            branch_name
-        )))?
+        .ok_or_else(|| BackendError::new(format!("Invalid remote name in {}", branch_name)))?
         .to_owned())
 }
 
