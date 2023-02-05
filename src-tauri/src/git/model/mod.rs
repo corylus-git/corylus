@@ -108,18 +108,40 @@ impl TryFrom<&(git2::Branch<'_>, git2::BranchType)> for BranchInfo {
 }
 
 pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<UpstreamInfo>> {
-    if branch
-        .get()
-        .name()
-        .map_or(false, |n| n.starts_with("refs/remotes"))
-    {
+    let branch_ref_name = branch.get().name().ok_or(BackendError {
+        message: format!(
+            "Failed to get reference for branch {}",
+            branch.name()?.unwrap_or("<no branch name>")
+        ),
+    })?;
+    if branch_ref_name.starts_with("refs/remotes") {
         return Ok(None); // remote branches do not have an upstream
     }
     let upstream = branch.upstream();
+    let upstream_name_buf = repo.branch_upstream_name(branch_ref_name)?;
+    let upstream_name = upstream_name_buf.as_str().ok_or(BackendError {
+        message: format!("Invalid upstream name for branch {}", branch_ref_name),
+    })?;
+
+    log::debug!(
+        "Branch: {:?}, upstream branch: {:?}",
+        branch_ref_name,
+        upstream_name
+    );
     match upstream {
         Err(error) => {
             if error.code() == ErrorCode::NotFound {
-                Ok(None)
+             let remote_name = get_remote_name(
+                upstream_name,
+                repo,
+            )?;
+                Ok(Some(UpstreamInfo {
+                    ref_name: upstream_name.split_at(remote_name.len() + 1).1.to_owned(),
+                    upstream_missing: true,
+                    ahead: 0,
+                    behind: 0,
+                    remote_name,
+                }))
             } else {
                 log::error!("Cannot get upstream: {}", error);
                 Err(error.into())
@@ -155,7 +177,8 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
 }
 
 fn get_remote_name(branch_name: &str, repo: &Repository) -> Result<String> {
-    Ok(repo.branch_remote_name(branch_name)?
+    Ok(repo
+        .branch_remote_name(branch_name)?
         .as_str()
         .ok_or(BackendError {
             message: format!("Invalid remote name in {}", branch_name),
