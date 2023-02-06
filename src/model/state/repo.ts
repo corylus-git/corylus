@@ -97,7 +97,7 @@ export const repoStore = create<RepoState & RepoActions>()(
         historyLoader: undefined,
         lock: new AsyncLock(),
         affected: { branches: [], tags: [], refs: [] },
-       openRepo: (path: string): Promise<void> => {
+        openRepo: (path: string): Promise<void> => {
             Logger().debug('openRepo', 'Opening repo', { path });
             invoke('git_open', { path });
             set(
@@ -331,7 +331,7 @@ listen<{commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | '
  * handlers for events from the backend
  * =================================================
  */
-listen<HistoryInfo>('historyChanged', ev => {
+listen<HistoryInfo>('history-changed', ev => {
     repoStore.getState().setHistory(ev.payload);
 })
 

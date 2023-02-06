@@ -169,7 +169,7 @@ pub async fn git_open(
         log::debug!("Graph changed. Emitting event. {}", backend.graph.lines.len());
         window.emit("graphChanged", &backend.graph)?;
         window.emit(
-            "historyChanged",
+            "history-changed",
             GraphChangeData {
                 total: backend.graph.lines.len(),
                 change_start_idx: 0,
@@ -196,7 +196,7 @@ pub async fn add_to_gitignore(
         if ignore_file_path.ends_with(".git") {
             ignore_file_path = ignore_file_path
                 .parent()
-                .ok_or(BackendError::new(
+                .ok_or_else(|| BackendError::new(
                     "Could not find repository root path.".to_owned()
                 ))?
                 .to_path_buf();

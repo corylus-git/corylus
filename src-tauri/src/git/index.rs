@@ -6,7 +6,7 @@ use tauri::Window;
 
 use crate::error::{Result, DefaultResult};
 
-use super::{model::index::IndexStatus, with_backend, with_backend_mut, GitBackend, StateType, history::load_history};
+use super::{model::{index::IndexStatus, graph::{GraphLayoutData, GraphChangeData}}, with_backend, with_backend_mut, GitBackend, StateType, history::{load_history, do_get_graph}};
 
 #[tauri::command]
 pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
@@ -95,7 +95,13 @@ pub fn do_commit(
     load_history(&backend.repo, None)?;
     window.emit("status-changed", ())?;
     window.emit("branches-changed", ())?;
-    window.emit("history-changed", ())?;
+    // TODO this repeats code from git_open -> don't like this current setup
+    backend.graph = do_get_graph(backend, None)?;
+    window.emit("history-changed", GraphChangeData {
+        total: backend.graph.lines.len(),
+        change_end_idx: 0,
+        change_start_idx: backend.graph.lines.len()
+    })?; 
     Ok(())
 }
 
