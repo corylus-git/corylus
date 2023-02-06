@@ -119,11 +119,11 @@ pub async fn create_branch(
                 reference.peel_to_commit()?.tree()?.as_object(),
                 Some(CheckoutBuilder::new().safe()),
             )?;
-            backend
-                .repo
-                .set_head(reference.name().ok_or(BackendError::new(
+            backend.repo.set_head(reference.name().ok_or_else(|| {
+                BackendError::new(
                     "Could not get ref name of new branch. Cannot check out after creation",
-                ))?)?;
+                )
+            })?)?;
         };
         window.emit("branches-changed", {})?;
         Ok(())
@@ -132,35 +132,64 @@ pub async fn create_branch(
 }
 
 #[tauri::command]
-pub async fn checkout(
+pub async fn change_branch(state: StateType<'_>, window: Window, ref_name: &str) -> DefaultResult {
+    with_backend(state, |backend| {
+        let (object, reference) = backend.repo.revparse_ext(ref_name)?;
+        let commit = object.peel_to_commit()?;
+        backend.repo.checkout_tree(
+            commit.tree()?.as_object(),
+            Some(CheckoutBuilder::new().safe()),
+        )?;
+        if let Some(r) = reference {
+            backend.repo.set_head(r.name().ok_or_else(|| {
+                BackendError::new("Cannot get reference name of the branch. Not updating HEAD")
+            })?)?;
+        }
+        window.emit("branches-changed", {})?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn checkout_remote_branch(
     state: StateType<'_>,
     window: Window,
     ref_name: &str,
-    local: Option<&str>,
+    local_name: &str,
 ) -> DefaultResult {
     with_backend(state, |backend| {
+        if backend
+            .repo
+            .find_branch(local_name, BranchType::Local)
+            .is_ok()
+        {
+            return Err(BackendError::new(format!(
+                "A branch with the name {} already exists locally and cannot be overwritten.",
+                local_name
+            )));
+        }
         let (object, reference) = backend.repo.revparse_ext(ref_name)?;
-        if let Some(l) = local {
-            if backend.repo.find_branch(l, BranchType::Local).is_ok() {
-                return Err(BackendError::new(format!(
-                    "A branch with the name {} already exists locally and cannot be overwritten.",
-                    l
-                )));
-            }
-            // TODO check out tracking branch
-            todo!()
-        } else {
-            backend.repo.checkout_tree(
-                object.peel_to_commit()?.tree()?.as_object(),
-                Some(CheckoutBuilder::new().safe()),
-            )?;
-            if let Some(r) = reference {
-                backend.repo.set_head(r.name().ok_or(BackendError::new(
-                    "Cannot get reference name of the branch. Not updating HEAD",
-                ))?)?;
-            }
-        };
-        window.emit("branches-changed", {})?;
+        if reference.as_ref().map_or(true, |r| !r.is_remote()) {
+            return Err(BackendError::new(format!(
+                "{} is not pointing to a remote branch and cannot be tracked locally",
+                ref_name
+            )));
+        }
+        let commit = object.peel_to_commit()?;
+        backend.repo.checkout_tree(
+            commit.tree()?.as_object(),
+            Some(CheckoutBuilder::new().safe()),
+        )?;
+        window.emit("status-changed", ())?;
+        let mut local_branch = backend.repo.branch(local_name, &commit, false)?;
+        local_branch.set_upstream(Some(ref_name))?;
+        backend
+            .repo
+            .set_head(local_branch.get().name().ok_or_else(|| {
+                BackendError::new("Designated HEAD branch has no name. Internal program error")
+            })?)?;
+        window.emit("branches-changed", ())?;
         Ok(())
     })
     .await

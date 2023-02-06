@@ -58,7 +58,7 @@ export const changeBranch = trackError(
             uiStore.getState().startProgress(ref);
             try {
                 Logger().debug('changeBranch', 'Changing branch');
-                await invoke('change_branch', {name: ref, remote: false });
+                await invoke('change_branch', {refName: ref });
                 // repoStore.getState().loadBranches();
             } finally {
                 uiStore.getState().stopProgress(ref);
@@ -441,7 +441,7 @@ export const remoteCheckout = trackError(
             remote,
             local,
         });
-        await invoke('checkout', { refName: `${remote.remote}/${remote.refName}`, local});
+        await invoke('checkout_remote_branch', { refName: `${remote.remote}/${remote.refName}`, localName: local});
     }
 );
 
