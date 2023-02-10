@@ -1,13 +1,13 @@
-use git2::{build::CheckoutBuilder, Branch, BranchType, Oid, Repository};
+use git2::{build::CheckoutBuilder, Branch, BranchType, Oid, Repository, ResetType};
 use tauri::Window;
 
 use crate::error::{BackendError, DefaultResult, Result};
 
 use super::{
-    model::{get_upstream, git::SourceType, BranchInfo},
+    model::{get_upstream, git::SourceType, BranchInfo, graph::GraphChangeData},
     with_backend,
     worktree::load_worktrees,
-    StateType,
+    StateType, history::do_get_graph, with_backend_mut,
 };
 
 #[tauri::command]
@@ -190,6 +190,42 @@ pub async fn checkout_remote_branch(
                 BackendError::new("Designated HEAD branch has no name. Internal program error")
             })?)?;
         window.emit("branches-changed", ())?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn reset(
+    state: StateType<'_>,
+    window: Window,
+    to_ref: &str,
+    mode: &str,
+) -> DefaultResult {
+    with_backend_mut(state, |backend| {
+        let target = backend.repo.revparse_single(to_ref)?;
+        let reset_type = match mode {
+            "soft" => Ok(ResetType::Soft),
+            "mixed" => Ok(ResetType::Mixed),
+            "hard" => Ok(ResetType::Hard),
+            _ => Err(BackendError::new(format!(
+                "Unsupported reset type \"{}\"",
+                mode
+            ))),
+        }?;
+        backend.repo.reset(&target, reset_type, None)?;
+        window.emit("status-changed", ())?;
+        window.emit("branches-changed", ())?;
+        // TODO this repeats code from git_open -> don't like this current setup
+        backend.graph = do_get_graph(backend, None)?;
+        window.emit(
+            "history-changed",
+            GraphChangeData {
+                total: backend.graph.lines.len(),
+                change_end_idx: 0,
+                change_start_idx: backend.graph.lines.len(),
+            },
+        )?;
         Ok(())
     })
     .await

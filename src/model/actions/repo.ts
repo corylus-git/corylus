@@ -183,15 +183,12 @@ export const abortMerge = trackError(
 export const resetBranch = trackError(
     'reset branch',
     'resetBranch',
-    async (branch: string, toRef: string, mode: string): Promise<void> => {
+    async (toRef: string, mode: string): Promise<void> => {
         Logger().debug('resetBranch', 'Resetting branch', {
-            branch: branch,
             toRef: toRef,
             mode: mode,
         });
-        await repoStore.getState().backend.reset(branch, toRef, mode);
-        // repoStore.getState().loadBranches();
-        // repoStore.getState().getStatus();
+        await invoke('reset', { toRef, mode });
         Logger().debug('resetBranch', 'Reset finished');
     }
 );

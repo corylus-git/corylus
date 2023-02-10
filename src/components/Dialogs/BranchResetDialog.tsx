@@ -15,7 +15,7 @@ export const BranchResetDialog: React.FC = () => {
                 <Formik
                     initialValues={{ resetType: 'mixed' }}
                     onSubmit={(value, _) => {
-                        resetBranch(dialog.branch, dialog.toRef, value.resetType);
+                        resetBranch(dialog.toRef, value.resetType);
                         dialog.close();
                     }}
                     onReset={() => dialog.close()}>
