@@ -4,10 +4,8 @@ import { just, Maybe, toOptional } from '../../util/maybe';
 import { toast } from 'react-toastify';
 // import { MergeResult } from 'simple-git/promise';
 // import fs from 'fs';
-import { join } from '@tauri-apps/api/path';
 import { repoStore } from '../state/repo';
 import { progress } from '../state/progress';
-import { stagingArea } from '../state/stagingArea';
 import { trackError } from '../../util/error-display';
 import { dialogStore } from '../state/dialogs';
 import { uiStore } from '../state/uiState';
@@ -361,13 +359,13 @@ export const dropStash = trackError(
 export const createTag = trackError(
     'create new tag',
     'createTag',
-    async (tag: string, ref: string, message: Maybe<string>): Promise<void> => {
+    async (tag: string, ref: string, message: string | undefined): Promise<void> => {
         Logger().debug('createTag', 'Creating new tag', {
             ref: ref,
             tag: tag,
             message: message,
         });
-        await repoStore.getState().backend.createTag(tag, ref, message);
+        await invoke('create_tag', {name: tag, refName: ref, message: message});
         Logger().silly('createTag', 'Success.');
     }
 );

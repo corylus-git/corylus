@@ -1,4 +1,6 @@
-use crate::error::Result;
+use tauri::Window;
+
+use crate::error::{DefaultResult, Result};
 
 use super::model::git::Tag;
 use super::{with_backend, StateType};
@@ -28,6 +30,28 @@ pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>> {
             true
         })?;
         Ok(tags)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn create_tag(
+    state: StateType<'_>,
+    window: Window,
+    name: &str,
+    ref_name: &str,
+    message: Option<&str>,
+) -> DefaultResult {
+    with_backend(state, |backend| {
+        let object = backend.repo.revparse_single(ref_name)?;
+        let tagger = backend.repo.signature()?;
+        if let Some(m) = message {
+            backend.repo.tag(name, &object, &tagger, m, false)?;
+        } else {
+            backend.repo.tag_lightweight(name, &object, false)?;
+        }
+        window.emit("tags-changed", ())?;
+        Ok(())
     })
     .await
 }

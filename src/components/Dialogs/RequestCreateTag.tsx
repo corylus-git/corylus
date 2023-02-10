@@ -7,7 +7,6 @@ import { ButtonGroup } from '../util/ButtonGroup';
 import { StyledButton } from '../util/StyledButton';
 import { preNormalize, postNormalize } from '../../util/normalizeRef';
 import styled from 'styled-components';
-import { fromNullable } from '../../util/maybe';
 import { createTag } from '../../model/actions/repo';
 import { useDialog } from '../../model/state/dialogs';
 
@@ -35,7 +34,7 @@ export const RequestCreateTagDialog: React.FC = () => {
         <Modal isOpen={true}>
             <Formik
                 onSubmit={(values, _) => {
-                    createTag(values.tag, dialog.ref, fromNullable(values.message));
+                    createTag(values.tag, dialog.ref, values.message);
                     dialog.close();
                 }}
                 onReset={() => dialog.close()}

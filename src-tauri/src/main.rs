@@ -28,7 +28,7 @@ use crate::{
         remote::{get_remotes, push, fetch}, stash::{get_stashes, stash, get_stash_stats, apply_stash, drop_stash},
         branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch, checkout_remote_branch},
         worktree::{get_worktrees, checkout_worktree},
-        tags::get_tags,
+        tags::{get_tags, create_tag},
         config::get_config,
         files::get_files,
         merge::{merge, abort_merge}
@@ -79,6 +79,7 @@ fn main() {
             get_worktrees,
             checkout_worktree,
             get_tags,
+            create_tag,
             get_config,
             get_files,
             apply_diff,
