@@ -1,7 +1,6 @@
 import React from 'react';
 import { Modal } from '../util/Modal';
 import { StyledDialog } from '../util/StyledDialog';
-import { Formik } from 'formik';
 import { ButtonGroup } from '../util/ButtonGroup';
 import { StyledButton } from '../util/StyledButton';
 import { useDialog } from '../../model/state/dialogs';

@@ -230,3 +230,38 @@ pub async fn reset(
     })
     .await
 }
+
+#[tauri::command]
+pub async fn rebase(state: StateType<'_>, window: Window, target: &str) -> DefaultResult
+{
+     with_backend_mut(state, |backend| {
+        let onto = backend.repo.revparse_single(target)?.peel_to_commit()?;
+        let onto_commit = backend.repo.find_annotated_commit(onto.id())?;
+        let mut rebase = backend.repo.rebase(None, None, Some(&onto_commit), None)?;
+        let committer = backend.repo.signature()?;
+        while let Some(operation) = rebase.next() {
+            match operation {
+                Ok(_) => {
+                    rebase.commit(None, &committer, None)?;
+                },
+                Err(e) => {
+                    Err(e)?;
+                }
+            }
+        }
+        rebase.finish(None)?;
+        window.emit("status-changed", ())?;
+        window.emit("branches-changed", ())?;
+        // TODO this repeats code from git_open -> don't like this current setup
+        backend.graph = do_get_graph(backend, None)?;
+        window.emit(
+            "history-changed",
+            GraphChangeData {
+                total: backend.graph.lines.len(),
+                change_end_idx: 0,
+                change_start_idx: backend.graph.lines.len(),
+            },
+        )?;
+        Ok(())
+    }).await
+}

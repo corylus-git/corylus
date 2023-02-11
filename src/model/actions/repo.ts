@@ -498,13 +498,7 @@ export const rebase = trackError(
         commands?: readonly { action: string; commit: Commit }[]
     ): Promise<void> => {
         Logger().debug('rebase', 'Rebasing current branch', { target, commands });
-        await repoStore.getState().backend.rebase(target, commands);
-        const promises = [
-            repoStore.getState().loadHistory(),
-            // repoStore.getState().loadBranches(),
-            // repoStore.getState().getStatus(),
-        ];
-        await Promise.all(promises);
+        await invoke('rebase', { target });
     }
 );
 
