@@ -40,7 +40,7 @@ impl TryFrom<git2::StatusEntry<'_>> for IndexStatus {
         Ok(Self {
             path: value
                 .path()
-                .ok_or(BackendError::new(
+                .ok_or_else(|| BackendError::new(
                     "Cannot get index status for entry without path",
                 ))?
                 .into(),
@@ -80,4 +80,27 @@ fn get_index_status(entry: &git2::StatusEntry<'_>) -> DiffStatus {
     } else {
         DiffStatus::Unmodified
     }
+}
+
+/**
+ * Information about a possible rebase, that is currently in progress
+ */
+#[derive(Serialize)]
+pub struct RebaseStatusInfo {
+    /**
+     * Commits that were already done
+     */
+    // done: readonly RebaseAction[];
+    /**
+     * The current patch that causes a conflict during the rebase
+     */
+    pub patch: String,
+    /**
+     * The current message of the commit that caused the conflict
+     */
+    pub message: String,
+    /*
+     * The commits that are still open to be rebased
+     */
+    // todo: readonly RebaseAction[];
 }

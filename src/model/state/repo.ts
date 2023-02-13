@@ -9,7 +9,7 @@ import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
 import { GitBackend } from '../../util/GitBackend';
 import { Logger } from '../../util/logger';
-import { just, Maybe, nothing } from '../../util/maybe';
+import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
 import { queryClient } from '../../util/queryClient';
 import { getDiff } from '../actions/repo';
 import { GitConfigValue, IGitConfig, IGitConfigValues, NamedGitConfigValue } from '../IGitConfig';
@@ -299,8 +299,11 @@ export const useCurrentBranch = (): BranchInfo | undefined => {
 /**
  * get the current pending commit (e.g. after a failed merge)
  */
-export const useRebaseStatus = (): Maybe<RebaseStatusInfo> =>
-    useRepo((state: RepoState & RepoActions) => state.rebaseStatus);
+export const useRebaseStatus = (): Maybe<RebaseStatusInfo> => {
+    const { data } = useQuery('rebase_status', () => invoke<RebaseStatusInfo>('rebase_status', {}));
+    Logger().debug('useRebaseStatus', `Rebase status ${data}`);
+    return fromNullable(data);
+}
 
 /**
  * Get the commit stats for the given commit.

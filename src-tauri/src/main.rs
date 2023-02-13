@@ -26,12 +26,13 @@ use crate::{
         history::{get_affected_branches, get_commit, get_commit_stats, get_graph, get_commits},
         index::{commit, get_status, stage, unstage, apply_diff, discard_changes},
         remote::{get_remotes, push, fetch}, stash::{get_stashes, stash, get_stash_stats, apply_stash, drop_stash},
-        branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch, checkout_remote_branch, reset, rebase},
+        branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch, checkout_remote_branch, reset},
         worktree::{get_worktrees, checkout_worktree},
         tags::{get_tags, create_tag},
         config::get_config,
         files::get_files,
-        merge::{merge, abort_merge}
+        merge::{merge, abort_merge},
+        rebase::{rebase, rebase_status}
     },
     settings::get_settings, log::send_log,
 };
@@ -78,6 +79,7 @@ fn main() {
             checkout_remote_branch,
             reset,
             rebase,
+            rebase_status,
             get_worktrees,
             checkout_worktree,
             get_tags,
