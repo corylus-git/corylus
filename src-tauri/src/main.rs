@@ -34,7 +34,7 @@ use crate::{
         merge::{merge, abort_merge},
         rebase::{rebase, rebase_status}
     },
-    settings::get_settings, log::send_log,
+    settings::{get_settings, update_settings, update_history}, log::send_log,
 };
 
 // #[cfg(not(test))]
@@ -49,6 +49,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             send_log,
             get_settings,
+            update_settings,
+            update_history,
             get_branches,
             is_git_dir,
             git_open,

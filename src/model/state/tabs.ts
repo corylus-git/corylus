@@ -6,7 +6,7 @@ import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
 import { Logger } from '../../util/logger';
 import { just, Maybe, nothing } from '../../util/maybe';
-import { settingsStore } from '../settings';
+import { updateHistory, updateSettings } from '../settings';
 import { repoStore } from './repo';
 import { stagingArea } from './stagingArea';
 
@@ -94,7 +94,7 @@ export const tabsStore = create<TabsState & TabsActions>()(
                     repoStore.getState().openRepo(tab.path.value);
                     stagingArea.getState().reset();
                 }
-                state.tabs.forEach((t) => t.path.found && settingsStore.getState().updateHistory(t.path.value));
+                state.tabs.forEach((t) => t.path.found && updateHistory(t.path.value));
                 return state;
             });
         },
@@ -144,7 +144,7 @@ function openInActiveTab(tabs: TabState[], active: Maybe<string>, path: string, 
             path,
         });
         repoStore.getState().openRepo(path);
-        settingsStore.getState().updateHistory(path);
+        updateHistory(path);
     }
 }
 

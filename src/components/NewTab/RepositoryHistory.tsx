@@ -54,7 +54,7 @@ const HistoryBlock: React.FC<HistoryBlockComponentProps> = (props) => {
                         }
                     }}
                     title={e.path}>
-                    <>{e.title} - {e.date.toLocaleDateString()}</>
+                    <>{e.title} - {new Date(e.date).toLocaleDateString()}</>
                 </HistoryEntryButton>
             ))}
         </>

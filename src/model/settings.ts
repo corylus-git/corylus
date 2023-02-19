@@ -1,20 +1,17 @@
-import { tabsStore } from './state/tabs';
-import createHook from 'zustand';
 import create from 'zustand/vanilla';
-import { allActivePaths } from './state/util';
-import { themeStore } from './state/theme';
-import { darkTheme } from '../style/dark-theme';
 import { Logger } from '../util/logger';
-import { Theme } from '../style/theme';
 import { invoke } from '@tauri-apps/api';
 import { immer } from 'zustand/middleware/immer';
 import { basename } from '@tauri-apps/api/path';
-import { castDraft } from 'immer';
+import { useQuery } from 'react-query';
+import { trackError } from '../util/error-display';
+import { listen } from '@tauri-apps/api/event';
+import { queryClient } from '../util/queryClient';
 
 export interface HistoryEntry {
-    path: string; 
-    title: string; 
-    date: Date;
+    path: string;
+    title: string;
+    date: number;
 }
 
 /**
@@ -48,7 +45,7 @@ export interface SettingsActions {
      *
      * @param path The path to add to the history
      */
-    updateHistory(path: string): void;
+    updateHistory(path: string): Promise<void>;
 
     load(): Promise<void>;
 }
@@ -71,44 +68,28 @@ export interface SettingsActions {
 //     }
 // }
 
-export const settingsStore = create<SettingsState & SettingsActions>()(
-    immer((set, get) => ({
-        openTabs: [],
-        theme: "dark",
-        repositoryHistory: [],
-        updateHistory: (path: string) => {
+const DEFAULT_SETTINGS = {
+    openTabs: [],
+    theme: 'dark',
+    repositoryHistory: []
+};
 
-        },
-        load: async () => {
-            const data = await invoke<any>('get_settings');
-            const s = data.repositoryHistory as { path: string; date: number }[];
-            const history = await Promise.all(s.map(async ({ path, date }) => ({
-                path,
-                date: new Date(date),
-                title: await basename(path)
-            })));
-            set(state => {
-                state.openTabs = data.openTabs;
-                state.theme = data.theme;
-                state.repositoryHistory = castDraft(history);
-            })
-        }
-    })),
+export const useSettings = () => {
+    return useQuery('settings', async () => invoke<SettingsState>('get_settings'), { staleTime: Infinity, cacheTime: Infinity })?.data ?? DEFAULT_SETTINGS;
+}
+
+listen('settings-changed', (_) => queryClient.invalidateQueries('settings'));
+
+export const updateSettings = trackError('updateSettings', 'update settings',
+    async (newSettings: SettingsState): Promise<void> => {
+        const backendSettings = await invoke<SettingsState>('update_settings', { settings: newSettings });
+        queryClient.setQueryData('settings', backendSettings);
+    }
 );
 
-export const useSettings = createHook(settingsStore);
+export const updateHistory = trackError('updateHistory', 'update history', 
+    async (path: string) => {
+        await invoke('update_history', { path });
+    }
+);
 
-export function startAppSettingsStorage(): void {
-    // TODO
-    // tabsStore.subscribe(
-    //     (tabs: string[] | null) => (appSettings().openTabs = tabs ?? []),
-    //     (s) => allActivePaths(s)
-    // );
-    // themeStore.subscribe(
-    //     (theme: string | null) => {
-    //         Logger().debug('appSettingsStorage', 'Syncing new theme to settings', { theme });
-    //         appSettings().theme = theme ?? darkTheme.name;
-    //     },
-    //     (s) => s.current.name
-    // );
-}

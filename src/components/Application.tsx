@@ -4,7 +4,7 @@ import { basename } from '@tauri-apps/api/path';
 import { HashRouter as Router } from 'react-router-dom';
 
 import '../style/app.css';
-import styled, { ThemeProvider, DefaultTheme } from 'styled-components';
+import styled, { ThemeProvider } from 'styled-components';
 import { Tabs } from './util/Tabs';
 import { Logger } from '../util/logger';
 import { useSettings } from '../model/settings';
@@ -28,15 +28,11 @@ const ApplicationView = styled.div`
     color: var(--foreground);
 `;
 
-export const Application = () => {
+const ApplicationViewContainer: React.FC = () => {
     const [showAbout, setShowAbout] = useState(false);
     const theme = useTheme();
     const tabs = useTabs();
     const settings = useSettings();
-
-    useEffect(() => {
-        settings.load();
-    }, []);
 
     useEffect(() => {
         (async () => {
@@ -49,7 +45,7 @@ export const Application = () => {
             theme.switchTheme(settings.theme ?? darkTheme.name);
         })();
     }, [settings.openTabs, settings.theme]);
-    Logger().debug('Application', 'Re-rendering <Application />', { theme: theme.current });
+    Logger().debug('Application', 'Re-rendering <Application />', { theme: theme.current, tabs, settings, showAbout });
     React.useEffect(() => {
         // ipcRenderer.on('show-about', (_) => {
         //     setShowAbout(true);
@@ -59,24 +55,30 @@ export const Application = () => {
         document.documentElement.style.setProperty('--hue', theme.current.hue.toString());
         document.documentElement.style.setProperty('--lightness', theme.current.lightness);
     }, [theme.current]);
+
+    return (
+        <ThemeProvider theme={theme.current}>
+            <ApplicationView>
+                <GlobalErrorBoundary>
+                    <Router>
+                        <Tabs />
+                        <AboutPanel open={showAbout} onClose={() => setShowAbout(false)} />
+                    </Router>
+                    <ToastContainer
+                        newestOnTop={false}
+                        position="bottom-right"
+                        style={{ width: '40rem' }}
+                        closeButton={false}
+                    />
+                </GlobalErrorBoundary>
+            </ApplicationView>
+        </ThemeProvider>);
+}
+
+export const Application = () => {
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider theme={theme.current}>
-                <ApplicationView>
-                    <GlobalErrorBoundary>
-                        <Router>
-                            <Tabs />
-                            <AboutPanel open={showAbout} onClose={() => setShowAbout(false)} />
-                        </Router>
-                        <ToastContainer
-                            newestOnTop={false}
-                            position="bottom-right"
-                            style={{ width: '40rem' }}
-                            closeButton={false}
-                        />
-                    </GlobalErrorBoundary>
-                </ApplicationView>
-            </ThemeProvider>
+            <ApplicationViewContainer />
         </QueryClientProvider>
     );
 };
