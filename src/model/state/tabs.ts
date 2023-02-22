@@ -6,7 +6,7 @@ import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
 import { Logger } from '../../util/logger';
 import { just, Maybe, nothing } from '../../util/maybe';
-import { updateHistory, updateSettings } from '../settings';
+import { updateHistory, updateSettings, updateTabs, useSettings } from '../settings';
 import { repoStore } from './repo';
 import { stagingArea } from './stagingArea';
 
@@ -57,8 +57,10 @@ export const tabsStore = create<TabsState & TabsActions>()(
                     path: nothing,
                     title: '(New Tab)',
                 };
+                const tabs = [...state.tabs, tab];
+                updateTabs(tabs);
                 return {
-                    tabs: [...state.tabs, tab],
+                    tabs,
                     active: just(tab.id)
                 };
             });
@@ -80,6 +82,7 @@ export const tabsStore = create<TabsState & TabsActions>()(
                         }
                     }
                 }
+                updateTabs(newState.tabs);
                 return newState;
             });
         },
@@ -101,7 +104,7 @@ export const tabsStore = create<TabsState & TabsActions>()(
         openRepoInActive: async (path: string): Promise<void> => {
             const title = await basename(path);
             set((state) => {
-               openInActiveTab(state.tabs, state.active, path, title);
+                openInActiveTab(state.tabs, state.active, path, title);
             });
         },
         openRepoInNew: async (path: string): Promise<void> => {
@@ -120,7 +123,7 @@ export const tabsStore = create<TabsState & TabsActions>()(
         loadTabs: (tabs: readonly TabState[]): void => {
             set((state) => {
                 Logger().debug('loadTabs', 'Loading stored tabs', { tabs: tabs });
-                state.tabs =  castDraft(tabs);
+                state.tabs = castDraft(tabs);
             });
             const active = get().active;
             if (active.found) {
@@ -144,6 +147,7 @@ function openInActiveTab(tabs: TabState[], active: Maybe<string>, path: string, 
             path,
         });
         repoStore.getState().openRepo(path);
+        updateTabs(tabs);
         updateHistory(path);
     }
 }
@@ -155,6 +159,27 @@ export function getTab(path: string): TabState | undefined {
     const tabs = tabsStore.getState();
     return tabs.tabs.find(t => t.path.found && t.path.value === path)
 }
-
-
+//
+// export function useTabs() {
+//     const settings = useSettings();
+//     return {
+//         tabs: settings.openTabs,
+//         active: nothing,
+//
+//         addTab: async (): Promise<void> => {
+//             Logger().debug('addTab', 'Opening new tab');
+//             const tab: TabState = {
+//                 id: `tab-${nanoid()}`,
+//                 path: nothing,
+//                 title: '(New Tab)',
+//             };
+//
+//             await updateSettings({
+//                 ...settings,
+//                 openTabs: [...settings.openTabs, tab],
+//                 active: tab.id
+//             });
+//         },
+//     }
+// }
 export const useTabs = createHook(tabsStore);

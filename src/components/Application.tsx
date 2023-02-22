@@ -7,7 +7,7 @@ import '../style/app.css';
 import styled, { ThemeProvider } from 'styled-components';
 import { Tabs } from './util/Tabs';
 import { Logger } from '../util/logger';
-import { useSettings } from '../model/settings';
+import { startSettingsObserver, useSettings } from '../model/settings';
 import { GlobalErrorBoundary } from './GlobalErrorBoundary';
 import { AboutPanel } from './AboutPanel';
 // import { ipcRenderer } from 'electron';

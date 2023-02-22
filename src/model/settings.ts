@@ -7,6 +7,7 @@ import { useQuery } from 'react-query';
 import { trackError } from '../util/error-display';
 import { listen } from '@tauri-apps/api/event';
 import { queryClient } from '../util/queryClient';
+import { TabsState, tabsStore, TabState } from './state/tabs';
 
 export interface HistoryEntry {
     path: string;
@@ -71,25 +72,36 @@ export interface SettingsActions {
 const DEFAULT_SETTINGS = {
     openTabs: [],
     theme: 'dark',
-    repositoryHistory: []
+    repositoryHistory: [],
 };
 
 export const useSettings = () => {
     return useQuery('settings', async () => invoke<SettingsState>('get_settings'), { staleTime: Infinity, cacheTime: Infinity })?.data ?? DEFAULT_SETTINGS;
 }
 
-listen('settings-changed', (_) => queryClient.invalidateQueries('settings'));
+// listen('settings-changed', (_) => queryClient.invalidateQueries('settings'));
 
 export const updateSettings = trackError('updateSettings', 'update settings',
     async (newSettings: SettingsState): Promise<void> => {
-        const backendSettings = await invoke<SettingsState>('update_settings', { settings: newSettings });
-        queryClient.setQueryData('settings', backendSettings);
+        await invoke<SettingsState>('update_settings', { settings: newSettings });
+        // queryClient.setQueryData('settings', backendSettings);
     }
 );
 
-export const updateHistory = trackError('updateHistory', 'update history', 
+export const updateHistory = trackError('updateHistory', 'update history',
     async (path: string) => {
         await invoke('update_history', { path });
     }
 );
 
+export const updateTabs = trackError('updateTabs', 'updating stored tabs',
+    async (tabs: readonly TabState[]) => {
+        const currentSettings = queryClient.getQueryData<SettingsState>('settings');
+        if (!currentSettings) {
+            Logger().error('updateTabs', 'Tried to save updated tabs in non-existent settings');
+        }
+        else {
+            await updateSettings({ ...currentSettings, openTabs: tabs.flatMap(t => t.path.found ? [t.path.value] : []) });
+        }
+    }
+);

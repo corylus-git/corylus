@@ -1,6 +1,6 @@
-use crate::error::Result;
+use crate::error::{Result, DefaultResult};
 
-use super::{model::config::{GitConfigEntry, GitConfigLevel}, StateType, with_backend};
+use super::{model::config::{GitConfigEntry, GitConfigLevel}, StateType, with_backend, with_state};
 
 #[tauri::command]
 pub async fn get_config(state: StateType<'_>) -> Result<Vec<GitConfigEntry>>
