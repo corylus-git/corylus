@@ -306,14 +306,6 @@ export const useRebaseStatus = (): Maybe<RebaseStatusInfo> => {
 }
 
 /**
- * Get the commit stats for the given commit.
- * 
- * @param commit The commit for which to return the stats
- * @returns The CommitStats for the commit
- */
-export const loadCommitStats = (commit: Commit): Promise<CommitStats> => repoStore.getState().backend.getCommitStats(commit);
-
-/**
  * Query the diff of a specific file
  */
 export function useDiff(source: 'commit' | 'stash' | 'index' | 'workdir', path: string, commit?: string, parent?: string, untracked?: boolean) {

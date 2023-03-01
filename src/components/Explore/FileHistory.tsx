@@ -7,10 +7,12 @@ import { NoScrollPanel } from '../util/NoScrollPanel';
 import { CommitDetailsView } from '../Diff/Commit';
 import { useFileHistory, explorer, useFileHistoryGraph } from '../../model/state/explorer';
 import { GraphRenderer } from '../History/GraphRenderer';
-import { loadCommitStats, useBranches, useTags } from '../../model/state/repo';
+import { useBranches, useTags } from '../../model/state/repo';
 import { useAsync } from 'react-use';
-import { Commit } from '../../model/stateObjects';
+import { Commit, CommitStats } from '../../model/stateObjects';
 import { just, nothing } from '../../util/maybe';
+import { invoke } from '@tauri-apps/api';
+import { getCommitStats } from '../../model/actions/repo';
 
 const HistoryContainer = styled.div`
     position: absolute;
@@ -41,8 +43,7 @@ export const FileHistory: React.FC = () => {
     const branches = useBranches();
     const [selectedCommit, setSelectedCommit] = React.useState<Commit>();
     const stats = useAsync(async () => {
-        console.log("Loading commit from file history", selectedCommit);
-        return selectedCommit ? loadCommitStats(selectedCommit) : undefined;
+        return selectedCommit ? getCommitStats(selectedCommit.oid) : undefined;
     }, [selectedCommit])
 
     React.useLayoutEffect(resizer, [history, targetRef.current]);

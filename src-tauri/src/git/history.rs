@@ -220,7 +220,7 @@ pub async fn get_commit_stats(
     state: StateType<'_>,
     window: Window,
     oid: &str,
-) -> DefaultResult {
+) -> Result<CommitStats> {
     with_backend_mut(state, |backend| {
         let commit =
             Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
@@ -244,15 +244,12 @@ pub async fn get_commit_stats(
             .map(|diff| map_diff(&diff))
             .ok();
 
-        window.emit(
-            "commitStatsChanged",
-            CommitStats::Commit(CommitStatsData {
+        let commit_stats = CommitStats::Commit(CommitStatsData {
                 commit: FullCommitData::try_from(&commit)?,
                 direct,
                 incoming,
-            }),
-        )?;
-        Ok(())
+            });
+        Ok(commit_stats)
     })
     .await
 }

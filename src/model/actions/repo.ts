@@ -552,14 +552,19 @@ export const syncConfig = trackError(
     }
 );
 
-export function selectCommit(ref: CommitStatsData | string | Commit) {
+export function getCommitStats(oid: string) {
+    return invoke<CommitStats>('get_commit_stats', { oid });
+}
+
+export async function selectCommit(ref: CommitStatsData | string | Commit) {
     if (!(ref as CommitStatsData).direct) {
         const oid =
             typeof ref === 'string'
                 ? ref
                 : (ref as Commit).oid;
         Logger().debug('selectCommit', 'Requesting commit details', { oid});
-        invoke('get_commit_stats', { oid });
+        const stats = await getCommitStats(oid);
+        repoStore.getState().setSelectedCommit(just(stats));
         requestAffectedCommits(oid, true, true);
     } else {
         requestAffectedCommits((ref as CommitStatsData).commit.oid, true, true);
