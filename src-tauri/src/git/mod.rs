@@ -12,6 +12,7 @@ pub mod stash;
 pub mod tags;
 pub mod worktree;
 pub mod rebase;
+pub mod credentials;
 
 use std::{fs::OpenOptions, io::Write, sync::Arc};
 

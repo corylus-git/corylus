@@ -1,10 +1,14 @@
-use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions};
+use std::{collections::HashSet, path::Path};
+
+use git2::{
+    AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks,
+};
 use log::debug;
 use tauri::Window;
 
 use crate::error::{BackendError, DefaultResult, Result};
 
-use super::{model::remote::RemoteMeta, with_backend, with_backend_mut, StateType};
+use super::{model::remote::RemoteMeta, with_backend, with_backend_mut, StateType, credentials::make_credentials_callback};
 
 #[tauri::command]
 pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>> {
@@ -29,7 +33,6 @@ pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>> {
     })
     .await
 }
-
 #[tauri::command]
 pub async fn push(
     state: StateType<'_>,
@@ -47,7 +50,10 @@ pub async fn push(
         if let Some(u) = upstream {
             branch_ref = branch_ref.map(|br| format!("{}:refs/heads/{}", br, u));
         }
+        let mut remote_callbacks = RemoteCallbacks::new();
+        remote_callbacks.credentials(make_credentials_callback(&backend.repo));
         let mut options = PushOptions::new();
+        options.remote_callbacks(remote_callbacks);
         let refspecs = if branch_ref.is_some() {
             vec![branch_ref.unwrap()]
         } else {

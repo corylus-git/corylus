@@ -972,9 +972,8 @@ dependencies = [
 
 [[package]]
 name = "git2"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2994bee4a3a6a51eb90c218523be382fd7ea09b16380b9312e9dbe955ff7c7d1"
+version = "0.16.1"
+source = "git+https://github.com/rust-lang/git2-rs.git?rev=7292b00#7292b00ae106e73e8c7f2f2020e648cd3e6d4ae3"
 dependencies = [
  "bitflags",
  "libc",
@@ -1404,8 +1403,7 @@ dependencies = [
 [[package]]
 name = "libgit2-sys"
 version = "0.14.2+1.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f3d95f6b51075fe9810a7ae22c7095f12b98005ab364d8544797a825ce946a4"
+source = "git+https://github.com/rust-lang/git2-rs.git?rev=7292b00#7292b00ae106e73e8c7f2f2020e648cd3e6d4ae3"
 dependencies = [
  "cc",
  "libc",
@@ -1417,9 +1415,9 @@ dependencies = [
 
 [[package]]
 name = "libssh2-sys"
-version = "0.2.23"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b094a36eb4b8b8c8a7b4b8ae43b2944502be3e59cd87687595cf6b0a71b3f4ca"
+checksum = "2dc8a030b787e2119a731f1951d6a773e2280c660f8ec4b0f5e1505a386e71ee"
 dependencies = [
  "cc",
  "libc",
