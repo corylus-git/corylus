@@ -225,7 +225,7 @@ pub async fn add_to_gitignore(
     .await
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum DiffSourceType {
     Workdir,

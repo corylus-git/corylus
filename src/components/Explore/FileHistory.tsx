@@ -9,9 +9,8 @@ import { useFileHistory, explorer, useFileHistoryGraph } from '../../model/state
 import { GraphRenderer } from '../History/GraphRenderer';
 import { useBranches, useTags } from '../../model/state/repo';
 import { useAsync } from 'react-use';
-import { Commit, CommitStats } from '../../model/stateObjects';
+import { Commit } from '../../model/stateObjects';
 import { just, nothing } from '../../util/maybe';
-import { invoke } from '@tauri-apps/api';
 import { getCommitStats } from '../../model/actions/repo';
 
 const HistoryContainer = styled.div`

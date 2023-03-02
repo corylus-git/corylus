@@ -218,7 +218,6 @@ pub async fn get_commit(
 #[tauri::command]
 pub async fn get_commit_stats(
     state: StateType<'_>,
-    window: Window,
     oid: &str,
 ) -> Result<CommitStats> {
     with_backend_mut(state, |backend| {

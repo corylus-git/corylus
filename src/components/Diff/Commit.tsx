@@ -177,7 +177,7 @@ export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
                                 commit={stats.value.commit.oid}
                                 diffs={stats.value.incoming}
                                 source="commit"
-                                toParent={`${stats.value.commit.oid}^`}
+                                toParent={`${stats.value.commit.oid}^2`}
                             />
                         </>
                     )}

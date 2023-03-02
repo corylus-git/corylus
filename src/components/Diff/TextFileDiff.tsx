@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDiff } from '../../model/state/repo';
 import { DiffStat } from '../../model/stateObjects';
+import { Logger } from '../../util/logger';
 import { DiffViewer } from './DiffViewer';
 
 export type TextFileDiffProps = {
@@ -19,8 +20,9 @@ export const TextFileDiff: React.FC<TextFileDiffProps> = (props) => {
     if (error) {
         return <>Could not load diff.</>
     }
-    if (data) {
+    if (data && data.length > 0) {
         return <DiffViewer file={data[0]} selectable />
     }
-    return <></>;
+    Logger().error('TextFileDiff', 'Received empty diff from the backend', { props });
+    return <>Internal error loading the diff</>;
 };

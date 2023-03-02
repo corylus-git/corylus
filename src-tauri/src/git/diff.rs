@@ -1,4 +1,4 @@
-use std::{fs::read, path::Path, convert::TryFrom};
+use std::{convert::TryFrom, fs::read, path::Path};
 
 use git2::{Oid, Patch};
 
@@ -18,23 +18,21 @@ pub async fn get_diff(
     path: Option<&str>,
     untracked: Option<bool>,
 ) -> Result<Vec<FileDiff>> {
+    log::debug!("Retrieving diff for source {:?}({:?} -> {:?}), path: {:?}", source, commit_id, to_parent, path);
     with_backend(state, |backend| match &source {
         DiffSourceType::Commit => {
-            let parent = to_parent.map(|p| p.to_owned()).or_else(|| {
-                if source == DiffSourceType::Commit {
-                    commit_id
-                        .and_then(|id| {
-                            Oid::from_str(id)
-                                .and_then(|oid| backend.repo.find_commit(oid))
-                                .and_then(|commit| commit.parent_id(0))
-                                .map(|oid| oid.to_string())
-                                .ok()
-                        })
-                } else {
-                    None
-                }
-            });
-            let diff = backend.load_diff(commit_id, parent.as_deref(), &[path])?;
+            let parent = if let Some(p_id) = to_parent {
+                Some(backend.repo.revparse_single(p_id)?.id())
+            } else if let Some(id) = commit_id {
+                let oid = Oid::from_str(id)?;
+                let commit = backend.repo.find_commit(oid)?;
+                Some(commit.parent_id(0)?)
+            } else {
+                None
+            };
+            log::trace!("Getting diff for commit: {:?} -> {:?}, path {:?}", commit_id, parent, path);
+            let diff =
+                backend.load_diff(commit_id, parent.map(|p| p.to_string()).as_deref(), &[path])?;
             Ok(Diff::try_from(diff)?.0)
         }
         DiffSourceType::Workdir => {
@@ -43,11 +41,21 @@ pub async fn get_diff(
             if let Some(p) = path {
                 if untracked.unwrap_or(false) {
                     let empty = vec![];
-                    let full_path = backend.repo.workdir().map(|repo_dir| repo_dir.join(p)).ok_or(BackendError::new(format!("Could not resolve path {}", p)))?;
+                    let full_path = backend
+                        .repo
+                        .workdir()
+                        .map(|repo_dir| repo_dir.join(p))
+                        .ok_or(BackendError::new(format!("Could not resolve path {}", p)))?;
                     let contents = read(full_path).map_err(|e| BackendError::new(e.to_string()))?;
-                    let mut patch = Patch::from_buffers(&empty, None, &contents, Some(Path::new(p)), Some(&mut opts))?;
+                    let mut patch = Patch::from_buffers(
+                        &empty,
+                        None,
+                        &contents,
+                        Some(Path::new(p)),
+                        Some(&mut opts),
+                    )?;
                     let diff = git2::Diff::from_buffer(&(patch.to_buf()?))?;
-                    return Ok(Diff::try_from(diff)?.0)
+                    return Ok(Diff::try_from(diff)?.0);
                 }
                 opts.pathspec(p);
             }
