@@ -1,14 +1,15 @@
 use std::{collections::HashSet, path::Path};
 
-use git2::{
-    AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks,
-};
+use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks};
 use log::debug;
 use tauri::Window;
 
 use crate::error::{BackendError, DefaultResult, Result};
 
-use super::{model::remote::RemoteMeta, with_backend, with_backend_mut, StateType, credentials::make_credentials_callback};
+use super::{
+    credentials::make_credentials_callback, model::remote::RemoteMeta, with_backend,
+    with_backend_mut, StateType,
+};
 
 #[tauri::command]
 pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>> {
@@ -102,7 +103,14 @@ pub async fn fetch(
                         } else {
                             AutotagOption::None
                         });
-                        r.fetch(&ref_spec.map_or([""], |rs| [rs]), Some(&mut options), None)?;
+                        let fetch_refspec = r.fetch_refspecs()?;
+                        let default_refspec: Vec<&str> = fetch_refspec.iter().flatten().collect();
+                        r.fetch(
+                            &ref_spec.map_or(default_refspec, |rs| vec![rs]),
+                            Some(&mut options),
+                            None,
+                        )?;
+                        debug!("Fetched changes from {}", name);
                     }
                 }
                 Ok(())
