@@ -17,16 +17,20 @@ import {
     usePendingCommit,
     repoStore,
     useRebaseStatus,
+    useConflict,
+    useMergeHead,
+    useMergeMessage,
 } from '../../model/state/repo';
 import { SelectedFile, useStagingArea } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../util/filetypes';
 import { invoke } from '@tauri-apps/api';
 import { useIndex } from '../../model/state';
+import { useQuery } from 'react-query';
 
 let splitterX: string | undefined = undefined;
 
-const DiffDisplayPanel: React.FC<{selectedFile: SelectedFile | undefined}> = (props) => {
+const DiffDisplayPanel: React.FC<{ selectedFile: SelectedFile | undefined }> = (props) => {
     if (props.selectedFile) {
         const source = props.selectedFile.source;
         // const fileType = mime.lookup(stagingArea.selectedFile.value.path) || 'text/plain';
@@ -60,35 +64,29 @@ const DiffDisplayPanel: React.FC<{selectedFile: SelectedFile | undefined}> = (pr
     }
     // TODO
     // if (stagingArea.selectedConflict.found) {
-    //     return (
-    //         <div>
-    //             <ConflictResolutionPanel
-    //                 conflict={stagingArea.selectedConflict.value}
-    //                 onClose={() => {
-    //                     stagingArea.deselectConflictedFile();
-    //                 }}
-    //             />
-    //         </div>
-    //     );
     // }
     return <></>;
 };
+
+const FilePanel: React.FC<{ selectedFile: SelectedFile | undefined }> = (props) => {
+    if (props.selectedFile?.conflicted) {
+        return (
+            <ConflictResolutionPanel path={props.selectedFile.path} ourType="commit" theirType='commit' />
+        );
+    }
+    return <DiffDisplayPanel selectedFile={props.selectedFile} />
+}
 
 export const IndexPanel: React.FC = () => {
     const { data: index } = useIndex();
     const [selectedFile, setSelectedFile] = React.useState<SelectedFile>();
     Logger().debug('IndexPanel', 'Received new index status', { index: index });
 
-    function showMergeResolutionPanel(file: IndexStatus) {
-        // stagingArea.deselectDiff();
-        // stagingArea.selectConflictedFile(file);
-    }
-
     return (
         <div style={{ display: 'grid', gridTemplateRows: '1fr 10rem', marginLeft: '5px' }}>
             <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
                 <StagingArea
-                    workdir={index?.filter((s) => s.workdirStatus !== 'unmodified')}
+                    workdir={index?.filter((s) => s.workdirStatus !== 'unmodified' || s.isConflicted)}
                     staged={index?.filter(
                         (s) =>
                             s.indexStatus !== 'untracked' &&
@@ -98,21 +96,17 @@ export const IndexPanel: React.FC = () => {
                     onStagePath={(path) => invoke('stage', { path: path.path })}
                     onUnstagePath={(path) => invoke('unstage', { path: path.path })}
                     onSelectWorkdirEntry={(entry) => {
-                        if (!entry.isConflicted) {
-                            if (entry.type !== 'dir') {
-                                setSelectedFile({path: entry.path, source: 'workdir', untracked: entry.workdirStatus === 'untracked'});
-                            }
-                        } else {
-                            showMergeResolutionPanel(entry);
+                        if (entry.type !== 'dir') {
+                            setSelectedFile({ path: entry.path, source: 'workdir', untracked: entry.workdirStatus === 'untracked', conflicted: entry.isConflicted });
                         }
                     }}
                     onSelectIndexEntry={(entry) => {
                         if (!entry.isConflicted && entry.type !== 'dir') {
-                            setSelectedFile({path: entry.path, source: 'index', untracked: false});
+                            setSelectedFile({ path: entry.path, source: 'index', untracked: false, conflicted: false });
                         }
                     }}
                 />
-                <DiffDisplayPanel selectedFile={selectedFile}/>
+                <FilePanel selectedFile={selectedFile} />
             </Splitter>
             <CommitForm
                 onCommit={() => {
@@ -138,9 +132,9 @@ let commitMessage: Maybe<string> = nothing;
 let savedAmend = false;
 
 function CommitForm(props: { onCommit?: () => void }) {
-    const backend = useRepo((s) => s.backend);
     const pendingCommit = usePendingCommit();
     const rebaseStatus = useRebaseStatus();
+    const { data } = useMergeMessage();
     let pendingCommitMessage = pendingCommit.found
         ? just(pendingCommit.value.message)
         : commitMessage;
@@ -170,7 +164,7 @@ function CommitForm(props: { onCommit?: () => void }) {
                 }}
                 enableReinitialize
                 initialValues={{
-                    commitmsg: pendingCommitMessage.found ? pendingCommitMessage.value : '',
+                    commitmsg: data ?? '',
                     amend: savedAmend,
                 }}
                 initialErrors={

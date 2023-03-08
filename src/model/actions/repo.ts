@@ -385,7 +385,7 @@ export const resolveConflict = trackError(
             conflictedPath,
             resolution,
         });
-        await repoStore.getState().backend.resolveConflict(conflictedPath, resolution);
+        await invoke('checkout', { rev: resolution == 'ours' ? 'HEAD' : 'MERGE_HEAD', path: conflictedPath, resolution });
         Logger().silly('resolveConflict', 'Success');
         // repoStore.getState().getStatus();
     }

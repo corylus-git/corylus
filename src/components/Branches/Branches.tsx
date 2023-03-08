@@ -106,7 +106,7 @@ const ContextMenu: React.FC<{
             {
                 props.currentBranch.found && !props.branch.current && <MenuGroup>
                     <MenuItem onClick={() => props.dialogActions.deleteBranchDialog(props.branch)}>Delete branch {props.branch.refName}</MenuItem>
-                    <MenuItem>Merge {props.branch.refName} into {props.currentBranch.value.refName}</MenuItem>
+                    <MenuItem onClick={() => props.dialogActions.open({ type: 'request-merge', source: just(props.branch.refName) })}>Merge {props.branch.refName} into {props.currentBranch.value.refName}</MenuItem>
                     <MenuItem>Rebase {props.currentBranch.value.refName} on {props.branch.refName}</MenuItem>
                     <MenuItem>Interactive rebase {props.currentBranch!.value.refName} on {props.branch.refName}</MenuItem>
                     {

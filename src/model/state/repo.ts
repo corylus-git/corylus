@@ -16,6 +16,7 @@ import { GitConfigValue, IGitConfig, IGitConfigValues, NamedGitConfigValue } fro
 import {
     BranchInfo, Commit, CommitStats, PendingCommit, RebaseStatusInfo, RemoteMeta, Stash, Tag
 } from '../stateObjects';
+import { SelectedConflict, SelectedFile } from './stagingArea';
 
 /**
  * Information about the git history
@@ -305,6 +306,12 @@ export const useRebaseStatus = (): Maybe<RebaseStatusInfo> => {
     return fromNullable(data);
 }
 
+export function useMergeStatus() {
+    const result = useQuery('is_merge', () => invoke<boolean>('is_merge', {}));
+    Logger().debug('useMergeStatus', `Merge status ${result.data}`);
+    return result.data;
+}
+
 /**
  * Query the diff of a specific file
  */
@@ -320,6 +327,22 @@ export function useDiff(source: 'commit' | 'stash' | 'index' | 'workdir', path: 
 listen<{commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 'workdir', parent?: string, untracked?: boolean}>('diff-changed', ev => {
     Logger().debug('diff-changed', 'Diff changed', { paylod: ev.payload });
 });
+
+export function useHead() {
+    return useCommit('HEAD');
+}
+
+export function useMergeHead() {
+    return useCommit('HEAD^');
+}
+
+export function useCommit(ref: string | undefined) {
+    return useQuery(['commit', ref], () => invoke<Commit>('get_commit', { refNameOrOid: ref}), { enabled: !!ref });
+}
+
+export function useMergeMessage() {
+    return useQuery(['merge_message'], () => invoke<string | undefined>('get_merge_message', {}));
+}
 
 /**
  * =================================================

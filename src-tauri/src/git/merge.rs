@@ -1,9 +1,9 @@
-use git2::{build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository};
+use git2::{build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository, RepositoryState, ErrorCode};
 use tauri::Window;
 
 use crate::error::{Result, DefaultResult, BackendError};
 
-use super::{index::do_commit, with_backend_mut, StateType};
+use super::{index::do_commit, with_backend_mut, StateType, with_backend};
 
 #[tauri::command]
 pub async fn merge(
@@ -77,6 +77,16 @@ fn fast_forward(
 }
 
 #[tauri::command]
+pub async fn is_merge(state: StateType<'_>) -> Result<bool>
+{
+    with_backend(state, |backend| {
+        let state = backend.repo.state();
+        log::trace!("Repository state: {:?}", state);
+        Ok(state == RepositoryState::Merge)
+    }).await
+}
+
+#[tauri::command]
 pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult {
     with_backend_mut(state, |backend| {
         // TODO there is actually a reset mode --merge in the Git CLI which is currently not
@@ -94,4 +104,11 @@ pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult 
         Ok(())
     })
     .await
+}
+
+#[tauri::command]
+pub async fn get_merge_message(state: StateType<'_>) -> Result<Option<String>> {
+    with_backend(state, |backend| {
+        Ok(Some(backend.repo.message()?))
+    }).await
 }

@@ -1,12 +1,21 @@
 use std::path::Path;
 
-use git2::{build::CheckoutBuilder, Status};
+use git2::{build::CheckoutBuilder, Status, MergeOptions};
 use log::{debug, error};
+use serde::Deserialize;
 use tauri::Window;
 
-use crate::error::{Result, DefaultResult};
+use crate::error::{DefaultResult, Result};
 
-use super::{model::{index::IndexStatus, graph::{GraphLayoutData, GraphChangeData}}, with_backend, with_backend_mut, GitBackend, StateType, history::{load_history, do_get_graph}};
+use super::{
+    history::{do_get_graph, load_history},
+    model::{
+        git::Commit,
+        graph::{GraphChangeData, GraphLayoutData},
+        index::{FileConflict, IndexStatus},
+    },
+    with_backend, with_backend_mut, GitBackend, StateType,
+};
 
 #[tauri::command]
 pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
@@ -97,11 +106,14 @@ pub fn do_commit(
     window.emit("branches-changed", ())?;
     // TODO this repeats code from git_open -> don't like this current setup
     backend.graph = do_get_graph(backend, None)?;
-    window.emit("history-changed", GraphChangeData {
-        total: backend.graph.lines.len(),
-        change_end_idx: 0,
-        change_start_idx: backend.graph.lines.len()
-    })?; 
+    window.emit(
+        "history-changed",
+        GraphChangeData {
+            total: backend.graph.lines.len(),
+            change_end_idx: 0,
+            change_start_idx: backend.graph.lines.len(),
+        },
+    )?;
     Ok(())
 }
 
@@ -126,11 +138,7 @@ pub async fn apply_diff(
 }
 
 #[tauri::command]
-pub async fn discard_changes(
-    window: Window,
-    state: StateType<'_>,
-    path: &str,
-) -> DefaultResult {
+pub async fn discard_changes(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
         let p = Path::new(path);
         let state = if p.is_file() {
@@ -152,6 +160,41 @@ pub async fn discard_changes(
                 .force()
                 .update_index(false)
                 .remove_untracked(true);
+            backend.repo.checkout_head(Some(&mut co))?;
+        }
+        window.emit("status-changed", ())?;
+        Ok(())
+    })
+    .await
+}
+
+#[derive(Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ConflictResolution {
+    Ours,
+    Theirs,
+}
+
+#[tauri::command]
+pub async fn checkout(
+    state: StateType<'_>,
+    window: Window,
+    rev: Option<&str>,
+    path: Option<&str>,
+    resolution: Option<ConflictResolution>,
+) -> DefaultResult {
+    with_backend(state, |backend| {
+        let mut co = CheckoutBuilder::new();
+        if let Some(p) = path {
+            co.path(p);
+        }
+        if let Some(_r) = resolution {
+            co.force();
+        }
+        if let Some(r) = rev {
+            let obj = backend.repo.revparse_single(r)?;
+            backend.repo.checkout_tree(&obj, Some(&mut co))?;
+        } else {
             backend.repo.checkout_head(Some(&mut co))?;
         }
         window.emit("status-changed", ())?;

@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::error::BackendError;
 
-use super::git::DiffStatus;
+use super::git::{Commit, DiffStatus};
 
 #[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -40,9 +40,7 @@ impl TryFrom<git2::StatusEntry<'_>> for IndexStatus {
         Ok(Self {
             path: value
                 .path()
-                .ok_or_else(|| BackendError::new(
-                    "Cannot get index status for entry without path",
-                ))?
+                .ok_or_else(|| BackendError::new("Cannot get index status for entry without path"))?
                 .into(),
             workdir_status: get_workdir_status(&value),
             index_status: get_index_status(&value),
@@ -103,4 +101,14 @@ pub struct RebaseStatusInfo {
      * The commits that are still open to be rebased
      */
     // todo: readonly RebaseAction[];
+}
+
+/**
+ * Information about a specific conflict
+ */
+#[derive(Serialize)]
+pub struct FileConflict {
+    file: IndexStatus,
+    ours: Commit,
+    theirs: Commit,
 }

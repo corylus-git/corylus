@@ -24,14 +24,14 @@ use crate::{
         diff::get_diff,
         get_graph_entries, add_to_gitignore,
         history::{get_affected_branches, get_commit, get_commit_stats, get_graph, get_commits},
-        index::{commit, get_status, stage, unstage, apply_diff, discard_changes},
+        index::{commit, get_status, stage, unstage, apply_diff, discard_changes, checkout},
         remote::{get_remotes, push, fetch}, stash::{get_stashes, stash, get_stash_stats, apply_stash, drop_stash},
         branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch, checkout_remote_branch, reset},
         worktree::{get_worktrees, checkout_worktree},
         tags::{get_tags, create_tag},
         config::get_config,
         files::get_files,
-        merge::{merge, abort_merge},
+        merge::{merge, is_merge, abort_merge, get_merge_message},
         rebase::{rebase, rebase_status}
     },
     settings::{get_settings, update_settings, update_history}, log::send_log,
@@ -67,6 +67,7 @@ fn main() {
             stage,
             unstage,
             commit,
+            checkout,
             get_graph,
             get_graph_entries,
             get_affected_branches,
@@ -92,7 +93,9 @@ fn main() {
             discard_changes,
             add_to_gitignore,
             merge,
-            abort_merge
+            is_merge,
+            abort_merge,
+            get_merge_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

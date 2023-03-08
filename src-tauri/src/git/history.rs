@@ -206,10 +206,10 @@ pub async fn get_commit(
     state: StateType<'_>,
     ref_name_or_oid: &str,
 ) -> Result<Commit> {
+    log::trace!("Requesting commit information for {}", ref_name_or_oid);
     with_backend(state, |backend| {
-        let parsed_oid = Oid::from_str(ref_name_or_oid)
-            .or_else(|_| backend.repo.refname_to_id(ref_name_or_oid))?;
-        let commit = backend.repo.find_commit(parsed_oid)?;
+        let obj = backend.repo.revparse_single(ref_name_or_oid)?;
+        let commit = obj.peel_to_commit()?;
         map_commit(&commit, false)
     })
     .await

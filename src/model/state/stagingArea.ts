@@ -16,6 +16,7 @@ export interface SelectedFile {
     path: string;
     source: 'workdir' | 'index';
     untracked: boolean;
+    conflicted: boolean;
 }
 
 export interface SelectedConflict {

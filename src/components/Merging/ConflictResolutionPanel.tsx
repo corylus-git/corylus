@@ -5,11 +5,13 @@ import { CommitMetaData } from '../Diff/Commit';
 import { Logger } from '../../util/logger';
 import { resolveConflict } from '../../model/actions/repo';
 import { SelectedConflict, useStagingArea } from '../../model/state/stagingArea';
-import { useRepo } from '../../model/state/repo';
+import { useHead, useMergeHead, useRepo } from '../../model/state/repo';
 
 export interface ConflictResolutionPanelProps {
+    path: string;
+    ourType: 'commit' | 'stash';
+    theirType: 'commit' | 'stash';
     onClose?: () => void;
-    conflict: SelectedConflict;
 }
 
 const ConflictResolutionDisplay = styled.div`
@@ -34,63 +36,76 @@ const ResolutionButton = styled(StyledButton)`
 `;
 
 export const ConflictResolutionPanel: React.FC<ConflictResolutionPanelProps> = (props) => {
-    const stagingArea = useStagingArea();
-    return (
-        <ConflictResolutionDisplay>
-            <h1 className="full">{props.conflict.file.path}</h1>
-            <div className="full">This file has incompatible changes in the merged commits.</div>
-            <ResolutionButton
-                onClick={() => {
-                    resolveConflict(props.conflict.file.path, 'ours');
-                    props.onClose?.();
-                }}>
-                <h2>
-                    {props.conflict.theirs.type === 'commit'
-                        ? 'Select our version'
-                        : 'Discard patch'}
-                </h2>
-            </ResolutionButton>
-            <ResolutionButton
-                onClick={() => {
-                    resolveConflict(props.conflict.file.path, 'theirs');
-                    props.onClose?.();
-                }}>
-                <h2>
-                    {' '}
-                    {props.conflict.theirs.type === 'commit'
-                        ? 'Select incoming version (theirs)'
-                        : 'Apply patch'}
-                </h2>
-            </ResolutionButton>
-            <div>
-                <h3>Last commit:</h3>
-                <CommitMetaData commit={props.conflict.ours} />
-            </div>
-            <div>
-                {props.conflict.theirs.type === 'commit' ? (
-                    <>
-                        <h3>Last commit:</h3>
-                        <CommitMetaData commit={props.conflict.theirs} />
-                    </>
-                ) : (
-                    <>
-                        <h3>Incoming patch</h3>
-                        <p>
-                            The current incoming conflict stems from a patch (e.g.{' '}
-                            <code>stash apply</code>)
-                        </p>
-                        <p>It does not have an underlying commit.</p>
-                    </>
-                )}
-            </div>
-            <ResolutionButton
-                className="full"
-                onClick={() => {
-                    Logger().silly('ConflictResolutionPanel', 'Requesting manual merge');
-                    stagingArea.requestManualMerge(props.conflict.file.path);
-                }}>
-                <h2>Merge file manually</h2>
-            </ResolutionButton>
-        </ConflictResolutionDisplay>
-    );
+    const ours = useHead();
+    const theirs = useMergeHead();
+
+    if (ours.isFetching || theirs.isFetching) {
+        return <>Loading conflicting commits...</>
+    }
+
+    if (ours.error || theirs.error) {
+        return <>Something broke loading commit information...</>
+    }
+
+    if (ours.data && theirs.data) {
+        return (
+            <ConflictResolutionDisplay>
+                <h1 className="full">{props.path}</h1>
+                <div className="full">This file has incompatible changes in the merged commits.</div>
+                <ResolutionButton
+                    onClick={() => {
+                        resolveConflict(props.path, 'ours');
+                        props.onClose?.();
+                    }}>
+                    <h2>
+                        {ours.data.type === 'commit'
+                            ? 'Select our version'
+                            : 'Discard patch'}
+                    </h2>
+                </ResolutionButton>
+                <ResolutionButton
+                    onClick={() => {
+                        resolveConflict(props.path, 'theirs');
+                        props.onClose?.();
+                    }}>
+                    <h2>
+                        {theirs.data.type === 'commit'
+                            ? 'Select incoming version (theirs)'
+                            : 'Apply patch'}
+                    </h2>
+                </ResolutionButton>
+                <div>
+                    <h3>Last commit:</h3>
+                    {<CommitMetaData commit={ours.data} />}
+                </div>
+                <div>
+                    {theirs.data.type === 'commit' ? (
+                        <>
+                            <h3>Last commit:</h3>
+                            <CommitMetaData commit={theirs.data} />
+                        </>
+                    ) : (
+                        <>
+                            <h3>Incoming patch</h3>
+                            <p>
+                                The current incoming conflict stems from a patch (e.g.{' '}
+                                <code>stash apply</code>)
+                            </p>
+                            <p>It does not have an underlying commit.</p>
+                        </>
+                    )}
+                </div>
+                <ResolutionButton
+                    className="full"
+                    onClick={() => {
+                        Logger().silly('ConflictResolutionPanel', 'Requesting manual merge');
+                        // stagingArea.requestManualMerge(props.conflict.file.path);
+                    }}>
+                    <h2>Merge file manually</h2>
+                </ResolutionButton>
+            </ConflictResolutionDisplay>
+        );
+    }
+
+    return <>Internal error</>;
 };
