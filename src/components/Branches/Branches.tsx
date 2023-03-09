@@ -91,7 +91,7 @@ const ContextMenu: React.FC<{
                             );
                         }
                     }
-                }}>Update ${props.branch.refName} to remote tracking branch</MenuItem>
+                }}>Update {props.branch.refName} to remote tracking branch</MenuItem>
             }
             {
                 (props.branch.upstream?.ahead ?? 0) > 0 &&
