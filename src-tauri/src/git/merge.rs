@@ -1,9 +1,11 @@
-use git2::{build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository, RepositoryState, ErrorCode};
+use git2::{
+    build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository, RepositoryState,
+};
 use tauri::Window;
 
-use crate::error::{Result, DefaultResult, BackendError};
+use crate::error::{BackendError, DefaultResult, Result};
 
-use super::{index::do_commit, with_backend_mut, StateType, with_backend};
+use super::{index::do_commit, with_backend, with_backend_mut, StateType};
 
 #[tauri::command]
 pub async fn merge(
@@ -14,6 +16,7 @@ pub async fn merge(
 ) -> DefaultResult {
     with_backend_mut(state, |backend| {
         let (is_branch, source_obj, source_commit) = get_source_ref(&backend.repo, from)?;
+        let target_ref = backend.repo.head()?.shorthand().unwrap_or("<unknown>").to_string();
         // limit the lifetime of the backend borrow to not collide with do_commit below
         let (analysis, preference) = backend.repo.merge_analysis(&[&source_commit])?;
         if analysis.is_fast_forward() && !preference.is_no_fast_forward() && !no_fast_forward {
@@ -37,9 +40,9 @@ pub async fn merge(
                 return Err(BackendError::new("Merge cannot be committed due to conflicts. Please check the index for details."));
             }
             let message = if is_branch {
-                format!("Merge branch '{}' into {}", from, "<todo>")
+                format!("Merge branch '{}' into {}", from, target_ref)
             } else {
-                format!("Merge {} into {}", from, "<todo>")
+                format!("Merge {} into {}", from, target_ref)
             };
             drop(source_obj);
             drop(source_commit);
@@ -77,13 +80,13 @@ fn fast_forward(
 }
 
 #[tauri::command]
-pub async fn is_merge(state: StateType<'_>) -> Result<bool>
-{
+pub async fn is_merge(state: StateType<'_>) -> Result<bool> {
     with_backend(state, |backend| {
         let state = backend.repo.state();
         log::trace!("Repository state: {:?}", state);
         Ok(state == RepositoryState::Merge)
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
@@ -108,7 +111,5 @@ pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult 
 
 #[tauri::command]
 pub async fn get_merge_message(state: StateType<'_>) -> Result<Option<String>> {
-    with_backend(state, |backend| {
-        Ok(Some(backend.repo.message()?))
-    }).await
+    with_backend(state, |backend| Ok(Some(backend.repo.message()?))).await
 }
