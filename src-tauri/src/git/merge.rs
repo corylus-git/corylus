@@ -8,7 +8,10 @@ use crate::{
     window_events::{TypedEmit, WindowEvents},
 };
 
-use super::{index::do_commit, with_backend, with_backend_mut, StateType};
+use super::{
+    index::do_commit, model::graph::GraphChangeData, with_backend, with_backend_mut, GitBackend,
+    StateType,
+};
 
 #[tauri::command]
 pub async fn merge(
@@ -23,7 +26,7 @@ pub async fn merge(
         // limit the lifetime of the backend borrow to not collide with do_commit below
         let (analysis, preference) = backend.repo.merge_analysis(&[&source_commit])?;
         if analysis.is_fast_forward() && !preference.is_no_fast_forward() && !no_fast_forward {
-            fast_forward(window, &backend.repo, &source_obj, from)?;
+            fast_forward(window, &backend, &source_obj, from)?;
         }
         else {
             let mut merge_opts = MergeOptions::new();
@@ -69,16 +72,25 @@ fn get_source_ref<'repo>(
 
 fn fast_forward(
     window: Window,
-    repo: &Repository,
+    backend: &GitBackend,
     target: &Object,
     target_ref_name: &str,
 ) -> DefaultResult {
     let mut checkout_opts = CheckoutBuilder::new();
     checkout_opts.safe();
-    repo.checkout_tree(target, Some(&mut checkout_opts))?;
-    repo.set_head(target_ref_name)?;
+    backend
+        .repo
+        .checkout_tree(target, Some(&mut checkout_opts))?;
+    backend.repo.set_head(target_ref_name)?;
     window.typed_emit(WindowEvents::StatusChanged, ())?;
-    window.typed_emit(WindowEvents::HistoryChanged, ())?;
+    window.typed_emit(
+        WindowEvents::HistoryChanged,
+        GraphChangeData {
+            total: backend.graph.lines.len(),
+            change_end_idx: 0,
+            change_start_idx: backend.graph.lines.len(),
+        },
+    )?;
     Ok(())
 }
 

@@ -6,6 +6,7 @@ use tauri::Window;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
+    git::model::graph::GraphChangeData,
     window_events::{TypedEmit, WindowEvents},
 };
 
@@ -126,7 +127,14 @@ pub async fn fetch(
                 Ok(())
             })?;
         window.typed_emit(WindowEvents::BranchesChanged, {})?;
-        window.typed_emit(WindowEvents::HistoryChanged, {})?;
+        window.typed_emit(
+            WindowEvents::HistoryChanged,
+            GraphChangeData {
+                total: backend.graph.lines.len(),
+                change_end_idx: 0,
+                change_start_idx: backend.graph.lines.len(),
+            },
+        )?;
         Ok(())
     })
     .await
