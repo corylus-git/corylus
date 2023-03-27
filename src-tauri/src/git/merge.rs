@@ -3,7 +3,10 @@ use git2::{
 };
 use tauri::Window;
 
-use crate::error::{BackendError, DefaultResult, Result};
+use crate::{
+    error::{BackendError, DefaultResult, Result},
+    window_events::{TypedEmit, WindowEvents},
+};
 
 use super::{index::do_commit, with_backend, with_backend_mut, StateType};
 
@@ -36,7 +39,7 @@ pub async fn merge(
                 Some(&mut checkout_opts),
             )?;
             if backend.repo.index()?.has_conflicts() {
-                window.emit("status-changed", ())?;
+                window.typed_emit(WindowEvents::StatusChanged, ())?;
                 return Err(BackendError::new("Merge cannot be committed due to conflicts. Please check the index for details."));
             }
             let message = if is_branch {
@@ -74,8 +77,8 @@ fn fast_forward(
     checkout_opts.safe();
     repo.checkout_tree(target, Some(&mut checkout_opts))?;
     repo.set_head(target_ref_name)?;
-    window.emit("status-changed", ())?;
-    window.emit("history-changed", ())?;
+    window.typed_emit(WindowEvents::StatusChanged, ())?;
+    window.typed_emit(WindowEvents::HistoryChanged, ())?;
     Ok(())
 }
 
@@ -103,7 +106,7 @@ pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult 
             git2::ResetType::Hard,
             Some(&mut checkout_opts),
         )?;
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await

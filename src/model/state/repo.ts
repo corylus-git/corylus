@@ -1,8 +1,8 @@
-import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/tauri';
 import AsyncLock from 'async-lock';
 import { castDraft } from 'immer';
 import { useQuery, UseQueryResult } from 'react-query';
+import { loggers } from 'winston';
 import createHook from 'zustand';
 // import produce from 'immer';
 import { immer } from 'zustand/middleware/immer';
@@ -11,6 +11,7 @@ import { GitBackend } from '../../util/GitBackend';
 import { Logger } from '../../util/logger';
 import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
 import { queryClient } from '../../util/queryClient';
+import { listen } from '../../util/typesafeListen';
 import { getDiff } from '../actions/repo';
 import { GitConfigValue, IGitConfig, IGitConfigValues, NamedGitConfigValue } from '../IGitConfig';
 import {
@@ -232,7 +233,7 @@ export const useHistory = (): { entries: readonly Commit[]; first: number; total
 export const useTags = (): readonly Tag[] =>
     useQuery('tags', () => invoke<readonly Tag[]>('get_tags')).data ?? [];
 
-listen('tags_changed', (_) => queryClient.invalidateQueries('tags'));
+listen('TagsChanged', (_) => queryClient.invalidateQueries('tags'));
 
 /**
  * Get the current available remotes in the repo
@@ -246,7 +247,7 @@ export const useRemotes = (): readonly RemoteMeta[] =>
 export const useStashes = (): UseQueryResult<readonly Stash[]> =>
     useQuery('stashes', () => invoke<readonly Stash[]>('get_stashes'));
 
-listen('stashes-changed', (_) => queryClient.invalidateQueries('stashes'));
+listen('StashesChanged', (_) => queryClient.invalidateQueries('stashes'));
 
 /**
  * get the current pending commit (e.g. after a failed merge)
@@ -279,11 +280,13 @@ export function useAffectedBranches(): string[] {
  * Get the current available branches in the repo (local and remote)
  */
 export const useBranches = (): UseQueryResult<readonly BranchInfo[]> =>
-    useQuery('branches', () => {
-        return invoke<readonly BranchInfo[]>('get_branches', {})
+    useQuery('branches', async () => {
+        const branches = await invoke<readonly BranchInfo[]>('get_branches', {});
+        Logger().debug('useBranches:query', 'Received branches from the backend.', {branches });
+        return branches;
     });
 
-listen('branches-changed', _ => {
+listen('BranchesChanged', _ => {
     Logger().debug('branches-changed', 'Invalidating branches query');
     queryClient.invalidateQueries('branches');
 });
@@ -324,8 +327,9 @@ export function useDiff(source: 'commit' | 'stash' | 'index' | 'workdir', path: 
         untracked
     }));
 }
-listen<{commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 'workdir', parent?: string, untracked?: boolean}>('diff-changed', ev => {
+listen<{commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 'workdir', parent?: string, untracked?: boolean}>('DiffChanged', ev => {
     Logger().debug('diff-changed', 'Diff changed', { paylod: ev.payload });
+    queryClient.invalidateQueries(['diff', ev.payload.commit, ev.payload.path, ev.payload.source, ev.payload.parent, ev.payload.untracked]);
 });
 
 export function useHead() {
@@ -349,11 +353,11 @@ export function useMergeMessage() {
  * handlers for events from the backend
  * =================================================
  */
-listen<HistoryInfo>('history-changed', ev => {
+listen<HistoryInfo>('HistoryChanged', ev => {
     repoStore.getState().setHistory(ev.payload);
 })
 
-listen<CommitStats>('commitStatsChanged', ev => {
+listen<CommitStats>('CommitStatsChanged', ev => {
     console.log("Got new commit stats", ev.payload);
     repoStore.getState().setSelectedCommit(just(ev.payload));
 });

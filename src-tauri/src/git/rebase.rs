@@ -1,25 +1,31 @@
 use git2::RepositoryState;
 use tauri::Window;
 
-use crate::error::{DefaultResult, BackendError, Result};
+use crate::{
+    error::{BackendError, DefaultResult, Result},
+    window_events::{TypedEmit, WindowEvents},
+};
 
-use super::{StateType, with_backend_mut, model::{graph::GraphChangeData, index::RebaseStatusInfo}, history::do_get_graph, with_backend};
+use super::{
+    history::do_get_graph,
+    model::{graph::GraphChangeData, index::RebaseStatusInfo},
+    with_backend, with_backend_mut, StateType,
+};
 
 #[tauri::command]
-pub async fn rebase_status(state: StateType<'_>) -> Result<Option<RebaseStatusInfo>>
-{
+pub async fn rebase_status(state: StateType<'_>) -> Result<Option<RebaseStatusInfo>> {
     with_backend(state, |backend| {
         log::debug!("Repo state {:?}", backend.repo.state());
         if backend.repo.state() == RepositoryState::RebaseMerge {
             Ok(Some(RebaseStatusInfo {
                 patch: "<todo>".to_owned(),
-                message: "<todo>".to_owned()
+                message: "<todo>".to_owned(),
             }))
-        }
-        else {
+        } else {
             Ok(None)
         }
-    }).await
+    })
+    .await
 }
 
 #[tauri::command]
@@ -33,11 +39,15 @@ pub async fn rebase(state: StateType<'_>, window: Window, target: &str) -> Defau
             match operation {
                 Ok(op) => {
                     if backend.repo.index()?.has_conflicts() {
-                        window.emit("status-changed", ())?;
+                        window.typed_emit(WindowEvents::StatusChanged, ())?;
                         let failed_commit = backend.repo.find_commit(op.id())?;
                         return Err(BackendError::new(format!(
                             "Failed to merge commit {}: {}. Please fix the issues and continue.",
-                            failed_commit.as_object().short_id()?.as_str().unwrap_or("<invalid OID>"),
+                            failed_commit
+                                .as_object()
+                                .short_id()?
+                                .as_str()
+                                .unwrap_or("<invalid OID>"),
                             failed_commit.message().unwrap_or("<invalid message>")
                         )));
                     }
@@ -49,12 +59,12 @@ pub async fn rebase(state: StateType<'_>, window: Window, target: &str) -> Defau
             }
         }
         rebase.finish(None)?;
-        window.emit("status-changed", ())?;
-        window.emit("branches-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
         // TODO this repeats code from git_open -> don't like this current setup
         backend.graph = do_get_graph(backend, None)?;
-        window.emit(
-            "history-changed",
+        window.typed_emit(
+            WindowEvents::HistoryChanged,
             GraphChangeData {
                 total: backend.graph.lines.len(),
                 change_end_idx: 0,

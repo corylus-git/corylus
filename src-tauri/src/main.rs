@@ -6,11 +6,13 @@
 #[cfg(test)]
 #[macro_use]
 extern crate lazy_static;
+extern crate enum_display_derive;
 
 mod error;
 mod git;
-mod settings;
 mod log;
+mod settings;
+mod window_events;
 
 use std::sync::Arc;
 
@@ -21,25 +23,33 @@ use tauri::async_runtime::Mutex;
 
 use crate::{
     git::{
-        diff::get_diff,
-        get_graph_entries, add_to_gitignore,
-        history::{get_affected_branches, get_commit, get_commit_stats, get_graph, get_commits},
-        index::{commit, get_status, stage, unstage, apply_diff, discard_changes, checkout},
-        remote::{get_remotes, push, fetch}, stash::{get_stashes, stash, get_stash_stats, apply_stash, drop_stash},
-        branches::{get_branches, get_unmerged_branches, create_branch, delete_branch, change_branch, checkout_remote_branch, reset},
-        worktree::{get_worktrees, checkout_worktree},
-        tags::{get_tags, create_tag},
+        add_to_gitignore,
+        branches::{
+            change_branch, checkout_remote_branch, create_branch, delete_branch, get_branches,
+            get_unmerged_branches, reset,
+        },
         config::get_config,
+        diff::get_diff,
         files::get_files,
-        merge::{merge, is_merge, abort_merge, get_merge_message},
-        rebase::{rebase, rebase_status}
+        get_graph_entries,
+        history::{get_affected_branches, get_commit, get_commit_stats, get_commits, get_graph},
+        index::{apply_diff, checkout, commit, discard_changes, get_status, stage, unstage},
+        merge::{abort_merge, get_merge_message, is_merge, merge},
+        rebase::{rebase, rebase_status},
+        remote::{fetch, get_remotes, push},
+        stash::{apply_stash, drop_stash, get_stash_stats, get_stashes, stash},
+        tags::{create_tag, get_tags},
+        worktree::{checkout_worktree, get_worktrees},
     },
-    settings::{get_settings, update_settings, update_history}, log::send_log,
+    log::send_log,
+    settings::{get_settings, update_history, update_settings},
 };
 
 // #[cfg(not(test))]
 fn main() {
-    SimpleLogger::new().init().unwrap_or_else(|err| println!("Could not initialize logger. {}", err));
+    SimpleLogger::new()
+        .init()
+        .unwrap_or_else(|err| println!("Could not initialize logger. {}", err));
 
     tauri::Builder::default()
         .manage(Arc::new(Mutex::new(AppState {

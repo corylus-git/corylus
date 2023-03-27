@@ -1,5 +1,6 @@
 pub mod branches;
 pub mod config;
+pub mod credentials;
 pub mod diff;
 pub mod files;
 pub mod graph;
@@ -7,12 +8,11 @@ pub mod history;
 pub mod index;
 pub mod merge;
 pub mod model;
+pub mod rebase;
 pub mod remote;
 pub mod stash;
 pub mod tags;
 pub mod worktree;
-pub mod rebase;
-pub mod credentials;
 
 use std::{fs::OpenOptions, io::Write, sync::Arc};
 
@@ -21,12 +21,16 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
 
-use crate::{error::{BackendError, DefaultResult}, settings::Settings};
+use crate::{
+    error::{BackendError, DefaultResult},
+    settings::Settings,
+    window_events::{TypedEmit, WindowEvents},
+};
 
 use self::{
     history::do_get_graph,
     model::{
-        graph::{GraphLayoutData, LayoutListEntry, GraphChangeData},
+        graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
         BranchInfo,
     },
 };
@@ -72,15 +76,15 @@ impl GitBackend {
     //         .map(|e| e.unwrap())
     //         .collect();
     //     self.graph = calculate_graph_layout(commits);
-    //     window.emit(
-    //         "historyChanged",
+    //     window.typed_emit(
+    //         "HistoryChanged",
     //         GraphChangeData {
     //             total: self.graph.lines.len(),
     //             change_start_idx: 0,
     //             change_end_idx: self.graph.lines.len(),
     //         },
     //     )?;
-    //     window.emit("graphChanged", &self.graph)?;
+    //     window.typed_emit("graphChanged", &self.graph)?;
     //     Ok(())
     // }
     //
@@ -156,11 +160,7 @@ pub async fn get_graph_entries(
 }
 
 #[tauri::command]
-pub async fn git_open(
-    state: StateType<'_>,
-    window: Window,
-    path: &str,
-) -> DefaultResult {
+pub async fn git_open(state: StateType<'_>, window: Window, path: &str) -> DefaultResult {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
     let mut s = state.lock().await;
     s.git = Some(GitBackend::new(path)?);
@@ -168,10 +168,13 @@ pub async fn git_open(
     info!("Successfully opened repo at {}", path);
     if let Some(backend) = s.git.as_mut() {
         backend.graph = do_get_graph(backend, None)?;
-        log::debug!("Graph changed. Emitting event. {}", backend.graph.lines.len());
-        window.emit("graphChanged", &backend.graph)?;
-        window.emit(
-            "history-changed",
+        log::debug!(
+            "Graph changed. Emitting event. {}",
+            backend.graph.lines.len()
+        );
+        window.typed_emit(WindowEvents::GraphChanged, &backend.graph)?;
+        window.typed_emit(
+            WindowEvents::HistoryChanged,
             GraphChangeData {
                 total: backend.graph.lines.len(),
                 change_start_idx: 0,
@@ -198,9 +201,9 @@ pub async fn add_to_gitignore(
         if ignore_file_path.ends_with(".git") {
             ignore_file_path = ignore_file_path
                 .parent()
-                .ok_or_else(|| BackendError::new(
-                    "Could not find repository root path.".to_owned()
-                ))?
+                .ok_or_else(|| {
+                    BackendError::new("Could not find repository root path.".to_owned())
+                })?
                 .to_path_buf();
         }
         ignore_file_path = ignore_file_path.join(".gitignore");
@@ -208,18 +211,14 @@ pub async fn add_to_gitignore(
             .create(true)
             .append(true)
             .open(ignore_file_path)
-            .map_err(|e| BackendError::new(
-                e.to_string()
-            ))?;
+            .map_err(|e| BackendError::new(e.to_string()))?;
         ignore_file
             .write(format!("{}\n", pattern).as_bytes())
-            .map_err(|e| BackendError::new(
-                e.to_string()
-            ))?;
-        ignore_file.flush().map_err(|e| BackendError::new(
-            e.to_string()
-        ))?;
-        window.emit("status-changed", ())?;
+            .map_err(|e| BackendError::new(e.to_string()))?;
+        ignore_file
+            .flush()
+            .map_err(|e| BackendError::new(e.to_string()))?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
@@ -262,7 +261,10 @@ pub async fn with_backend<F: FnOnce(&GitBackend) -> std::result::Result<R, Backe
     }
 }
 
-pub async fn with_backend_mut<F: FnOnce(&mut GitBackend) -> std::result::Result<R, BackendError>, R>(
+pub async fn with_backend_mut<
+    F: FnOnce(&mut GitBackend) -> std::result::Result<R, BackendError>,
+    R,
+>(
     state: StateType<'_>,
     op: F,
 ) -> Result<R, BackendError> {

@@ -1,11 +1,14 @@
 use std::path::Path;
 
-use git2::{build::CheckoutBuilder, Status, MergeOptions};
+use git2::{build::CheckoutBuilder, MergeOptions, Status};
 use log::{debug, error};
 use serde::Deserialize;
 use tauri::Window;
 
-use crate::error::{DefaultResult, Result};
+use crate::{
+    error::{DefaultResult, Result},
+    window_events::{TypedEmit, WindowEvents},
+};
 
 use super::{
     history::{do_get_graph, load_history},
@@ -38,7 +41,7 @@ pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> DefaultR
     with_backend(state, |backend| {
         let mut index = backend.repo.index()?;
         index.add_all([path], git2::IndexAddOption::DEFAULT, None)?;
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
@@ -52,7 +55,7 @@ pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> Defaul
         backend
             .repo
             .reset_default(Some(&head.into_object()), [path])?;
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
@@ -102,12 +105,12 @@ pub fn do_commit(
         }
     }
     load_history(&backend.repo, None)?;
-    window.emit("status-changed", ())?;
-    window.emit("branches-changed", ())?;
+    window.typed_emit(WindowEvents::StatusChanged, ())?;
+    window.typed_emit(WindowEvents::BranchesChanged, ())?;
     // TODO this repeats code from git_open -> don't like this current setup
     backend.graph = do_get_graph(backend, None)?;
-    window.emit(
-        "history-changed",
+    window.typed_emit(
+        WindowEvents::HistoryChanged,
         GraphChangeData {
             total: backend.graph.lines.len(),
             change_end_idx: 0,
@@ -130,8 +133,8 @@ pub async fn apply_diff(
         let head_tree = backend.repo.head()?.peel_to_tree()?;
         let mut index = backend.repo.apply_to_tree(&head_tree, &diff, None)?;
         backend.repo.set_index(&mut index)?;
-        window.emit("status-changed", ())?;
-        window.emit("diff-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
+        window.typed_emit(WindowEvents::DiffChanged, ())?;
         Ok(())
     })
     .await
@@ -162,7 +165,7 @@ pub async fn discard_changes(window: Window, state: StateType<'_>, path: &str) -
                 .remove_untracked(true);
             backend.repo.checkout_head(Some(&mut co))?;
         }
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
@@ -197,7 +200,7 @@ pub async fn checkout(
         } else {
             backend.repo.checkout_head(Some(&mut co))?;
         }
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await

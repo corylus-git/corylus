@@ -1,7 +1,10 @@
 use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
 
-use crate::error::{BackendError, DefaultResult, Result};
+use crate::{
+    error::{BackendError, DefaultResult, Result},
+    window_events::{TypedEmit, WindowEvents},
+};
 
 use super::{
     history::map_diff,
@@ -26,8 +29,8 @@ pub async fn stash(
                 None
             },
         )?;
-        window.emit("stashes-changed", {})?;
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StashesChanged, {})?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
@@ -99,8 +102,8 @@ pub async fn get_stash_stats(state: StateType<'_>, window: Window, oid: &str) ->
             })
             .ok()
             .map(|diff| map_diff(&diff));
-        window.emit(
-            "commitStatsChanged",
+        window.typed_emit(
+            WindowEvents::CommitStatsChanged,
             CommitStats::Stash(StashStatsData {
                 stash: StashData::try_from(&stash_commit)?,
                 changes: direct,
@@ -139,8 +142,8 @@ pub async fn apply_stash(
         } else {
             backend.repo.stash_apply(stash_idx, Some(&mut opts))?;
         }
-        window.emit("stashes-changed", ())?;
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StashesChanged, ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
@@ -153,7 +156,7 @@ pub async fn drop_stash(state: StateType<'_>, window: Window, oid: &str) -> Defa
         opts.reinstantiate_index();
         let stash_idx = find_stash_idx(oid, backend)?;
         backend.repo.stash_drop(stash_idx)?;
-        window.emit("stashes-changed", ())?;
+        window.typed_emit(WindowEvents::StashesChanged, ())?;
         Ok(())
     })
     .await

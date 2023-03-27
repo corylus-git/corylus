@@ -4,7 +4,10 @@ use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks
 use log::debug;
 use tauri::Window;
 
-use crate::error::{BackendError, DefaultResult, Result};
+use crate::{
+    error::{BackendError, DefaultResult, Result},
+    window_events::{TypedEmit, WindowEvents},
+};
 
 use super::{
     credentials::make_credentials_callback, model::remote::RemoteMeta, with_backend,
@@ -67,7 +70,7 @@ pub async fn push(
         );
         remote.push(&refspecs, Some(&mut options))?;
         debug!("Success");
-        window.emit("branches_changed", {})?;
+        window.typed_emit(WindowEvents::BranchesChanged, {})?;
         Ok(())
     })
     .await
@@ -82,6 +85,13 @@ pub async fn fetch(
     prune: bool,
     fetch_tags: bool,
 ) -> DefaultResult {
+    log::trace!(
+        "Invoking fetch(remote={:?}, ref_spec={:?}, prune={}, fetch_tags={})",
+        remote,
+        ref_spec,
+        prune,
+        fetch_tags
+    );
     with_backend_mut(state, |backend| {
         backend
             .repo
@@ -115,8 +125,8 @@ pub async fn fetch(
                 }
                 Ok(())
             })?;
-        window.emit("branches_changed", {})?;
-        window.emit("history_changed", {})?;
+        window.typed_emit(WindowEvents::BranchesChanged, {})?;
+        window.typed_emit(WindowEvents::HistoryChanged, {})?;
         Ok(())
     })
     .await

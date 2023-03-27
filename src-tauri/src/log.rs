@@ -3,7 +3,7 @@ use std::fmt::Display;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-#[serde(rename_all="UPPERCASE")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum Level {
     Trace,
     Debug,
@@ -14,20 +14,17 @@ pub enum Level {
 
 impl Display for Level {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(
-            match self {
-                Self::Trace => "TRACE",
-                Self::Debug => "DEBUG",
-                Self::Info => "INFO",
-                Self::Warn => "WARN",
-                Self::Error => "ERROR",
-            }
-        )
+        f.write_str(match self {
+            Self::Trace => "TRACE",
+            Self::Debug => "DEBUG",
+            Self::Info => "INFO",
+            Self::Warn => "WARN",
+            Self::Error => "ERROR",
+        })
     }
 }
 
-impl From<Level> for log::Level 
-{
+impl From<Level> for log::Level {
     fn from(level: Level) -> Self {
         match level {
             Level::Trace => log::Level::Trace,

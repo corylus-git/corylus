@@ -1,7 +1,10 @@
 use git2::{build::CheckoutBuilder, Branch, BranchType, Oid, Repository, ResetType};
 use tauri::Window;
 
-use crate::error::{BackendError, DefaultResult, Result};
+use crate::{
+    error::{BackendError, DefaultResult, Result},
+    window_events::{TypedEmit, WindowEvents},
+};
 
 use super::{
     history::do_get_graph,
@@ -89,7 +92,7 @@ pub async fn delete_branch(
             upstream.delete()?;
         };
         branch.delete()?;
-        window.emit("branches-changed", {})?;
+        window.typed_emit(WindowEvents::BranchesChanged, {})?;
         Ok(())
     })
     .await
@@ -126,7 +129,7 @@ pub async fn create_branch(
                 )
             })?)?;
         };
-        window.emit("branches-changed", {})?;
+        window.typed_emit(WindowEvents::BranchesChanged, {})?;
         Ok(())
     })
     .await
@@ -146,7 +149,7 @@ pub async fn change_branch(state: StateType<'_>, window: Window, ref_name: &str)
                 BackendError::new("Cannot get reference name of the branch. Not updating HEAD")
             })?)?;
         }
-        window.emit("branches-changed", {})?;
+        window.typed_emit(WindowEvents::BranchesChanged, {})?;
         Ok(())
     })
     .await
@@ -182,7 +185,7 @@ pub async fn checkout_remote_branch(
             commit.tree()?.as_object(),
             Some(CheckoutBuilder::new().safe()),
         )?;
-        window.emit("status-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
         let mut local_branch = backend.repo.branch(local_name, &commit, false)?;
         local_branch.set_upstream(Some(ref_name))?;
         backend
@@ -190,7 +193,7 @@ pub async fn checkout_remote_branch(
             .set_head(local_branch.get().name().ok_or_else(|| {
                 BackendError::new("Designated HEAD branch has no name. Internal program error")
             })?)?;
-        window.emit("branches-changed", ())?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
     })
     .await
@@ -215,12 +218,12 @@ pub async fn reset(
             ))),
         }?;
         backend.repo.reset(&target, reset_type, None)?;
-        window.emit("status-changed", ())?;
-        window.emit("branches-changed", ())?;
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
         // TODO this repeats code from git_open -> don't like this current setup
         backend.graph = do_get_graph(backend, None)?;
-        window.emit(
-            "history-changed",
+        window.typed_emit(
+            WindowEvents::HistoryChanged,
             GraphChangeData {
                 total: backend.graph.lines.len(),
                 change_end_idx: 0,
@@ -231,4 +234,3 @@ pub async fn reset(
     })
     .await
 }
-

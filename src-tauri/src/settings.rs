@@ -12,6 +12,7 @@ use tauri::Window;
 use crate::{
     error::{BackendError, DefaultResult, Result},
     git::{with_state, with_state_mut, StateType},
+    window_events::{TypedEmit, WindowEvents},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -131,7 +132,7 @@ pub async fn update_settings(
 ) -> Result<Settings> {
     with_state_mut(&state, |s| {
         s.settings = settings;
-        window.emit("settings_changed", ())?;
+        window.typed_emit(WindowEvents::SettingsChanged, ())?;
         store_settings(&s.settings)?;
         Ok(s.settings.clone())
     })
@@ -167,7 +168,7 @@ pub async fn update_history(state: StateType<'_>, path: &str) -> Result<Settings
             s.settings.repository_history.sort_by_key(|e| e.date);
             s.settings.repository_history.truncate(100);
         }
-        
+
         Ok(s.settings.clone())
     })
     .await

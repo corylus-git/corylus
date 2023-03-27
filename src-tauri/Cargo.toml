@@ -18,12 +18,14 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2.3", features = ["api-all"] }
 # git2 = { version = "0.16.1", features = ["vendored-libgit2"] }
-git2 = { git = "https://github.com/rust-lang/git2-rs.git", rev="7292b00" } # TODO have a look at this later once the next release is out 
-lazy_static = { version = "1.4.0"}
-directories = "4.0.1"
-config = {version = "0.13.2", features = ["serde_json"] }
+git2 = { git = "https://github.com/rust-lang/git2-rs.git", rev = "7292b00" } # TODO have a look at this later once the next release is out 
+lazy_static = { version = "1.4.0" }
+directories = "5.0.0"
+config = { version = "0.13.2", features = ["serde_json"] }
 log = "0.4.17"
 simple_logger = "4.0.0"
+ts-rs = "6.2.1"
+enum-display-derive = "0.1.1"
 
 [features]
 # by default Tauri runs in production mode
@@ -38,4 +40,3 @@ opt-level = 0
 incremental = true
 strip = false
 lto = false
-

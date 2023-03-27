@@ -1,7 +1,7 @@
-import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/tauri';
 import { useQuery, UseQueryResult } from 'react-query';
 import { queryClient } from '../../util/queryClient';
+import { listen } from '../../util/typesafeListen';
 import { IndexStatus } from '../stateObjects';
 
 export type IndexActions = {
@@ -30,4 +30,4 @@ export function useIndex(): UseQueryResult<IndexStatus[]> {
 export const useConflicts = (): boolean =>
     useIndex().data?.find((s) => s.isConflicted) !== undefined;
 
-listen('status-changed', () => queryClient.invalidateQueries('index'));
+listen('StatusChanged', () => queryClient.invalidateQueries('index'));

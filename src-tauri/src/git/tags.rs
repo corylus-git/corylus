@@ -1,6 +1,7 @@
 use tauri::Window;
 
 use crate::error::{DefaultResult, Result};
+use crate::window_events::{TypedEmit, WindowEvents};
 
 use super::model::git::Tag;
 use super::{with_backend, StateType};
@@ -50,7 +51,7 @@ pub async fn create_tag(
         } else {
             backend.repo.tag_lightweight(name, &object, false)?;
         }
-        window.emit("tags-changed", ())?;
+        window.typed_emit(WindowEvents::TagsChanged, ())?;
         Ok(())
     })
     .await
