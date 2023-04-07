@@ -11,7 +11,7 @@ export interface UpstreamInfo {
     /**
      * The ref name of the upstream branch
      */
-    ref: string;
+    refName: string;
     /**
      * indicates, that the upstream branch is no longer available, e.g. after being deleted
      * remotely and purged on fetch
