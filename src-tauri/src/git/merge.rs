@@ -73,9 +73,10 @@ pub fn do_merge(
         } else {
             format!("Merge {} into {}", from, target_ref)
         };
+        let parent_commit_ids = source_commit.id();
         drop(source_obj);
         drop(source_commit);
-        do_commit(backend, window, &message, false)?;
+        do_commit(backend, window, &message, false, vec![parent_commit_ids])?;
         backend.repo.cleanup_state()?;
     };
     Ok(())
@@ -113,7 +114,6 @@ fn fast_forward(
         .repo
         .checkout_tree(target, Some(&mut checkout_opts))?;
     head_ref.set_target(target.id(), &ref_log_message)?;
-    // backend.repo.set_head(target_ref_name)?;
     window.typed_emit(WindowEvents::StatusChanged, ())?;
     window.typed_emit(
         WindowEvents::HistoryChanged,

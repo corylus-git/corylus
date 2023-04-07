@@ -11,8 +11,8 @@ use crate::{
 };
 
 use super::{
-    credentials::make_credentials_callback, model::remote::RemoteMeta, with_backend,
-    with_backend_mut, StateType,
+    credentials::make_credentials_callback, merge::do_merge, model::remote::RemoteMeta,
+    with_backend, with_backend_mut, StateType,
 };
 
 #[tauri::command]
@@ -101,27 +101,7 @@ pub async fn fetch(
             .try_for_each(|remote_name| -> DefaultResult {
                 if let Some(name) = remote_name {
                     if remote.is_none() || remote.unwrap() == name {
-                        debug!("Fetching changes from remote {}", name);
-                        let mut r = backend.repo.find_remote(name)?;
-                        let mut options = FetchOptions::new();
-                        options.prune(if prune {
-                            FetchPrune::On
-                        } else {
-                            FetchPrune::Off
-                        });
-                        options.download_tags(if fetch_tags {
-                            AutotagOption::All
-                        } else {
-                            AutotagOption::None
-                        });
-                        let fetch_refspec = r.fetch_refspecs()?;
-                        let default_refspec: Vec<&str> = fetch_refspec.iter().flatten().collect();
-                        r.fetch(
-                            &ref_spec.map_or(default_refspec, |rs| vec![rs]),
-                            Some(&mut options),
-                            None,
-                        )?;
-                        debug!("Fetched changes from {}", name);
+                        do_fetch(&backend.repo, name, prune, fetch_tags, ref_spec)?;
                     }
                 }
                 Ok(())
@@ -139,8 +119,61 @@ pub async fn fetch(
     })
     .await
 }
-//
-// #[tauri::command]
-// pub async fn pull(
-// ) -> Result<>
-//
+
+fn do_fetch(
+    repo: &git2::Repository,
+    name: &str,
+    prune: bool,
+    fetch_tags: bool,
+    ref_spec: Option<&str>,
+) -> DefaultResult {
+    debug!("Fetching changes from remote {}", name);
+    let mut r = repo.find_remote(name)?;
+    let mut options = FetchOptions::new();
+    options.prune(if prune {
+        FetchPrune::On
+    } else {
+        FetchPrune::Off
+    });
+    options.download_tags(if fetch_tags {
+        AutotagOption::All
+    } else {
+        AutotagOption::None
+    });
+    let fetch_refspec = r.fetch_refspecs()?;
+    let default_refspec: Vec<&str> = fetch_refspec.iter().flatten().collect();
+    r.fetch(
+        &ref_spec.map_or(default_refspec, |rs| vec![rs]),
+        Some(&mut options),
+        None,
+    )?;
+    debug!("Fetched changes from {}", name);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn pull(
+    state: StateType<'_>,
+    window: Window,
+    remote: &str,
+    remote_branch: &str,
+    no_fast_forward: bool, // TODO I don't like this name, that results from serializing 'noFF' on the typescript side of things
+) -> DefaultResult {
+    with_backend_mut(state, |backend| {
+        do_fetch(&backend.repo, remote, false, false, Some(remote_branch))?;
+        let from_ref = backend
+            .repo
+            .revparse_ext(&format!("{}/{}", remote, remote_branch))?
+            .1
+            .ok_or_else(|| BackendError::new("Could not parse remote branch reference"))?
+            .name()
+            .ok_or_else(|| BackendError::new("Target reference has no valid name"))?
+            .to_owned();
+        do_merge(backend, window, &from_ref, no_fast_forward)?;
+        // TODO merge
+        // window.typed_emit(WindowEvents::BranchesChanged, ())?;
+        // window.typed_emit(WindowEvents::HistoryChanged, ())?;
+        Ok(())
+    })
+    .await
+}

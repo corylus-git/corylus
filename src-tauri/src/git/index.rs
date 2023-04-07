@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use git2::{build::CheckoutBuilder, MergeOptions, Status};
+use git2::{build::CheckoutBuilder, Commit, MergeOptions, Status};
 use log::{debug, error};
 use serde::Deserialize;
 use tauri::Window;
@@ -13,7 +13,6 @@ use crate::{
 use super::{
     history::{do_get_graph, load_history},
     model::{
-        git::Commit,
         graph::{GraphChangeData, GraphLayoutData},
         index::{FileConflict, IndexStatus},
     },
@@ -68,13 +67,15 @@ pub async fn commit(
     message: &str,
     amend: bool,
 ) -> DefaultResult {
-    with_backend_mut(state, |backend| do_commit(backend, window, message, amend))
-        .await
-        .map_err(|e| {
-            // TODO replace this with .inspect_err() as it becomes stable
-            error!("Could not commit. {}", e);
-            e
-        })
+    with_backend_mut(state, |backend| {
+        do_commit(backend, window, message, amend, vec![])
+    })
+    .await
+    .map_err(|e| {
+        // TODO replace this with .inspect_err() as it becomes stable
+        error!("Could not commit. {}", e);
+        e
+    })
 }
 
 pub fn do_commit(
@@ -82,6 +83,7 @@ pub fn do_commit(
     window: Window,
     message: &str,
     amend: bool,
+    merge_parents: Vec<git2::Oid>,
 ) -> DefaultResult {
     let tree_id = backend.repo.index()?.write_tree()?;
     {
@@ -93,13 +95,22 @@ pub fn do_commit(
             let amended = head.amend(Some("HEAD"), None, None, None, Some(message), Some(&tree))?;
             debug!("Amended commit {:?}->{:?}", head, amended);
         } else {
+            let mut parents = vec![head];
+            let additional_parent_commits: std::result::Result<Vec<git2::Commit>, git2::Error> =
+                merge_parents
+                    .iter()
+                    .map(|id| backend.repo.find_commit(*id))
+                    .collect();
+            parents.extend(additional_parent_commits?);
+            let parent_refs: Vec<&git2::Commit> = parents.iter().collect(); // the call below expects references to the commits, which is a bit complicated with the owned commits above
+
             let oid = backend.repo.commit(
                 Some("HEAD"),
                 &signature,
                 &signature,
                 message,
                 &tree,
-                &[&head],
+                &parent_refs,
             )?;
             debug!("Committed {}", oid);
         }
