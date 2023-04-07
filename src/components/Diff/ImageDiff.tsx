@@ -6,7 +6,6 @@ import { useAsync } from 'react-use';
 import { useRepo } from '../../model/state/repo';
 import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
 import { Logger } from '../../util/logger';
-import { GitBackend } from '../../util/GitBackend';
 
 export type ImageDiffProps = {
     oldRef: string;
@@ -34,32 +33,32 @@ type LoadedImageData = {
 };
 
 async function loadImage(
-    backend: GitBackend,
     ref: 'workdir' | string,
     path: string
 ): Promise<Maybe<LoadedImageData>> {
-    const fileData = await backend.getFileContents(ref, path);
-    if (!fileData.found) {
-        return nothing;
-    }
-    const url = URL.createObjectURL(
-        new Blob([fileData.value], { type: mime.lookup(path) || 'text/plain' })
-    );
-    const img = new Image();
-    const prom = new Promise<LoadedImageData['size']>((resolve) => {
-        img.onload = (ev) => {
-            const i = ev.currentTarget as HTMLImageElement;
-            resolve({ w: img.width, h: img.height });
-        };
-    });
-    img.src = url;
-    const size = await prom;
-    Logger().debug('ImageDiff', 'Loaded image', { url, size });
-    return just({
-        img,
-        url,
-        size,
-    });
+    // const fileData = await backend.getFileContents(ref, path);
+    // if (!fileData.found) {
+    //     return nothing;
+    // }
+    // const url = URL.createObjectURL(
+    //     new Blob([fileData.value], { type: mime.lookup(path) || 'text/plain' })
+    // );
+    // const img = new Image();
+    // const prom = new Promise<LoadedImageData['size']>((resolve) => {
+    //     img.onload = (ev) => {
+    //         const i = ev.currentTarget as HTMLImageElement;
+    //         resolve({ w: img.width, h: img.height });
+    //     };
+    // });
+    // img.src = url;
+    // const size = await prom;
+    // Logger().debug('ImageDiff', 'Loaded image', { url, size });
+    // return just({
+    //     img,
+    //     url,
+    //     size,
+    // });
+    return nothing; // TODO fix
 }
 
 const DiffImage = styled.img`
@@ -90,12 +89,11 @@ const DiffNewImageContainer = styled.div`
 `;
 
 export const ImageDiff: React.FC<ImageDiffProps> = (props) => {
-    const backend = useRepo((state) => state.backend);
-    const oldImage = useAsync(() => loadImage(backend, props.oldRef, props.oldPath), [
+    const oldImage = useAsync(() => loadImage(props.oldRef, props.oldPath), [
         props.oldRef,
         props.oldPath,
     ]);
-    const newImage = useAsync(() => loadImage(backend, props.newRef, props.newPath), [
+    const newImage = useAsync(() => loadImage(props.newRef, props.newPath), [
         props.newRef,
         props.newPath,
     ]);

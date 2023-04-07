@@ -7,7 +7,6 @@ import createHook from 'zustand';
 // import produce from 'immer';
 import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
-import { GitBackend } from '../../util/GitBackend';
 import { Logger } from '../../util/logger';
 import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
 import { queryClient } from '../../util/queryClient';
@@ -47,10 +46,6 @@ export type RepoState = {
      */
     path: string;
     /**
-     * The current git backend connected to this repo
-     */
-    backend: GitBackend;
-    /**
      * The history of the currently opened repository
      */
     history: HistoryInfo;
@@ -88,7 +83,6 @@ export type RepoActions = {
 export const repoStore = create<RepoState & RepoActions>()(
     immer((set, get) => ({
         active: false,
-        backend: (undefined as unknown) as GitBackend, // TODO: I hate this
         history: { entries: [], total: 0, first: 0 },
         path: '',
         pendingCommit: nothing,
@@ -106,8 +100,6 @@ export const repoStore = create<RepoState & RepoActions>()(
                 (state) => ({
                     ...state,
                     active: true,
-                    // TODO
-                    // backend: new SimpleGitBackend(path),
                     branches: [],
                     history: { entries: [], total: 0, first: 0 },
                     historySize: 0,
@@ -190,15 +182,7 @@ export const repoStore = create<RepoState & RepoActions>()(
             set((state) => {
                 state.selectedCommit = nothing;
             });
-        },
-        getRebaseStatus: async (): Promise<void> => {
-            Logger().debug('getRebaseStatus', 'Checking for rebase in progress');
-            const status = await get().backend.getRebaseStatus();
-            Logger().debug('getRebaseStatus', 'Received status', { status });
-            set((state) => {
-                // state.rebaseStatus = status;
-            });
-        },
+        }
     }))
 );
 
