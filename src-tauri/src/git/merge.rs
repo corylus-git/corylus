@@ -1,6 +1,7 @@
 use git2::{
     build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository, RepositoryState,
 };
+use log::{debug, trace};
 use tauri::Window;
 
 use crate::{
@@ -21,43 +22,63 @@ pub async fn merge(
     no_fast_forward: bool,
 ) -> DefaultResult {
     with_backend_mut(state, |backend| {
-        let (is_branch, source_obj, source_commit) = get_source_ref(&backend.repo, from)?;
-        let target_ref = backend.repo.head()?.shorthand().unwrap_or("<unknown>").to_string();
-        // limit the lifetime of the backend borrow to not collide with do_commit below
-        let (analysis, preference) = backend.repo.merge_analysis(&[&source_commit])?;
-        if analysis.is_fast_forward() && !preference.is_no_fast_forward() && !no_fast_forward {
-            fast_forward(window, &backend, &source_obj, from)?;
-        }
-        else {
-            let mut merge_opts = MergeOptions::new();
-            merge_opts.patience(true).find_renames(true);
-            let mut checkout_opts = CheckoutBuilder::new();
-            checkout_opts
-                .safe()
-                .conflict_style_merge(true)
-                .allow_conflicts(true);
-            backend.repo.merge(
-                &[&source_commit],
-                Some(&mut merge_opts),
-                Some(&mut checkout_opts),
-            )?;
-            if backend.repo.index()?.has_conflicts() {
-                window.typed_emit(WindowEvents::StatusChanged, ())?;
-                return Err(BackendError::new("Merge cannot be committed due to conflicts. Please check the index for details."));
-            }
-            let message = if is_branch {
-                format!("Merge branch '{}' into {}", from, target_ref)
-            } else {
-                format!("Merge {} into {}", from, target_ref)
-            };
-            drop(source_obj);
-            drop(source_commit);
-            do_commit(backend, window, &message, false)?;
-            backend.repo.cleanup_state()?;
-        };
-        Ok(())
+        do_merge(backend, window, from, no_fast_forward)
     })
     .await
+}
+
+pub fn do_merge(
+    backend: &mut GitBackend,
+    window: Window,
+    from: &str,
+    no_fast_forward: bool,
+) -> DefaultResult {
+    debug!(
+        "Merging {} into current branch (no_fast_forward: {}).",
+        from, no_fast_forward
+    );
+    let (is_branch, source_obj, source_commit) = get_source_ref(&backend.repo, from)?;
+    let target_ref = backend
+        .repo
+        .head()?
+        .shorthand()
+        .unwrap_or("<unknown>")
+        .to_string();
+    let (analysis, preference) = backend.repo.merge_analysis(&[&source_commit])?;
+    trace!("Performing merge. source_commit = {}, is_branch = {}, target_ref = {}, analysis = {:?}, preference = {:?}, no_fast_forward = {}", 
+        source_commit.id(), is_branch, target_ref, analysis, preference, no_fast_forward);
+    if analysis.is_fast_forward() && !preference.is_no_fast_forward() && !no_fast_forward {
+        fast_forward(window, &backend, &source_obj, &mut backend.repo.head()?)?;
+    } else {
+        let mut merge_opts = MergeOptions::new();
+        merge_opts.patience(true).find_renames(true);
+        let mut checkout_opts = CheckoutBuilder::new();
+        checkout_opts
+            .safe()
+            .conflict_style_merge(true)
+            .allow_conflicts(true);
+        backend.repo.merge(
+            &[&source_commit],
+            Some(&mut merge_opts),
+            Some(&mut checkout_opts),
+        )?;
+        if backend.repo.index()?.has_conflicts() {
+            window.typed_emit(WindowEvents::StatusChanged, ())?;
+            return Err(BackendError::new(
+                "Merge cannot be committed due to conflicts. Please check the index for details.",
+            ));
+        }
+        let message = if is_branch {
+            format!("Merge branch '{}' into {}", from, target_ref)
+        } else {
+            format!("Merge {} into {}", from, target_ref)
+        };
+        drop(source_obj);
+        drop(source_commit);
+        do_commit(backend, window, &message, false)?;
+        backend.repo.cleanup_state()?;
+    };
+    Ok(())
 }
 
 fn get_source_ref<'repo>(
@@ -74,14 +95,25 @@ fn fast_forward(
     window: Window,
     backend: &GitBackend,
     target: &Object,
-    target_ref_name: &str,
+    head_ref: &mut git2::Reference,
 ) -> DefaultResult {
+    let head_name = head_ref
+        .name()
+        .ok_or_else(|| BackendError::new("Cannot fast-forward detached head"))?;
+    let target_id_str = target
+        .short_id()?
+        .as_str()
+        .ok_or_else(|| BackendError::new("Cannot fast-forward to unknown target OID."))?
+        .to_string();
+    let ref_log_message = format!("Fast-forwarding {} to {}", head_name, target_id_str);
+    debug!("{}", ref_log_message);
     let mut checkout_opts = CheckoutBuilder::new();
     checkout_opts.safe();
     backend
         .repo
         .checkout_tree(target, Some(&mut checkout_opts))?;
-    backend.repo.set_head(target_ref_name)?;
+    head_ref.set_target(target.id(), &ref_log_message)?;
+    // backend.repo.set_head(target_ref_name)?;
     window.typed_emit(WindowEvents::StatusChanged, ())?;
     window.typed_emit(
         WindowEvents::HistoryChanged,
@@ -91,6 +123,7 @@ fn fast_forward(
             change_start_idx: backend.graph.lines.len(),
         },
     )?;
+    window.typed_emit(WindowEvents::BranchesChanged, ())?;
     Ok(())
 }
 
