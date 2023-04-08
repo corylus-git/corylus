@@ -49,6 +49,7 @@ const IndexTreeNodeDisplay: React.FC<{ file: string, path: string[], meta?: Inde
                 title={`${props.path?.join('/') ?? ''}/${props.file}`}
                 style={{
                     whiteSpace: 'nowrap',
+                    cursor: 'pointer'
                 }}
                 onContextMenu={(e) => {
                     e.preventDefault();

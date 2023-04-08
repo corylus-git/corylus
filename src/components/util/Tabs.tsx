@@ -45,6 +45,7 @@ const TabDiv = styled.div<{ active: boolean } & ComponentProps<'div'>>`
     :hover {
         background-color: var(--highlight);
     }
+    cursor: pointer;
     display: grid;
     grid-template-columns: 1fr 1.1rem;
     padding-top: 0.25rem;

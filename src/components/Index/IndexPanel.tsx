@@ -13,20 +13,16 @@ import { Logger } from '../../util/logger';
 import { nothing, just, Maybe } from '../../util/maybe';
 import { commit, addDiff, continueRebase } from '../../model/actions/repo';
 import {
-    useRepo,
     usePendingCommit,
     repoStore,
     useRebaseStatus,
-    useConflict,
-    useMergeHead,
     useMergeMessage,
 } from '../../model/state/repo';
-import { SelectedFile, useStagingArea } from '../../model/state/stagingArea';
+import { SelectedFile } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { isSupportedImageType } from '../../util/filetypes';
 import { invoke } from '@tauri-apps/api';
 import { useIndex } from '../../model/state';
-import { useQuery } from 'react-query';
 
 let splitterX: string | undefined = undefined;
 
