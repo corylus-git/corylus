@@ -8,6 +8,7 @@ import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
 import { Logger } from '../../util/logger';
 import { invoke } from '@tauri-apps/api/tauri';
 import { getMimeType } from '../../util/filetypes';
+import { useQuery } from 'react-query';
 
 export type ImageDiffProps = {
     oldRef: string;
@@ -87,34 +88,28 @@ const DiffNewImageContainer = styled.div`
 `;
 
 export const ImageDiff: React.FC<ImageDiffProps> = (props) => {
-    const oldImage = useAsync(() => loadImage(props.oldRef, props.oldPath), [
-        props.oldRef,
-        props.oldPath,
-    ]);
-    const newImage = useAsync(() => loadImage(props.newRef, props.newPath), [
-        props.newRef,
-        props.newPath,
-    ]);
+    const oldImage = useQuery(['image', props.oldRef, props.oldPath], () => loadImage(props.oldRef, props.oldPath));
+    const newImage = useQuery(['image', props.newRef, props.newPath], () => loadImage(props.newRef, props.newPath));
     const [diffImage, setDiffImage] = React.useState<string>();
     const [differentDimensions, setDifferentDimensions] = React.useState(false);
     // clean up in case the URL changes/the element is unmounted
     useEffect(
         () => () => {
-            oldImage.value?.found && URL.revokeObjectURL(oldImage.value.value.url);
+            oldImage.data?.found && URL.revokeObjectURL(oldImage.data.value.url);
         },
         [oldImage]
     );
     useEffect(
         () => () => {
-            newImage.value?.found && URL.revokeObjectURL(newImage.value.value.url);
+            newImage.data?.found && URL.revokeObjectURL(newImage.data.value.url);
         },
         [newImage]
     );
 
     useEffect(() => {
-        if (oldImage.value?.found && newImage.value?.found) {
-            const size = newImage.value.value.size;
-            const oldSize = oldImage.value.value.size;
+        if (oldImage.data?.found && newImage.data?.found) {
+            const size = newImage.data.value.size;
+            const oldSize = oldImage.data.value.size;
             if (oldSize.w !== size.w || oldSize.h !== size.h) {
                 Logger().debug(
                     'ImageDiff',
@@ -125,8 +120,8 @@ export const ImageDiff: React.FC<ImageDiffProps> = (props) => {
                 return;
             }
             const mask: Uint8Array = new Uint8Array(size.w * size.h * 4);
-            const newPixelData = getPixelData(newImage.value.value.img);
-            const oldPixelData = getPixelData(oldImage.value.value.img);
+            const newPixelData = getPixelData(newImage.data.value.img);
+            const oldPixelData = getPixelData(oldImage.data.value.img);
             if (newPixelData.found && oldPixelData.found) {
                 const d = pixelmatch(
                     oldPixelData.value.data,
@@ -153,8 +148,8 @@ export const ImageDiff: React.FC<ImageDiffProps> = (props) => {
     return diffImage || newImage ? (
         <>
             <DiffNewImageContainer>
-                {newImage.value?.found && (
-                    <DiffImage className="new" src={newImage.value.value.url} />
+                {newImage.data?.found && (
+                    <DiffImage className="new" src={newImage.data.value.url} />
                 )}
                 {diffImage && <DiffImage className="diff" src={diffImage} />}
             </DiffNewImageContainer>
