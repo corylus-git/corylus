@@ -24,7 +24,7 @@ export const PullDialog: React.FC = () => {
                     }}
                     onReset={() => dialog.close()}
                     initialValues={{
-                        remoteBranch: currentBranch?.upstream?.ref ?? '',
+                        remoteBranch: currentBranch?.upstream?.refName ?? '',
                         remote: currentBranch?.upstream?.remoteName ?? '',
                         noFF: false,
                     }}>

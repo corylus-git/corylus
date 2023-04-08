@@ -43,10 +43,11 @@ export const changeBranch = trackError(
                         'changeBranch',
                         'Requested auto-stashing changes during checkout'
                     );
-                    await repoStore.getState().backend.stash('Auto-stash during checkout', true);
-                    await repoStore.getState().backend.checkout(ref);
-                    const stashes = await repoStore.getState().backend.listStashes();
-                    await repoStore.getState().backend.applyStash(stashes[0], true);
+                    throw new Error("Not ported to Tauri yet");
+                    // await repoStore.getState().backend.stash('Auto-stash during checkout', true);
+                    // await repoStore.getState().backend.checkout(ref);
+                    // const stashes = await repoStore.getState().backend.listStashes();
+                    // await repoStore.getState().backend.applyStash(stashes[0], true);
                     // repoStore.getState().loadBranches();
                 } finally {
                     uiStore.getState().stopProgress(ref);
@@ -204,9 +205,8 @@ export const pull = trackError(
                 noFF: noFF,
             });
             progress.getState().setProgress('Pulling changes from upstream', true);
-            await repoStore.getState().backend.pull(remote, remoteBranch, noFF);
+            await invoke('pull', { remote, remoteBranch, noFastForward: noFF });
             progress.getState().setProgress('Finished pulling changes', false, 5000);
-            // repoStore.getState().loadBranches();
             repoStore.getState().loadHistory();
         } catch (e) {
             progress.getState().setProgress('Failed pulling changes', false, 5000);
@@ -372,7 +372,8 @@ export const deleteTag = trackError(
     'deleteTag',
     async (tag: Tag): Promise<void> => {
         Logger().debug('deleteTag', 'Deleting tag', { tag });
-        await repoStore.getState().backend.deleteTag(tag);
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.deleteTag(tag);
         Logger().silly('deleteTag', 'Success');
     }
 );
@@ -401,7 +402,8 @@ export const saveManualMerge = trackError(
         });
         // TODO
         // fs.writeFileSync(await join(repoStore.getState().backend.dir, filePath), code);
-        await repoStore.getState().backend.addPath(filePath);
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.addPath(filePath);
         // repoStore.getState().getStatus();
         Logger().debug('saveManualMerge', 'Success');
     }
@@ -446,7 +448,8 @@ export const discardDiff = trackError(
     async (path: string, diff: string): Promise<void> => {
         Logger().debug('discardDiff', 'Discarding diff', { path: path });
         Logger().silly('discardDiff', 'Diff is', { diff: diff });
-        await repoStore.getState().backend.applyDiff(diff, true, true); // revert this diff in the working copy
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.applyDiff(diff, true, true); // revert this diff in the working copy
         Logger().silly('discardDiff', 'Success.');
         // repoStore.getState().getStatus();
     }
@@ -457,7 +460,8 @@ export const addRemote = trackError(
     'addRemote',
     async (name: string, url: string): Promise<void> => {
         Logger().debug('addRemote', 'Adding new remote', { name, url });
-        await repoStore.getState().backend.addRemote(name, url);
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.addRemote(name, url);
     }
 );
 
@@ -466,7 +470,8 @@ export const updateRemote = trackError(
     'updateRemote',
     async (name: string, url: string): Promise<void> => {
         Logger().debug('updateRemote', 'Updating remote', { name, url });
-        await repoStore.getState().backend.updateRemote(name, url);
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.updateRemote(name, url);
     }
 );
 
@@ -475,7 +480,8 @@ export const deleteRemote = trackError(
     'deleteRemote',
     async (name: string): Promise<void> => {
         Logger().debug('deleteRemote', 'Deleting remote', { name });
-        await repoStore.getState().backend.deleteRemote(name);
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.deleteRemote(name);
         await repoStore.getState().loadHistory();
         // await repoStore.getState().loadBranches();
     }
@@ -507,7 +513,8 @@ export const abortRebase = trackError(
     'abortRebase',
     async (): Promise<void> => {
         Logger().debug('abortRebase', 'Aborting current rebase');
-        await repoStore.getState().backend.abortRebase();
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.abortRebase();
         const promises = [
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
@@ -522,7 +529,8 @@ export const continueRebase = trackError(
     'continueRebase',
     async (): Promise<void> => {
         Logger().debug('continueRebase', 'Continuing current rebase');
-        await repoStore.getState().backend.continueRebase();
+        throw new Error("Not ported to Tauri yet");
+        // await repoStore.getState().backend.continueRebase();
         const promises = [
             repoStore.getState().loadHistory(),
             // repoStore.getState().loadBranches(),
@@ -536,7 +544,8 @@ export const syncConfig = trackError(
     'sync config',
     'syncConfig',
     async (values: IGitConfig): Promise<void> => {
-        const store = repoStore.getState().backend.setConfigValue;
+        throw new Error("Not ported to Tauri yet");
+        // const store = repoStore.getState().backend.setConfigValue;
         // await store(
         //     AUTOFETCHENABLED,
         //     values.global?.corylus?.autoFetchEnabled ? 'true' : 'false',
