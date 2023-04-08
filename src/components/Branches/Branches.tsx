@@ -79,13 +79,13 @@ const ContextMenu: React.FC<{
                         if (props.currentBranch.found && props.branch.current) {
                             pull(
                                 props.branch.upstream!.remoteName,
-                                props.branch.upstream!.ref,
+                                props.branch.upstream!.refName,
                                 false
                             );
                         } else {
                             fetchRemote(
                                 just(props.branch.upstream!.remoteName),
-                                just(`${props.branch.upstream?.ref}:${props.branch.refName}`),
+                                just(`${props.branch.upstream?.refName}:${props.branch.refName}`),
                                 false,
                                 false
                             );
@@ -99,7 +99,7 @@ const ContextMenu: React.FC<{
                     props.branch && push(
                         props.branch.refName,
                         props.branch.upstream!.remoteName,
-                        props.branch.upstream!.ref
+                        props.branch.upstream!.refName
                     );
                 }}>Push {props.branch.refName} to remote tracking branch</MenuItem>
             }
@@ -113,7 +113,7 @@ const ContextMenu: React.FC<{
                         props.branch.worktree && getTab(props.branch.worktree) && <MenuItem onClick={() => tabsStore.getState().switchTab(getTab(props.branch.worktree!)!)}>Switch to worktree tab at {props.branch.worktree}</MenuItem>
                     }
                     {
-                        props.branch.worktree && !getTab(props.branch.worktree) && <MenuItem onClick={() => tabsStore.getState().openRepoInNew(props.branch.worktree!) }>Open worktree at {props.branch.worktree}</MenuItem>
+                        props.branch.worktree && !getTab(props.branch.worktree) && <MenuItem onClick={() => tabsStore.getState().openRepoInNew(props.branch.worktree!)}>Open worktree at {props.branch.worktree}</MenuItem>
                     }
                     {
                         !props.branch.worktree && <MenuItem onClick={async () => {
@@ -284,7 +284,7 @@ const BranchNodeDisplay: React.FC<{
                 title={
                     toOptional(props.branch)?.upstream?.upstreamMissing
                         ? ` Warning: the upstream branch for this branch (${toOptional(props.branch)?.upstream?.remoteName
-                        }/${toOptional(props.branch)?.upstream?.ref}) no longer exists.`
+                        }/${toOptional(props.branch)?.upstream?.refName}) no longer exists.`
                         : ''
                 }
                 current={!!toOptional(props.branch)?.current}
@@ -411,7 +411,7 @@ function BranchTree(props: {
             }}
             onEntryClick={(meta) => {
                 if ((meta as BranchInfo)?.head) {
-                /*     repoStore.getState().setSelectedCommit((meta as BranchInfo).head); */
+                    /*     repoStore.getState().setSelectedCommit((meta as BranchInfo).head); */
                 }
             }}
             onEntryDoubleClick={(branch) => {
