@@ -4,7 +4,7 @@ import { Formik, Form, Field } from 'formik';
 import mime from 'mime-types';
 
 import { Splitter } from '../util/Splitter';
-import { Commit, IndexStatus } from '../../model/stateObjects';
+import { Commit } from '../../model/stateObjects';
 import { StagingArea } from './StagingArea';
 import { StyledButton } from '../util/StyledButton';
 import { StagingDiffPanel } from './StagingDiffPanel';
@@ -20,7 +20,7 @@ import {
 } from '../../model/state/repo';
 import { SelectedFile } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
-import { isSupportedImageType } from '../../util/filetypes';
+import { getMimeType, isSupportedImageType } from '../../util/filetypes';
 import { invoke } from '@tauri-apps/api';
 import { useIndex } from '../../model/state';
 
@@ -29,8 +29,7 @@ let splitterX: string | undefined = undefined;
 const DiffDisplayPanel: React.FC<{ selectedFile: SelectedFile | undefined }> = (props) => {
     if (props.selectedFile) {
         const source = props.selectedFile.source;
-        // const fileType = mime.lookup(stagingArea.selectedFile.value.path) || 'text/plain';
-        const fileType = 'text/plain';
+        const fileType = getMimeType(props.selectedFile.path);
         if (isSupportedImageType(fileType)) {
             return (
                 <div>

@@ -32,20 +32,37 @@ pub async fn get_files(state: StateType<'_>) -> Result<Vec<FileStats>> {
 pub async fn get_file_contents(state: StateType<'_>, path: &str, rev: &str) -> Result<Vec<u8>> {
     with_backend(state, |backend| {
         debug!("Getting contents of {} at {}", path, rev);
-        let revision = backend.repo.revparse_single(rev)?;
-        let tree = revision.peel_to_tree()?;
-        let p = Path::new(path);
-        let file_object = tree.get_path(p)?.to_object(&backend.repo)?;
-        Ok(file_object
-            .as_blob()
-            .ok_or_else(|| {
+        if rev == "workdir" {
+            let repo_path = backend.repo.workdir().ok_or_else(|| {
+                BackendError::new(
+                    "Repository has no work dir. This should not have cause this request",
+                )
+            })?;
+            let full_path = repo_path.join(path);
+            log::trace!("Reading contents of {:?} from disk", full_path.as_os_str());
+            Ok(std::fs::read(full_path).map_err(|e| {
+                log::error!("Could not read file from workdir. {}", e.to_string());
                 BackendError::new(format!(
-                    "Cannot read contents of {} at revision {}",
-                    path, rev
+                    "Could not read file from workdir. {}",
+                    e.to_string()
                 ))
-            })?
-            .content()
-            .into())
+            })?)
+        } else {
+            let revision = backend.repo.revparse_single(rev)?;
+            let tree = revision.peel_to_tree()?;
+            let p = Path::new(path);
+            let file_object = tree.get_path(p)?.to_object(&backend.repo)?;
+            Ok(file_object
+                .as_blob()
+                .ok_or_else(|| {
+                    BackendError::new(format!(
+                        "Cannot read contents of {} at revision {}",
+                        path, rev
+                    ))
+                })?
+                .content()
+                .into())
+        }
     })
     .await
 }
