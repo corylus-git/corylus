@@ -8,7 +8,7 @@ import { ArrowDown } from '../icons/ArrowDown';
 import { FileStatus } from '../shared/FileStatus';
 import { ImageDiff } from './ImageDiff';
 import { TextFileDiff } from './TextFileDiff';
-import { isSupportedImageType } from '../../util/filetypes';
+import { getMimeType, isSupportedImageType } from '../../util/filetypes';
 import { Maybe } from '../../util/maybe';
 
 export interface CommitProps {
@@ -87,7 +87,8 @@ function FileDiff(props: {
     toParent?: string;
 }) {
     const [open, setOpen] = React.useState(false);
-    const mimeType = 'text/plain';
+    // const mimeType = 'text/plain';
+    const mimeType = getMimeType(props.diff.file.path);
     // TODO this breaks because mime.lookup seems to use extname internally which is not available in Tauri
     // const mimeType = mime.lookup(props.diff.file.path) || 'text/plain';
 

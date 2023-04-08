@@ -6,6 +6,8 @@ import { useAsync } from 'react-use';
 import { useRepo } from '../../model/state/repo';
 import { fromNullable, just, Maybe, nothing } from '../../util/maybe';
 import { Logger } from '../../util/logger';
+import { invoke } from '@tauri-apps/api/tauri';
+import { getMimeType } from '../../util/filetypes';
 
 export type ImageDiffProps = {
     oldRef: string;
@@ -36,29 +38,25 @@ async function loadImage(
     ref: 'workdir' | string,
     path: string
 ): Promise<Maybe<LoadedImageData>> {
-    // const fileData = await backend.getFileContents(ref, path);
-    // if (!fileData.found) {
-    //     return nothing;
-    // }
-    // const url = URL.createObjectURL(
-    //     new Blob([fileData.value], { type: mime.lookup(path) || 'text/plain' })
-    // );
-    // const img = new Image();
-    // const prom = new Promise<LoadedImageData['size']>((resolve) => {
-    //     img.onload = (ev) => {
-    //         const i = ev.currentTarget as HTMLImageElement;
-    //         resolve({ w: img.width, h: img.height });
-    //     };
-    // });
-    // img.src = url;
-    // const size = await prom;
-    // Logger().debug('ImageDiff', 'Loaded image', { url, size });
-    // return just({
-    //     img,
-    //     url,
-    //     size,
-    // });
-    return nothing; // TODO fix
+    const fileData = await invoke<Buffer>('get_file_contents', { rev: ref, path });
+    const url = URL.createObjectURL(
+        new Blob([new Uint8Array(fileData)], { type: getMimeType(path) })
+    );
+    const img = new Image();
+    const prom = new Promise<LoadedImageData['size']>((resolve) => {
+        img.onload = (ev) => {
+            const i = ev.currentTarget as HTMLImageElement;
+            resolve({ w: img.width, h: img.height });
+        };
+    });
+    img.src = url;
+    const size = await prom;
+    Logger().debug('ImageDiff', 'Loaded image', { url, size });
+    return just({
+        img,
+        url,
+        size,
+    });
 }
 
 const DiffImage = styled.img`
