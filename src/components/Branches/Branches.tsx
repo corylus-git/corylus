@@ -12,7 +12,7 @@ import { toast } from 'react-toastify';
 import { TagsList } from './TagsList';
 import { TypeHeader } from './TypeHeader';
 import { Maybe, nothing, toOptional, fromNullable, just } from '../../util/maybe';
-import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree } from '../../model/actions/repo';
+import { changeBranch, fetchRemote, deleteRemote, pull, push, addWorktree, selectCommit } from '../../model/actions/repo';
 import { Logger } from '../../util/logger';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
@@ -411,6 +411,7 @@ function BranchTree(props: {
             }}
             onEntryClick={(meta) => {
                 if ((meta as BranchInfo)?.head) {
+                    selectCommit((meta as BranchInfo).head);
                     /*     repoStore.getState().setSelectedCommit((meta as BranchInfo).head); */
                 }
             }}
