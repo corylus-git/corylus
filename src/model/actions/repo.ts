@@ -460,8 +460,8 @@ export const addRemote = trackError(
     'addRemote',
     async (name: string, url: string): Promise<void> => {
         Logger().debug('addRemote', 'Adding new remote', { name, url });
-        throw new Error("Not ported to Tauri yet");
-        // await repoStore.getState().backend.addRemote(name, url);
+        await invoke('add_remote', { name, url });
+        queryClient.invalidateQueries('remotes');
     }
 );
 
@@ -470,8 +470,8 @@ export const updateRemote = trackError(
     'updateRemote',
     async (name: string, url: string): Promise<void> => {
         Logger().debug('updateRemote', 'Updating remote', { name, url });
-        throw new Error("Not ported to Tauri yet");
-        // await repoStore.getState().backend.updateRemote(name, url);
+        await invoke('update_remote', { name, url });
+        queryClient.invalidateQueries('remotes');
     }
 );
 
@@ -480,10 +480,8 @@ export const deleteRemote = trackError(
     'deleteRemote',
     async (name: string): Promise<void> => {
         Logger().debug('deleteRemote', 'Deleting remote', { name });
-        throw new Error("Not ported to Tauri yet");
-        // await repoStore.getState().backend.deleteRemote(name);
-        await repoStore.getState().loadHistory();
-        // await repoStore.getState().loadBranches();
+        await invoke('delete_remote', { name });
+        queryClient.invalidateQueries('remotes');
     }
 );
 

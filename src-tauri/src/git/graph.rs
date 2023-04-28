@@ -1,9 +1,12 @@
 use std::ops::Index;
 
-use super::{model::{
-    git::Commit,
-    graph::{GraphLayoutData, LayoutListEntry, Rail},
-}, StateType, with_backend};
+use super::{
+    model::{
+        git::{Commit, FullCommitData},
+        graph::{GraphLayoutData, LayoutListEntry, Rail},
+    },
+    with_backend, StateType,
+};
 
 use crate::error::Result;
 
@@ -16,11 +19,17 @@ use crate::error::Result;
 ///
 /// # Returns
 /// This method returns the position the item was placed and whether the rail was empty before or not
-fn find_first_available_rail(rails: &mut Vec<Rail>, new_entry: &str, may_replace: Option<&str>) -> (usize, bool) {
+fn find_first_available_rail(
+    rails: &mut Vec<Rail>,
+    new_entry: &str,
+    may_replace: Option<&str>,
+) -> (usize, bool) {
     // preferably try to place the entry on a rail where it was requested
-    let requested_idx = rails
-        .iter()
-        .position(|r| r.is_some() && (r.as_ref().unwrap() == new_entry || may_replace.is_some() && may_replace.unwrap() == r.as_ref().unwrap()));
+    let requested_idx = rails.iter().position(|r| {
+        r.is_some()
+            && (r.as_ref().unwrap() == new_entry
+                || may_replace.is_some() && may_replace.unwrap() == r.as_ref().unwrap())
+    });
     if let Some(idx) = requested_idx {
         (idx, false)
     } else {
@@ -43,7 +52,8 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
         .map(|entry| {
             let graph_node = entry.as_graph_node();
             // 1. find rail to use: left-most rail that expects us as a parent OR is empty (if no rail expects us)
-            let (my_rail, was_empty) = find_first_available_rail(&mut rails, graph_node.oid(), None);
+            let (my_rail, was_empty) =
+                find_first_available_rail(&mut rails, graph_node.oid(), None);
             // 2. check whether we have any parents
             let has_parents = !graph_node.parents().is_empty();
             // 3. place our first parent on my rail
@@ -57,8 +67,12 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
                 graph_node.parents()[1..]
                     .iter()
                     .filter_map(|p| {
-                        let (rail, was_empty) = find_first_available_rail(&mut rails, &p.oid, Some(graph_node.oid()));
-                        if was_empty || rails[rail].is_some() && rails[rail].as_ref().unwrap() == graph_node.oid() {
+                        let (rail, was_empty) =
+                            find_first_available_rail(&mut rails, &p.oid, Some(graph_node.oid()));
+                        if was_empty
+                            || rails[rail].is_some()
+                                && rails[rail].as_ref().unwrap() == graph_node.oid()
+                        {
                             Some(rail)
                         } else {
                             None
@@ -73,7 +87,8 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
                 .iter()
                 .enumerate()
                 .filter_map(|(idx, oid)| {
-                    if oid.is_some() && oid.as_ref().unwrap() == graph_node.oid() && idx != my_rail {
+                    if oid.is_some() && oid.as_ref().unwrap() == graph_node.oid() && idx != my_rail
+                    {
                         Some(idx)
                     } else {
                         None
@@ -82,7 +97,10 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
                 .collect();
             // 6. place all other parents on rails as needed
             if graph_node.parents().len() > 1 {
-                outgoing.iter().zip(graph_node.parents()[1..].iter()).for_each(|(&idx, p)| { rails[idx] = Some(p.oid.clone()) });
+                outgoing
+                    .iter()
+                    .zip(graph_node.parents()[1..].iter())
+                    .for_each(|(&idx, p)| rails[idx] = Some(p.oid.clone()));
             };
             // 7. clear all rails requesting us as parent
             rails = rails
@@ -111,14 +129,49 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
 }
 
 #[tauri::command]
-pub async fn get_index(state: StateType<'_>, oid: &str) -> Result<Option<usize>>
-{
+pub async fn get_index(state: StateType<'_>, oid: &str) -> Result<Option<usize>> {
     with_backend(state, |backend| {
-        Ok(backend.graph.lines.iter().position(|line| match &line.commit {
-            Commit::Commit(c) => c.oid == oid,
-            Commit::Stash(s) => s.oid == oid
-        }))
-    }).await
+        Ok(backend
+            .graph
+            .lines
+            .iter()
+            .position(|line| match &line.commit {
+                Commit::Commit(c) => c.oid == oid,
+                Commit::Stash(s) => s.oid == oid,
+            }))
+    })
+    .await
+}
+
+fn match_commit(c: &FullCommitData, search_term: &str) -> bool {
+    c.author.name.to_lowercase().contains(search_term)
+        || c.author.email.to_lowercase().contains(search_term)
+        || c.message.to_lowercase().contains(search_term)
+        || c.short_oid.to_lowercase().contains(search_term)
+        || c.oid.to_lowercase().contains(search_term)
+}
+
+#[tauri::command]
+pub async fn find_commits(state: StateType<'_>, search_term: &str) -> Result<Vec<usize>> {
+    with_backend(state, |backend| {
+        Ok(backend
+            .graph
+            .lines
+            .iter()
+            .enumerate()
+            .filter_map(|(i, c)| match &c.commit {
+                Commit::Commit(c) => {
+                    if match_commit(c, search_term) {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                }
+                Commit::Stash(_) => None,
+            })
+            .collect())
+    })
+    .await
 }
 
 #[cfg(test)]

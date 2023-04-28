@@ -32,14 +32,15 @@ use crate::{
         diff::get_diff,
         files::{get_file_contents, get_files},
         get_graph_entries,
+        graph::{find_commits, get_index},
         history::{get_affected_branches, get_commit, get_commit_stats, get_commits, get_graph},
         index::{apply_diff, checkout, commit, discard_changes, get_status, stage, unstage},
         merge::{abort_merge, get_merge_message, is_merge, merge},
         rebase::{rebase, rebase_status},
-        remote::{fetch, get_remotes, pull, push},
+        remote::{add_remote, delete_remote, fetch, get_remotes, pull, push, update_remote},
         stash::{apply_stash, drop_stash, get_stash_stats, get_stashes, stash},
         tags::{create_tag, get_tags},
-        worktree::{checkout_worktree, get_worktrees}, graph::get_index,
+        worktree::{checkout_worktree, get_worktrees},
     },
     log::send_log,
     settings::{get_settings, update_history, update_settings},
@@ -85,6 +86,9 @@ fn main() {
             push,
             fetch,
             pull,
+            add_remote,
+            update_remote,
+            delete_remote,
             get_branches,
             get_unmerged_branches,
             create_branch,
@@ -108,7 +112,8 @@ fn main() {
             is_merge,
             abort_merge,
             get_merge_message,
-            get_index
+            get_index,
+            find_commits
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

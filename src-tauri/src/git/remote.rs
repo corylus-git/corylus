@@ -120,6 +120,36 @@ pub async fn fetch(
     .await
 }
 
+#[tauri::command]
+pub async fn add_remote(state: StateType<'_>, name: &str, url: &str) -> DefaultResult {
+    with_backend_mut(state, |backend| {
+        log::trace!("Adding new remote {} -> {}", name, url);
+        backend.repo.remote(name, url)?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn update_remote(state: StateType<'_>, name: &str, url: &str) -> DefaultResult {
+    with_backend_mut(state, |backend| {
+        log::trace!("Updating remote {} -> {}", name, url);
+        backend.repo.remote_set_url(name, url)?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_remote(state: StateType<'_>, name: &str) -> DefaultResult {
+    with_backend_mut(state, |backend| {
+        log::trace!("Removing remote {}", name);
+        backend.repo.remote_delete(name)?;
+        Ok(())
+    })
+    .await
+}
+
 fn do_fetch(
     repo: &git2::Repository,
     name: &str,

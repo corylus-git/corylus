@@ -33,6 +33,7 @@ import { UpstreamMissing } from './UpstreamMissing';
 import { SectionHeader } from './SectionHeader';
 import { getTab, tabsStore } from '../../model/state/tabs';
 import { ControlledMenu, ControlledMenuProps, MenuGroup, MenuItem, useMenuState } from '@szhsin/react-menu';
+import { ConfirmationDialog } from '../Dialogs/ConfirmationDialog';
 
 export interface BranchesProps {
     branches: readonly BranchInfo[];
@@ -359,20 +360,24 @@ function remoteContextMenu(remoteRepo: RemoteMeta, dialog: DialogActions) {
 const RemoteNameDisplay: React.FC<{ remote: RemoteMeta }> = (props) => {
     const [menuProps, toggleMenu] = useMenuState();
     const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
+    const dialogRef = React.useRef<HTMLDialogElement>(null);
     const dialog = useDialog();
     return (
-        <span onContextMenu={(e) => {
-            e.preventDefault();
-            setAnchorPoint({ x: e.clientX, y: e.clientY });
-            toggleMenu(true);
-        }}>
-            <ControlledMenu {...menuProps} anchorPoint={anchorPoint} onClose={() => toggleMenu(false)}>
-                <MenuItem onClick={() => dialog.open({ type: 'remote-configuration', remote: just(props.remote) })}>Configure remote</MenuItem>
-                <MenuItem>Delete remote</MenuItem>
-            </ControlledMenu>
-            <RemoteIcon height="1em" viewBox="0 0 24 20" />
-            {props.remote.remote}
-        </span>
+        <>
+            <ConfirmationDialog ref={dialogRef} message={`Really delete ${props.remote.remote} and all related branches`} title='Delete remote' onConfirm={() => deleteRemote(props.remote.remote)} onCancel={() => dialogRef.current?.close()} />
+            <span onContextMenu={(e) => {
+                e.preventDefault();
+                setAnchorPoint({ x: e.clientX, y: e.clientY });
+                toggleMenu(true);
+            }}>
+                <ControlledMenu {...menuProps} anchorPoint={anchorPoint} onClose={() => toggleMenu(false)}>
+                    <MenuItem onClick={() => dialog.open({ type: 'remote-configuration', remote: just(props.remote) })}>Configure remote</MenuItem>
+                    <MenuItem onClick={() => dialogRef.current?.showModal()}>Delete remote</MenuItem>
+                </ControlledMenu>
+                <RemoteIcon height="1em" viewBox="0 0 24 20" />
+                {props.remote.remote}
+            </span>
+        </>
     );
 };
 
