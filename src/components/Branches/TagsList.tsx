@@ -4,7 +4,7 @@ import { TypeHeader } from './TypeHeader';
 import { HoverableDiv } from '../StyleBase';
 import styled from 'styled-components';
 import { Tag } from '../../model/stateObjects';
-import { deleteTag } from '../../model/actions/repo';
+import { deleteTag, selectCommit } from '../../model/actions/repo';
 import { useTags, repoStore } from '../../model/state/repo';
 import { Affected } from './Affected';
 import MergeIconSmall from '../icons/MergeIconSmall.svg';
@@ -62,7 +62,7 @@ export const TagsList: React.FC = () => {
             }
             onEntryClick={(meta) => {
                 if (meta) {
-                    // repoStore.getState().selectCommit(meta.taggedOid);
+                    selectCommit(meta.taggedOid);
                 }
             }}
         />

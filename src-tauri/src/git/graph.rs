@@ -1,7 +1,11 @@
-use super::model::{
+use std::ops::Index;
+
+use super::{model::{
     git::Commit,
     graph::{GraphLayoutData, LayoutListEntry, Rail},
-};
+}, StateType, with_backend};
+
+use crate::error::Result;
 
 /// Place the given entry on the first usable rail
 ///
@@ -104,6 +108,17 @@ pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
         .collect();
 
     GraphLayoutData { lines, rails }
+}
+
+#[tauri::command]
+pub async fn get_index(state: StateType<'_>, oid: &str) -> Result<Option<usize>>
+{
+    with_backend(state, |backend| {
+        Ok(backend.graph.lines.iter().position(|line| match &line.commit {
+            Commit::Commit(c) => c.oid == oid,
+            Commit::Stash(s) => s.oid == oid
+        }))
+    }).await
 }
 
 #[cfg(test)]

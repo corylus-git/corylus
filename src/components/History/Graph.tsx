@@ -8,10 +8,12 @@ import {
 } from '../../model/state/repo';
 import { BranchInfo, Commit } from '../../model/stateObjects';
 import { LayoutListEntry } from '../../util/graphLayout';
-import { Maybe } from '../../util/maybe';
+import { Maybe, toOptional } from '../../util/maybe';
 import { SearchBox } from '../shared/SearchBox';
 import { ListSelector } from '../util/SelectableList';
 import { GraphRenderer } from './GraphRenderer';
+import { CommitStatsData } from '../../model/stateObjects';
+import { Logger } from '../../util/logger';
 
 function matchCommit(c: Commit, searchTerm: string): boolean {
     return (
@@ -38,14 +40,16 @@ export const Graph: React.FC<{
     const listSelector = React.useRef<ListSelector>(null);
 
     React.useEffect(() => {
-        const index = -1; // TODO implement searching in the backend
-        // const index = lines.findIndex(
-        //     (l) => selectedCommit.found && l.commit.oid === selectedCommit.value.commit.oid
-        // );
-        if (index !== -1) {
-            listSelector.current?.scrollToItem(index);
-            listSelector.current?.selectItems([index]);
-        }
+        Logger().debug('Graph', 'Requesting index for commit', { commit: selectedCommit});
+        const sc =  toOptional(selectedCommit) as CommitStatsData | undefined;
+        const indexPromise = sc ? invoke<number | undefined>('get_index', {oid: sc.commit.oid}) : Promise.resolve(undefined);
+        indexPromise.then(index => {
+            Logger().debug('Graph', 'Got index for commit', {oid: sc?.commit.oid, idx: index});
+            if (index !== undefined) {
+                listSelector.current?.scrollToItem(index);
+                listSelector.current?.selectItems([index]);
+            }
+        })
     }, [selectedCommit]);
     React.useEffect(() => {
         const index = matches[currentMatchIndex];

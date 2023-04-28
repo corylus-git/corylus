@@ -39,7 +39,7 @@ use crate::{
         remote::{fetch, get_remotes, pull, push},
         stash::{apply_stash, drop_stash, get_stash_stats, get_stashes, stash},
         tags::{create_tag, get_tags},
-        worktree::{checkout_worktree, get_worktrees},
+        worktree::{checkout_worktree, get_worktrees}, graph::get_index,
     },
     log::send_log,
     settings::{get_settings, update_history, update_settings},
@@ -107,7 +107,8 @@ fn main() {
             merge,
             is_merge,
             abort_merge,
-            get_merge_message
+            get_merge_message,
+            get_index
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
