@@ -54,7 +54,7 @@ function openContextMenu(meta: FileStats) {
     // menu.popup({ window: getCurrentWindow() });
 }
 
-const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
+const FileTree: React.FC<{ files: readonly FileStats[], onPathSelect: (path: string) => void }> = (props) => {
     const trees = props.files.reduce((existingTree, file) => {
         return insertPath(existingTree, file.path.split(/\//), file);
     }, [] as readonly TreeNode<FileStats>[]);
@@ -66,8 +66,7 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
             <ControlledMenu {...menuProps} onClose={() => setMenuState(false)} anchorPoint={anchorPoint}>
                 <MenuItem onClick={() => {
                     Logger().debug('FileTree', 'Showing file history', { file: meta!.path });
-                    // explorer.getState().loadPathHistory(meta!.path);
-                    throw new Error('Not yet ported');
+                    props.onPathSelect(meta!.path);
                 }}>Show file history</MenuItem>
                 <MenuItem>Annotate edits (blame)</MenuItem>
             </ControlledMenu>
@@ -110,6 +109,7 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
 export const ExplorerPanel: React.FC<{ commit?: Commit }> = (props) => {
     const { data: files } = useFiles(props.commit?.oid);
     const [searchTerm, setSearchTerm] = React.useState('');
+    const [path, setPath] = React.useState<string>();
     return (
         <ExplorerPanelView>
             <div>
@@ -121,12 +121,13 @@ export const ExplorerPanel: React.FC<{ commit?: Commit }> = (props) => {
                 {files ? (
                     <FileTree
                         files={files.filter((f) => f.path.indexOf(searchTerm) !== -1)}
+                        onPathSelect={setPath}
                     />
                 ) : (
                     <RunningIndicator active={true} size={2} />
                 )}
             </div>
-            <FileHistory />
+            {path && <FileHistory path={path} onClose={() => setPath(undefined)} />}
         </ExplorerPanelView>
     );
 };

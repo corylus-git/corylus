@@ -5,7 +5,7 @@ import { StyledButton } from '../util/StyledButton';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { CommitDetailsView } from '../Diff/Commit';
-import { useFileHistory, useFileHistoryGraph } from '../../model/state/explorer';
+import { useFileHistory } from '../../model/state/explorer';
 import { GraphRenderer } from '../History/GraphRenderer';
 import { useBranches, useTags } from '../../model/state/repo';
 import { useAsync } from 'react-use';
@@ -33,9 +33,8 @@ const HistoryContainer = styled.div`
     }
 `;
 
-export const FileHistory: React.FC = () => {
-    const history = useFileHistory();
-    const graph = useFileHistoryGraph();
+export const FileHistory: React.FC<{ path: string, onClose: () => void }> = ({ path, onClose }) => {
+    const history = useFileHistory(path);
     const targetRef = React.useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
     const tags = useTags();
@@ -49,7 +48,7 @@ export const FileHistory: React.FC = () => {
 
     function resizer() {
         Logger().silly('FileHistory', 'Resizing graph to', { dimensions: dimensions });
-        if (targetRef.current) {
+        if (targetRef.current && (dimensions.width !== targetRef.current.offsetWidth || dimensions.height !== targetRef.current.offsetHeight)) {
             setDimensions({
                 width: targetRef.current.offsetWidth,
                 height: targetRef.current.offsetHeight,
@@ -61,7 +60,7 @@ export const FileHistory: React.FC = () => {
         window.addEventListener('resize', resizer);
         return () => window.removeEventListener('resize', resizer);
     }, []);
-    return history.found ? (
+    return history.data ? (
         <div>
             <HistoryContainer>
                 <Splitter
@@ -77,12 +76,12 @@ export const FileHistory: React.FC = () => {
                         <GraphRenderer
                             width={dimensions.width - 10}
                             height={dimensions.height}
-                            totalCommits={graph?.length ?? 0}
+                            totalCommits={history.data.lines.length ?? 0}
                             first={0}
                             tags={tags}
                             branches={branches.data ?? []}
                             onCommitsSelected={(commit) => setSelectedCommit(commit[0])}
-                            getLine={(idx) => Promise.resolve(graph![idx])}
+                            getLine={(idx) => Promise.resolve(history.data.lines![idx])}
                         />
                     </NoScrollPanel>
                     <SplitterPanel>
@@ -90,7 +89,7 @@ export const FileHistory: React.FC = () => {
                     </SplitterPanel>
                 </Splitter>
                 <div className="button">
-                    <StyledButton onClick={() => { throw Error("Not ported yet") }}>
+                    <StyledButton onClick={onClose}>
                         Close
                     </StyledButton>
                 </div>

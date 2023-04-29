@@ -118,9 +118,9 @@ import { repoStore } from './repo';
 export const useFiles = (commit?: string): UseQueryResult<readonly FileStats[]> =>
     useQuery(['files', commit], () => invoke<readonly FileStats[]>('get_files', { commit }));
 
-export const useFileHistory = (): Maybe<readonly Commit[]> => nothing;
+export const useFileHistory = (path: string) => useQuery(['file_history', path], () => invoke<GraphLayoutData>('get_graph', { pathspec: path }));
 
-export const useFileHistoryGraph = (): readonly LayoutListEntry[] | undefined => undefined;
+// export const useFileHistoryGraph = (): readonly LayoutListEntry[] | undefined => undefined;
 
 export const useFilePath = (): Maybe<string> => nothing;
 
