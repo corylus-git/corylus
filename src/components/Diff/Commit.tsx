@@ -10,6 +10,7 @@ import { ImageDiff } from './ImageDiff';
 import { TextFileDiff } from './TextFileDiff';
 import { getMimeType, isSupportedImageType } from '../../util/filetypes';
 import { Maybe } from '../../util/maybe';
+import { selectCommit } from '../../model/actions/repo';
 
 export interface CommitProps {
     commit?: Commit;
@@ -64,7 +65,12 @@ export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
             <p style={{ margin: 0, fontSize: '80%' }}>
                 SHA: {props.commit.shortOid} (
                 {props.commit.parents.length === 1 ? 'parent ' : 'parents '}
-                {props.commit.parents.map((p) => p.short_oid).join(', ')})
+                {props.commit.parents.map((p, index) => {
+                    return <><a href="" onClick={(e) => {
+                        selectCommit(p.oid);
+                        e.preventDefault();
+                    }}>{p.shortOid}</a>{index < props.commit.parents.length - 1 ? ', ' : ''}</>
+                })} )
             </p>
             <pre style={{ fontFamily: 'inherit', marginLeft: '1rem' }}>{props.commit.message}</pre>
         </>
@@ -87,10 +93,7 @@ function FileDiff(props: {
     toParent?: string;
 }) {
     const [open, setOpen] = React.useState(false);
-    // const mimeType = 'text/plain';
     const mimeType = getMimeType(props.diff.file.path);
-    // TODO this breaks because mime.lookup seems to use extname internally which is not available in Tauri
-    // const mimeType = mime.lookup(props.diff.file.path) || 'text/plain';
 
     return (
         <>

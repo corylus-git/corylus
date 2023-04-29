@@ -144,7 +144,7 @@ export interface PendingCommit {
  */
 export interface ParentReference {
     oid: string;
-    short_oid: string;
+    shortOid: string;
 }
 
 /**
@@ -290,7 +290,7 @@ export interface StashStatsData {
     readonly changes: readonly DiffStat[];
 
     readonly index?: readonly DiffStat[];
-    
+
     readonly untracked?: readonly DiffStat[];
 }
 

@@ -220,3 +220,7 @@ dialog button:disabled {
 dialog button:hover {
   background-color: var(--highlight);
 }
+
+a {
+  color: var(--foreground);
+}
