@@ -37,6 +37,7 @@ import { AutoStashDialog } from './Dialogs/AutoStashDialog';
 import { useAutoFetcher } from '../util/AutoFetcher';
 import { useIndex } from '../model/state';
 import { queryClient } from '../util/queryClient';
+import { ConfirmationDialog } from './Dialogs/ConfirmationDialog';
 
 export const MainView = styled.div`
     display: grid;
@@ -66,6 +67,7 @@ const DialogsContainer: React.FC = () => (
         <InteractiveRebase />
         <Rebase />
         <AutoStashDialog />
+        <ConfirmationDialog />
     </>
 );
 

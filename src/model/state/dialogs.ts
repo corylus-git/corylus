@@ -6,11 +6,6 @@ import { Logger } from '../../util/logger';
 import { Maybe, nothing } from '../../util/maybe';
 import { RequestInitializeGitflow } from '../../util/workflows/gitflow';
 import { BranchInfo, RemoteMeta, Stash, UpstreamInfo } from '../stateObjects';
-import { repoStore } from './repo';
-
-export type RequestFetch = {
-    type: 'request-fetch';
-};
 
 export type RequestPull = {
     type: 'request-pull';
@@ -70,10 +65,14 @@ export type RequestCreateTag = {
     ref: string;
 };
 
+export type CallbackDialog = {
+    onConfirm?: () => void;
+};
+
 export type RemoteConfiguration = {
     type: 'remote-configuration';
     remote: Maybe<RemoteMeta>;
-};
+} & CallbackDialog;
 
 export type AddIgnoreListItem = {
     type: 'add-ignore-list-item';
@@ -92,6 +91,17 @@ export type AutoStash = {
     type: 'auto-stash';
     target: string;
 };
+
+export type FetchDialog = {
+    type: 'fetch-dialog';
+} & CallbackDialog;
+
+export type ConfirmationDialog = {
+    type: 'confirmation-dialog';
+    title: string;
+    message: string;
+} & Required<CallbackDialog>;
+
 /**
  * pseudo-state marking all dialogs closed
  */
@@ -104,17 +114,19 @@ export type NoDialog = {
  */
 export type SimpleDialogState = {
     type: 'simple-dialog';
-    dialog: 'RequestFetch' | 'RequestUpstream' | 'AutoStash';
+    dialog: 'RequestUpstream' | 'AutoStash';
 };
 
 export type DialogState =
     | NoDialog
+    | ConfirmationDialog
     | SimpleDialogState
     | RequestNewBranch
     | RequestUpstream
     | RequestDeleteBranch
     | RequestMerge
     | RequestBranchReset
+    | FetchDialog
     | RequestPull
     | RequestStash
     | RequestStashApply
@@ -142,6 +154,7 @@ export const dialogStore = create<DialogState & DialogActions>()(
             set((state) => ({ ...state, ...dialog }));
         },
         close: (): void => {
+            Logger().debug('closeDialog', 'Closing dialog');
             set((_) => ({
                 type: 'no-dialog',
             }));

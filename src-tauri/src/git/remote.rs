@@ -1,5 +1,3 @@
-use std::{collections::HashSet, path::Path};
-
 use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks};
 use log::debug;
 use tauri::Window;
@@ -121,30 +119,43 @@ pub async fn fetch(
 }
 
 #[tauri::command]
-pub async fn add_remote(state: StateType<'_>, name: &str, url: &str) -> DefaultResult {
+pub async fn add_remote(
+    state: StateType<'_>,
+    window: Window,
+    name: &str,
+    url: &str,
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         log::trace!("Adding new remote {} -> {}", name, url);
         backend.repo.remote(name, url)?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
     })
     .await
 }
 
 #[tauri::command]
-pub async fn update_remote(state: StateType<'_>, name: &str, url: &str) -> DefaultResult {
+pub async fn update_remote(
+    state: StateType<'_>,
+    window: Window,
+    name: &str,
+    url: &str,
+) -> DefaultResult {
     with_backend_mut(state, |backend| {
         log::trace!("Updating remote {} -> {}", name, url);
         backend.repo.remote_set_url(name, url)?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
     })
     .await
 }
 
 #[tauri::command]
-pub async fn delete_remote(state: StateType<'_>, name: &str) -> DefaultResult {
+pub async fn delete_remote(state: StateType<'_>, window: Window, name: &str) -> DefaultResult {
     with_backend_mut(state, |backend| {
         log::trace!("Removing remote {}", name);
         backend.repo.remote_delete(name)?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
     })
     .await

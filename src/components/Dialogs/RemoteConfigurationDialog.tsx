@@ -1,6 +1,5 @@
 import { useDialog } from '../../model/state/dialogs';
 import React from 'react';
-import { Modal } from '../util/Modal';
 import { StyledDialog } from '../util/StyledDialog';
 import { Formik } from 'formik';
 import { Logger } from '../../util/logger';
@@ -9,6 +8,7 @@ import { ButtonGroup } from '../util/ButtonGroup';
 import { StyledButton } from '../util/StyledButton';
 import styled from 'styled-components';
 import { addRemote, updateRemote } from '../../model/actions/repo';
+import { ModalDialog } from './ModalDialog';
 
 const DialogView = styled.div`
     display: grid;
@@ -23,23 +23,24 @@ const DialogView = styled.div`
 export const RemoteConfigurationDialog: React.FC = () => {
     const dialog = useDialog();
 
-    return dialog.type === 'remote-configuration' ? (
-        <Modal isOpen={true}>
-            <Formik
+    return (
+        <ModalDialog for="remote-configuration">
+            {dialog.type === 'remote-configuration' && <Formik
                 initialValues={{
                     remoteName: dialog.remote.found ? dialog.remote.value.remote : '',
                     url: dialog.remote.found ? dialog.remote.value.url : '',
                 }}
-                onSubmit={(values, _) => {
+                onSubmit={async (values, _) => {
                     Logger().silly('RemoteConfigurationDialog', 'Setting remote configuration', {
                         remote: values,
                     });
                     if (!dialog.remote.found) {
-                        addRemote(values.remoteName, values.url);
+                        await addRemote(values.remoteName, values.url);
                     } else {
-                        updateRemote(values.remoteName, values.url);
+                        await updateRemote(values.remoteName, values.url);
                     }
                     dialog.close();
+                    dialog.onConfirm?.();
                 }}
                 validate={({ remoteName, url }) => {
                     const errors: any = {};
@@ -90,9 +91,6 @@ export const RemoteConfigurationDialog: React.FC = () => {
                         </form>
                     </StyledDialog>
                 )}
-            </Formik>
-        </Modal>
-    ) : (
-        <></>
-    );
+            </Formik>}
+        </ModalDialog>);
 };
