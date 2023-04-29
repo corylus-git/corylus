@@ -5,7 +5,7 @@ import { StyledButton } from '../util/StyledButton';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { CommitDetailsView } from '../Diff/Commit';
-import { useFileHistory, explorer, useFileHistoryGraph } from '../../model/state/explorer';
+import { useFileHistory, useFileHistoryGraph } from '../../model/state/explorer';
 import { GraphRenderer } from '../History/GraphRenderer';
 import { useBranches, useTags } from '../../model/state/repo';
 import { useAsync } from 'react-use';
@@ -90,7 +90,7 @@ export const FileHistory: React.FC = () => {
                     </SplitterPanel>
                 </Splitter>
                 <div className="button">
-                    <StyledButton onClick={() => explorer.getState().closePathHistory()}>
+                    <StyledButton onClick={() => { throw Error("Not ported yet") }}>
                         Close
                     </StyledButton>
                 </div>

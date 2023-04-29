@@ -42,7 +42,7 @@ export const RequestMergeDialog: React.FC = () => {
                                                         <option key={b.refName}>{b.refName}</option>
                                                     ))}
                                             </select>{' '}
-                                            into {targetBranch?.refName}?
+                                            into {targetBranch.data?.refName}?
                                         </div>
                                         <div>
                                             <input
@@ -61,11 +61,11 @@ export const RequestMergeDialog: React.FC = () => {
                                         <input
                                             type="hidden"
                                             id="from"
-                                            value={targetBranch?.refName}
+                                            value={targetBranch.data?.refName}
                                         />
                                         <div>
                                             Merge from branch {from.value} into{' '}
-                                            {targetBranch?.refName}?
+                                            {targetBranch.data?.refName}?
                                         </div>
                                         <div>
                                             <input
@@ -86,7 +86,7 @@ export const RequestMergeDialog: React.FC = () => {
                                             value={/*toOptional(targetBranch)?.refName*/''}
                                         />
                                         <>Merge from commit {from} into{' '}
-                                        {/* {toOptional(targetBranch)?.refName}? */}</>
+                                            {/* {toOptional(targetBranch)?.refName}? */}</>
                                     </div>
                                 )}
                                 <ButtonGroup>

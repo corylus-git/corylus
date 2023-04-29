@@ -1,8 +1,7 @@
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import React from 'react';
 import styled from 'styled-components';
-import { explorer, useFiles } from '../../model/state/explorer';
-import { repoStore } from '../../model/state/repo';
+import { useFiles } from '../../model/state/explorer';
 import { Commit, FileStats } from '../../model/stateObjects';
 import { Logger } from '../../util/logger';
 import { FileStatus } from '../shared/FileStatus';
@@ -61,48 +60,49 @@ const FileTree: React.FC<{ files: readonly FileStats[] }> = (props) => {
     }, [] as readonly TreeNode<FileStats>[]);
     const [menuProps, setMenuState] = useMenuState();
     const [meta, setMeta] = React.useState<FileStats>();
-    const [anchorPoint, setAnchorPoint] = React.useState<{x: number, y: number}>();
+    const [anchorPoint, setAnchorPoint] = React.useState<{ x: number, y: number }>();
     return (
         <>
-        <ControlledMenu {...menuProps} onClose={() => setMenuState(false)} anchorPoint={anchorPoint}>
-            <MenuItem onClick={() => {
-                 Logger().debug('FileTree', 'Showing file history', { file: meta!.path });
-                 explorer.getState().loadPathHistory(meta!.path);
-             }}>Show file history</MenuItem>
-            <MenuItem>Annotate edits (blame)</MenuItem>
-        </ControlledMenu>
-        <Scrollable>
-            {trees.map((t, i) => (
-                <Tree
-                    key={i}
-                    root={t}
-                    label={(file, path, _, meta) => {
-                        return (
-                            <span
-                                title={`${path?.join('/') ?? ''}/${file}`}
-                                onContextMenu={(ev) => {
-                                    ev.preventDefault();
-                                    if (meta) {
-                                        setMeta(meta);
-                                        setAnchorPoint({x: ev.clientX, y: ev.clientY});
-                                        setMenuState(true);
-                                    }
-                                }}>
-                                {meta && (
-                                    <FileStatus
-                                        isConflicted={false}
-                                        status={meta.status}
-                                        style={{ fontSize: '80%', marginRight: '0.25rem' }}
-                                    />
-                                )}
-                                {file}
-                            </span>
-                        );
-                    }}
-                    expanded
-                />
-            ))}
-        </Scrollable>
+            <ControlledMenu {...menuProps} onClose={() => setMenuState(false)} anchorPoint={anchorPoint}>
+                <MenuItem onClick={() => {
+                    Logger().debug('FileTree', 'Showing file history', { file: meta!.path });
+                    // explorer.getState().loadPathHistory(meta!.path);
+                    throw new Error('Not yet ported');
+                }}>Show file history</MenuItem>
+                <MenuItem>Annotate edits (blame)</MenuItem>
+            </ControlledMenu>
+            <Scrollable>
+                {trees.map((t, i) => (
+                    <Tree
+                        key={i}
+                        root={t}
+                        label={(file, path, _, meta) => {
+                            return (
+                                <span
+                                    title={`${path?.join('/') ?? ''}/${file}`}
+                                    onContextMenu={(ev) => {
+                                        ev.preventDefault();
+                                        if (meta) {
+                                            setMeta(meta);
+                                            setAnchorPoint({ x: ev.clientX, y: ev.clientY });
+                                            setMenuState(true);
+                                        }
+                                    }}>
+                                    {meta && (
+                                        <FileStatus
+                                            isConflicted={false}
+                                            status={meta.status}
+                                            style={{ fontSize: '80%', marginRight: '0.25rem' }}
+                                        />
+                                    )}
+                                    {file}
+                                </span>
+                            );
+                        }}
+                        expanded
+                    />
+                ))}
+            </Scrollable>
         </>
     );
 };

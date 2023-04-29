@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import * as monaco from 'monaco-editor';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { attachScrollHandlers } from '../util/scrollSync';
-import { useBlameInfo, explorer } from '../../model/state/explorer';
+import { useBlameInfo } from '../../model/state/explorer';
 
 const BlameDialogContainer = styled(StyledDialog)`
     width: 90%;
@@ -82,7 +82,7 @@ export const BlameInfoDialog: React.FC = () => {
                 </div>
                 <StyledButton
                     onClick={() => {
-                        explorer.getState().closeBlameInfo();
+                        throw Error('Not yet ported to Tauri');
                     }}>
                     Close
                 </StyledButton>

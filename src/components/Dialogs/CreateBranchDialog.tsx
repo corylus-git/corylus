@@ -93,14 +93,14 @@ export const CreateBranchDialog: React.FC = () => {
                     initialValues={{
                         from: dialog.source.found
                             ? dialog.source.value
-                            : currentBranch
-                            ? currentBranch.refName
-                            : '',
+                            : currentBranch.data
+                                ? currentBranch.data.refName
+                                : '',
                         branch: dialog.branchPrefix.found ? dialog.branchPrefix.value : '',
                         checkout: true,
                     }}
                     onSubmit={(values, _) => {
-                        createBranch(values.branch, values.from, dialog.subType === 'branch' ? 'Branch' : 'Commit',  values.checkout);
+                        createBranch(values.branch, values.from, dialog.subType === 'branch' ? 'Branch' : 'Commit', values.checkout);
                         dialog.close();
                     }}
                     initialErrors={{ branch: 'Missing source' }} // the initial state is not valid

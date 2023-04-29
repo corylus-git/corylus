@@ -22,7 +22,7 @@ export const RequestFetchDialog: React.FC = () => {
                         fetchAll: true,
                         prune: true,
                         tags: true,
-                        remote: remotes[0]?.remote,
+                        remote: remotes.data?.[0]?.remote ?? 'origin',
                     }}
                     onSubmit={async (values, _) => {
                         await fetchRemote(
@@ -63,7 +63,7 @@ export const RequestFetchDialog: React.FC = () => {
                                             id="remotes"
                                             disabled={formik.values.fetchAll}
                                             {...formik.getFieldProps('remote')}>
-                                            {remotes.map((r) => (
+                                            {remotes.data?.map((r) => (
                                                 <option key={r.remote}>{r.remote}</option>
                                             ))}
                                         </select>

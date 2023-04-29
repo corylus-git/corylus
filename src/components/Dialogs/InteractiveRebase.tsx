@@ -30,7 +30,7 @@ const CommitPickerLine = styled.div`
 const CommitPicker: React.FC<{ target: string; onClose: () => void }> = (props) => {
     const repo = useRepo();
     const history = useAsync(
-        () => repo.backend.getHistory(undefined, undefined, undefined, `${props.target}..HEAD`, false),
+        () => Promise.resolve([] as any[]), //repo.backend.getHistory(undefined, undefined, undefined, `${props.target}..HEAD`, false),
         [props.target]
     );
     const tags = useTags();

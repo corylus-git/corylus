@@ -34,10 +34,10 @@ const RequestUpstreamDialogContent: React.FC<{ dialog: RequestUpstream & DialogA
     const remotes = useRemotes();
     const { data: branches } = useBranches();
     const upstream = React.useMemo(() => {
-        if (props.dialog.type === 'request-upstream') {
+        if (props.dialog.type === 'request-upstream' && remotes.data) {
             return selectTargetRemote(
                 fromNullable(props.dialog.forBranch.refName),
-                remotes,
+                remotes.data,
                 props.dialog.currentUpstream
             )
         }
@@ -107,7 +107,7 @@ const RequestUpstreamDialogContent: React.FC<{ dialog: RequestUpstream & DialogA
                                     }}>
                                     <label htmlFor="remote">Target remote</label>{' '}
                                     <select id="remote" {...formik.getFieldProps('remote')}>
-                                        {remotes?.map((r) => (
+                                        {remotes.data?.map((r) => (
                                             <option key={r.remote}>{r.remote}</option>
                                         ))}
                                     </select>

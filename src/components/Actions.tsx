@@ -144,104 +144,109 @@ export const Actions: React.FC = () => {
     const currentBranch = useCurrentBranch();
     const dialog = useDialog();
     const remotes = useRemotes()
-    Logger().silly('Actions', 'Remotes', { remotes, length: remotes.length });
-    return (
-        <ActionsContainer>
-            <RouteAction route="/" title="View the commit history">
-                <HistoryIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </RouteAction>
-            <RouteAction route="/index" title="Staging area">
-                <IndexIcon viewBox="0 0 24 24" width="100%" height="100%" />
-                <ModifificationCounter />
-            </RouteAction>
-            <RouteAction route="/files" title="Explore the working directory">
-                <ExploreIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </RouteAction>
-            <div style={{ height: '1rem' }}></div>
-            <BranchButton />
-            <ActionButton
-                onClick={() => {
-                    if (currentBranch) {
-                        dialog.open({
-                            type: 'request-merge',
-                            source: just(currentBranch.refName),
-                        });
-                    }
-                }}
-                title="Merge into current branch">
-                <MergeIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </ActionButton>
-            <ActionButton
-                onClick={() => {
-                    if (remotes.length === 0) {
-                        dialog.open({
-                            type: 'remote-configuration', remote: nothing,
-                            onConfirm: () => dialog.open({
-                                type: 'fetch-dialog'
+
+    if (remotes.data !== undefined && currentBranch.data !== undefined) {
+        return (
+            <ActionsContainer>
+                <RouteAction route="/" title="View the commit history">
+                    <HistoryIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </RouteAction>
+                <RouteAction route="/index" title="Staging area">
+                    <IndexIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                    <ModifificationCounter />
+                </RouteAction>
+                <RouteAction route="/files" title="Explore the working directory">
+                    <ExploreIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </RouteAction>
+                <div style={{ height: '1rem' }}></div>
+                <BranchButton />
+                <ActionButton
+                    onClick={() => {
+                        if (currentBranch) {
+                            dialog.open({
+                                type: 'request-merge',
+                                source: fromNullable(currentBranch.data?.refName),
+                            });
+                        }
+                    }}
+                    title="Merge into current branch">
+                    <MergeIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </ActionButton>
+                <ActionButton
+                    onClick={() => {
+                        if (remotes.data?.length === 0) {
+                            dialog.open({
+                                type: 'remote-configuration', remote: nothing,
+                                onConfirm: () => dialog.open({
+                                    type: 'fetch-dialog'
+                                })
                             })
-                        })
-                    }
-                    else {
-                        dialog.open({ type: 'fetch-dialog' })
-                    }
-                }}
-                title="Fetch remote repositories">
-                <FetchIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </ActionButton>
-            <ActionButton
-                onClick={() => {
-                    if (remotes.length === 0) {
-                        dialog.open({
-                            type: 'remote-configuration', remote: nothing,
-                            onConfirm: () => dialog.open({
-                                type: 'fetch-dialog',
-                                onConfirm: () => dialog.open({ type: 'request-pull' }),
-                            })
-                        });
-                    }
-                    else {
-                        dialog.open({ type: 'request-pull' });
-                    }
-                }}
-                title="Pull from remote repositories">
-                <PullIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </ActionButton>
-            <ActionButton
-                onClick={() => {
-                    if (currentBranch) {
-                        if (remotes.length === 0) {
+                        }
+                        else {
+                            dialog.open({ type: 'fetch-dialog' })
+                        }
+                    }}
+                    title="Fetch remote repositories">
+                    <FetchIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </ActionButton>
+                <ActionButton
+                    onClick={() => {
+                        if (remotes.data?.length === 0) {
                             dialog.open({
                                 type: 'remote-configuration', remote: nothing,
                                 onConfirm: () => dialog.open({
                                     type: 'fetch-dialog',
-                                    onConfirm: () => dialog.open({
-                                        type: 'request-upstream',
-                                        forBranch: currentBranch,
-                                        currentUpstream: fromNullable(currentBranch.upstream),
-                                    })
+                                    onConfirm: () => dialog.open({ type: 'request-pull' }),
                                 })
-                            })
-                        } else {
-                            dialog.open({
-                                type: 'request-upstream',
-                                forBranch: currentBranch,
-                                currentUpstream: fromNullable(currentBranch.upstream),
                             });
                         }
-                    }
-                }}
-                title="Push changes to remote repositories">
-                <PushIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </ActionButton>
-            <ActionButton
-                onClick={() => dialog.open({ type: 'request-stash' })}
-                title="Stash working copy modifications">
-                <StashIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </ActionButton>
-            <div></div>
-            <RouteAction route="/config" title="View/modify configuration">
-                <SettingsIcon viewBox="0 0 24 24" width="100%" height="100%" />
-            </RouteAction>
-        </ActionsContainer>
-    );
+                        else {
+                            dialog.open({ type: 'request-pull' });
+                        }
+                    }}
+                    title="Pull from remote repositories">
+                    <PullIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </ActionButton>
+                <ActionButton
+                    onClick={() => {
+                        if (currentBranch.data) {
+                            if (remotes.data?.length === 0) {
+                                dialog.open({
+                                    type: 'remote-configuration', remote: nothing,
+                                    onConfirm: () => dialog.open({
+                                        type: 'fetch-dialog',
+                                        onConfirm: () => {
+                                            dialog.open({
+                                                type: 'request-upstream',
+                                                forBranch: currentBranch.data!,
+                                                currentUpstream: fromNullable(currentBranch.data!.upstream),
+                                            })
+                                        }
+                                    })
+                                })
+                            } else {
+                                dialog.open({
+                                    type: 'request-upstream',
+                                    forBranch: currentBranch.data,
+                                    currentUpstream: fromNullable(currentBranch.data.upstream),
+                                });
+                            }
+                        }
+                    }}
+                    title="Push changes to remote repositories">
+                    <PushIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </ActionButton>
+                <ActionButton
+                    onClick={() => dialog.open({ type: 'request-stash' })}
+                    title="Stash working copy modifications">
+                    <StashIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </ActionButton>
+                <div></div>
+                <RouteAction route="/config" title="View/modify configuration">
+                    <SettingsIcon viewBox="0 0 24 24" width="100%" height="100%" />
+                </RouteAction>
+            </ActionsContainer>
+        );
+    }
+    return <></>;
 };

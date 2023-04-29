@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/tauri';
 import AsyncLock from 'async-lock';
 import { castDraft } from 'immer';
-import { useQuery, UseQueryResult } from 'react-query';
+import { QueryOptions, useQuery, UseQueryResult } from 'react-query';
 import { loggers } from 'winston';
 import createHook from 'zustand';
 // import produce from 'immer';
@@ -188,14 +188,14 @@ export const repoStore = create<RepoState & RepoActions>()(
 
 export const useRepo = createHook(repoStore);
 
-export const useConfig = (): UseQueryResult<IGitConfig> => 
+export const useConfig = (): UseQueryResult<IGitConfig> =>
     useQuery('config', async () => {
         const configValues = await invoke<NamedGitConfigValue<string>[]>('get_config');
         console.log("Got config:", configValues);
         return {
             user: {
-               name: configValues.find(c => c.name === "user.name"),
-               email: configValues.find(c => c.name === "user.email")
+                name: configValues.find(c => c.name === "user.name"),
+                email: configValues.find(c => c.name === "user.email")
             }
         }
     });
@@ -222,8 +222,8 @@ listen('TagsChanged', (_) => queryClient.invalidateQueries('tags'));
 /**
  * Get the current available remotes in the repo
  */
-export const useRemotes = (): readonly RemoteMeta[] =>
-    useQuery('remotes', () => invoke<readonly RemoteMeta[]>('get_remotes')).data ?? [];
+export const useRemotes = () =>
+    useQuery('remotes', () => invoke<readonly RemoteMeta[]>('get_remotes'));
 
 /**
  * Get the current available stashes in the repo
@@ -266,7 +266,7 @@ export function useAffectedBranches(): string[] {
 export const useBranches = (): UseQueryResult<readonly BranchInfo[]> =>
     useQuery('branches', async () => {
         const branches = await invoke<readonly BranchInfo[]>('get_branches', {});
-        Logger().debug('useBranches:query', 'Received branches from the backend.', {branches });
+        Logger().debug('useBranches:query', 'Received branches from the backend.', { branches });
         return branches;
     });
 
@@ -279,9 +279,9 @@ listen('BranchesChanged', _ => {
 /**
  * Get the current branch
  */
-export const useCurrentBranch = (): BranchInfo | undefined => {
-    const { data: branches } = useBranches();
-    return branches?.find(b => b.current);
+export const useCurrentBranch = () => {
+    const branches = useBranches();
+    return useQuery(['current_branch', branches.data], async () => branches.data?.find(b => b.current));
 }
 
 /**
@@ -311,7 +311,7 @@ export function useDiff(source: 'commit' | 'stash' | 'index' | 'workdir', path: 
         untracked
     }));
 }
-listen<{commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 'workdir', parent?: string, untracked?: boolean}>('DiffChanged', ev => {
+listen<{ commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 'workdir', parent?: string, untracked?: boolean }>('DiffChanged', ev => {
     Logger().debug('diff-changed', 'Diff changed', { paylod: ev.payload });
     queryClient.invalidateQueries(['diff', ev.payload.commit, ev.payload.path, ev.payload.source, ev.payload.parent, ev.payload.untracked]);
 });
@@ -325,7 +325,7 @@ export function useMergeHead() {
 }
 
 export function useCommit(ref: string | undefined) {
-    return useQuery(['commit', ref], () => invoke<Commit>('get_commit', { refNameOrOid: ref}), { enabled: !!ref });
+    return useQuery(['commit', ref], () => invoke<Commit>('get_commit', { refNameOrOid: ref }), { enabled: !!ref });
 }
 
 export function useMergeMessage() {

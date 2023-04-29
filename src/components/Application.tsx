@@ -7,12 +7,11 @@ import '../style/app.css';
 import styled, { ThemeProvider } from 'styled-components';
 import { Tabs } from './util/Tabs';
 import { Logger } from '../util/logger';
-import { startSettingsObserver, useSettings } from '../model/settings';
+import { useSettings } from '../model/settings';
 import { GlobalErrorBoundary } from './GlobalErrorBoundary';
 import { AboutPanel } from './AboutPanel';
-// import { ipcRenderer } from 'electron';
 import { ToastContainer } from 'react-toastify';
-import { QueryClient, QueryClientProvider } from 'react-query';
+import { QueryClientProvider } from 'react-query';
 
 import { nanoid } from 'nanoid';
 import { just } from '../util/maybe';

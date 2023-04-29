@@ -46,7 +46,7 @@ export const ManualMergePanel: React.FC = () => {
 
     if (stagingArea.manualMerge.found) {
         const p = stagingArea.manualMerge.value.path;
-        const mimeType = mime.lookup(p) || 'text/plain';
+        const mimeType = /* mime.lookup(p) || */'text/plain';
         return (
             <Modal isOpen={true}>
                 <ManualMergeViewContainer>

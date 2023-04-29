@@ -67,7 +67,7 @@ export const DeleteBranchDialog: React.FC = () => {
                                         <label htmlFor="removeRemote">
                                             Remove remote tracking branch{' '}
                                             {dialog.branch.upstream?.remoteName}/
-                                            {dialog.branch.upstream?.ref}
+                                            {dialog.branch.upstream?.refName}
                                         </label>
                                     </div>
                                 )}

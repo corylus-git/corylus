@@ -90,11 +90,11 @@ const MainStatusBar: React.FC = () => {
     return (
         <StatusBar>
             <CurrentBranch>
-                {currentBranch && currentBranch.isDetached && (
+                {currentBranch.data && currentBranch.data.isDetached && (
                     <Detached>DETACHED HEAD: </Detached>
                 )}
                 {index.status.length > 0 && '*'}
-                {currentBranch && currentBranch.refName}
+                {currentBranch.data && currentBranch.data.refName}
             </CurrentBranch>
         </StatusBar>
     );

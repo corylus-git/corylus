@@ -494,20 +494,21 @@ export const Branches: React.FC = () => {
     const branchTree = React.useMemo(
         () =>
             data &&
-            currentBranch !== undefined &&
+            currentBranch.data !== undefined &&
+            remotes.data &&
             createBranchTreeData(
                 data.filter((b) => !b.remote),
                 data.filter((b) => b.remote),
-                remotes,
-                currentBranch
+                remotes.data,
+                currentBranch.data
             ),
-        [data, currentBranch, remotes]
+        [data, currentBranch, remotes.data]
     );
 
-    if (isLoading) {
+    if (isLoading || remotes.isLoading) {
         return <div>Loading branches...</div>
     }
-    if (error) {
+    if (error || remotes.error) {
         return <div>Could not load branch data.</div>
     }
     return (
@@ -515,7 +516,7 @@ export const Branches: React.FC = () => {
             {branchTree && (
                 <BranchTree
                     root={branchTree}
-                    currentBranch={fromNullable(currentBranch)}
+                    currentBranch={fromNullable(currentBranch.data)}
                     affected={affected}
                 />
             )}

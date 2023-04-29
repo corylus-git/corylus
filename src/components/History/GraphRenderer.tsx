@@ -166,7 +166,7 @@ export const GraphRenderer = React.forwardRef<ListSelector, GraphRendererProps>(
             tags={tags}
             searchTerm={searchTerm}
             onOpenContextMenu={onOpenContextMenu}
-            currentBranch={currentBranch}
+            currentBranch={currentBranch.data}
             {...props}
         />
     );
