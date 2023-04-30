@@ -158,6 +158,15 @@ export const Tabs: React.FC = () => {
         activeRef.current?.scrollIntoView();
     }, [tabs.active]);
 
+    const getActiveTabPath = () => {
+        if (tabs.active.found) {
+            const activeTab = tabs.tabs.find(t => tabs.active.found && t.id === tabs.active.value);
+            return activeTab?.path?.found ? activeTab.path.value : undefined;
+        }
+    }
+
+    const activePath = getActiveTabPath(); 333
+
     return (
         <TabContainer onMouseUp={() => intervalRef.current && clearInterval(intervalRef.current)}>
             <TabHeader>
@@ -213,15 +222,11 @@ export const Tabs: React.FC = () => {
                 </div>
             </TabHeader>
             <TabContent>
-                {tabs.active.found ? (
-                    tabs.tabs.find(t => tabs.active.found && t.id === tabs.active.value)?.path?.found ? (
-                        <Repository />
-                    ) : (
-                        <NewTab />
-                    )
-                ) : (
-                    <></>
-                )}
+                {
+                    tabs.active.found
+                        ? (activePath ? <Repository path={activePath} /> : <NewTab />)
+                        : <></>
+                }
             </TabContent>
         </TabContainer>
     );

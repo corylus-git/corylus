@@ -200,6 +200,9 @@ export const useConfig = (): UseQueryResult<IGitConfig> =>
         }
     });
 
+export function loadRepo(path: string): void {
+    invoke('git_open', { path });
+}
 
 /**
  * Access the history of the repo

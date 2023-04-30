@@ -25,7 +25,7 @@ import { ConfigureGitFlow } from './Dialogs/ConfigureGitFlow';
 import { Logger } from '../util/logger';
 import { BranchResetDialog } from './Dialogs/BranchResetDialog';
 import { useDialog } from '../model/state/dialogs';
-import { useCurrentBranch, useRepo } from '../model/state/repo';
+import { loadRepo, useCurrentBranch, useRepo } from '../model/state/repo';
 import { useWorkflows } from '../model/state/workflows';
 import { Gitflow } from '../util/workflows/gitflow';
 import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
@@ -100,10 +100,9 @@ const MainStatusBar: React.FC = () => {
     );
 };
 
-export const Repository: React.FC = () => {
+export const Repository: React.FC<{ path: string }> = ({ path }) => {
     const repo = useRepo();
     const index = useIndex();
-    const path = repo.path;
     const dialog = useDialog();
     // TODO fix
     // const __ = useDirWatcher(path);
@@ -113,7 +112,8 @@ export const Repository: React.FC = () => {
     React.useEffect(() => {
         if (repo.active) {
             Logger().debug('Repository', 'Path changed', { path: path });
-            repo.loadHistory();
+            loadRepo(path);
+            // repo.loadHistory();
             queryClient.invalidateQueries();
             // repo.loadRepo().then(() => {
             //     workflows.registerGitWorkflows([new Gitflow(dialog)]);

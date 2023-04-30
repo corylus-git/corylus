@@ -30,7 +30,7 @@ export class Gitflow implements IGitWorkflow {
 
     name = 'Gitflow';
 
-    constructor(private dialog: DialogActions) {}
+    constructor(private dialog: DialogActions) { }
 
     private get possibleSources(): readonly {
         type: GitflowBranchType;
@@ -112,50 +112,50 @@ export class Gitflow implements IGitWorkflow {
 }
 
 export const configure = async (config: IGitFlowConfigValues): Promise<void> => {
-    const backend = repoStore.getState().backend;
-    Logger().info('GitFlow', 'Initializing Gitflow');
-    // set the config
-    Logger().info('Gitflow', 'Setting gitflow config', { config: config });
-    // await backend.setConfigValue('gitflow.branch.master', config.branch.master, 'local');
-    // await backend.setConfigValue('gitflow.branch.develop', config.branch.develop, 'local');
-    // await backend.setConfigValue('gitflow.prefix.feature', config.prefix.feature, 'local');
-    // await backend.setConfigValue('gitflow.prefix.bugfix', config.prefix.bugfix, 'local');
-    // await backend.setConfigValue('gitflow.prefix.release', config.prefix.release, 'local');
-    // await backend.setConfigValue('gitflow.prefix.hotfix', config.prefix.hotfix, 'local');
-    // await backend.setConfigValue('gitflow.prefix.support', config.prefix.support, 'local');
-    // await backend.setConfigValue('gitflow.prefix.versiontag', config.prefix.versiontag, 'local');
-    // get the history in order to decide, whether we can create our branches at all
-    const history = await backend.getHistory();
-    if (history.length === 0) {
-        Logger().info('Gitflow', 'Creating initial commit to attach branches to.');
-        // create an empty .gitignore to be able to initialize things
-        // TODO
-        // fs.writeFileSync(await join(backend.dir, '.gitignore'), '');
-        backend.addPath('.gitignore');
-        backend.commit('Initial commit');
-        // this will have created an initial commit on 'master' -> if the configuration wants to have a different
-        //  branch name, rename it
-        // if (config.branch.master !== 'master') {
-        //     backend.renameBranch('master', config.branch.master);
-        // }
-    }
-    // create the two long-lived branches first, if necessary
-    const branches = await backend.getBranches();
-    // if (branches.findIndex((b) => b.refName === config.branch.master) === -1) {
-    //     Logger().info('Gitflow', 'Creating master branch');
-    //     backend.branch(config.branch.master, 'HEAD', true);
-    // } else {
-    //     Logger().debug('Gitflow', 'Master branch already exists. Not recreating.');
+    // const backend = repoStore.getState().backend;
+    // Logger().info('GitFlow', 'Initializing Gitflow');
+    // // set the config
+    // Logger().info('Gitflow', 'Setting gitflow config', { config: config });
+    // // await backend.setConfigValue('gitflow.branch.master', config.branch.master, 'local');
+    // // await backend.setConfigValue('gitflow.branch.develop', config.branch.develop, 'local');
+    // // await backend.setConfigValue('gitflow.prefix.feature', config.prefix.feature, 'local');
+    // // await backend.setConfigValue('gitflow.prefix.bugfix', config.prefix.bugfix, 'local');
+    // // await backend.setConfigValue('gitflow.prefix.release', config.prefix.release, 'local');
+    // // await backend.setConfigValue('gitflow.prefix.hotfix', config.prefix.hotfix, 'local');
+    // // await backend.setConfigValue('gitflow.prefix.support', config.prefix.support, 'local');
+    // // await backend.setConfigValue('gitflow.prefix.versiontag', config.prefix.versiontag, 'local');
+    // // get the history in order to decide, whether we can create our branches at all
+    // const history = await backend.getHistory();
+    // if (history.length === 0) {
+    //     Logger().info('Gitflow', 'Creating initial commit to attach branches to.');
+    //     // create an empty .gitignore to be able to initialize things
+    //     // TODO
+    //     // fs.writeFileSync(await join(backend.dir, '.gitignore'), '');
+    //     backend.addPath('.gitignore');
+    //     backend.commit('Initial commit');
+    //     // this will have created an initial commit on 'master' -> if the configuration wants to have a different
+    //     //  branch name, rename it
+    //     // if (config.branch.master !== 'master') {
+    //     //     backend.renameBranch('master', config.branch.master);
+    //     // }
     // }
-    // if (branches.findIndex((b) => b.refName === config.branch.develop) === -1) {
-    //     Logger().info('Gitflow', 'Creating develop branch');
-    //     backend.branch(config.branch.develop, 'HEAD', false);
-    // } else {
-    //     Logger().debug('Gitflow', 'Develop branch already exists. Checking out.');
-    //     backend.checkout(config.branch.develop);
-    // }
-    // repoStore.getState().getConfig();
-    // toast.success('Successfully set up repository for GitFlow');
+    // // create the two long-lived branches first, if necessary
+    // const branches = await backend.getBranches();
+    // // if (branches.findIndex((b) => b.refName === config.branch.master) === -1) {
+    // //     Logger().info('Gitflow', 'Creating master branch');
+    // //     backend.branch(config.branch.master, 'HEAD', true);
+    // // } else {
+    // //     Logger().debug('Gitflow', 'Master branch already exists. Not recreating.');
+    // // }
+    // // if (branches.findIndex((b) => b.refName === config.branch.develop) === -1) {
+    // //     Logger().info('Gitflow', 'Creating develop branch');
+    // //     backend.branch(config.branch.develop, 'HEAD', false);
+    // // } else {
+    // //     Logger().debug('Gitflow', 'Develop branch already exists. Checking out.');
+    // //     backend.checkout(config.branch.develop);
+    // // }
+    // // repoStore.getState().getConfig();
+    // // toast.success('Successfully set up repository for GitFlow');
 };
 
 export const startBranch = async (

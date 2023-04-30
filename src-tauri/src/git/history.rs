@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Sort};
 use tauri::Window;
 
-use crate::error::{BackendError, Result, DefaultResult};
+use crate::error::{BackendError, DefaultResult, Result};
 
 use super::{
     graph::calculate_graph_layout,
@@ -138,10 +138,8 @@ fn transitive_reduction(commits: Vec<Commit>) -> Vec<Commit> {
     result
 }
 
-pub fn load_history(
-    repo: &git2::Repository,
-    pathspec: Option<&str>,
-) -> Result<Vec<Commit>> {
+pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<Vec<Commit>> {
+    let start = Instant::now();
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
     revwalk.push_glob("heads")?;
@@ -173,39 +171,32 @@ pub fn load_history(
         // do not reduce for full graphs as this algorithm is currently really inefficient
         transitive_reduction(internal_history)
     } else {
+        log::debug!(
+            "Loaded {} history elements in {} ms",
+            internal_history.len(),
+            start.elapsed().as_millis()
+        );
         internal_history
     })
 }
 
 #[tauri::command]
-pub async fn get_commits(
-    state: StateType<'_>,
-    pathspec: Option<&str>,
-) -> Result<Vec<Commit>> {
+pub async fn get_commits(state: StateType<'_>, pathspec: Option<&str>) -> Result<Vec<Commit>> {
     with_backend(state, |backend| load_history(&backend.repo, pathspec)).await
 }
 
 #[tauri::command]
-pub async fn get_graph(
-    state: StateType<'_>,
-    pathspec: Option<&str>,
-) -> Result<GraphLayoutData> {
+pub async fn get_graph(state: StateType<'_>, pathspec: Option<&str>) -> Result<GraphLayoutData> {
     with_backend(state, |backend| do_get_graph(backend, pathspec)).await
 }
 
-pub fn do_get_graph(
-    backend: &GitBackend,
-    pathspec: Option<&str>,
-) -> Result<GraphLayoutData> {
+pub fn do_get_graph(backend: &GitBackend, pathspec: Option<&str>) -> Result<GraphLayoutData> {
     let commits = load_history(&backend.repo, pathspec)?;
     Ok(calculate_graph_layout(commits))
 }
 
 #[tauri::command]
-pub async fn get_commit(
-    state: StateType<'_>,
-    ref_name_or_oid: &str,
-) -> Result<Commit> {
+pub async fn get_commit(state: StateType<'_>, ref_name_or_oid: &str) -> Result<Commit> {
     log::trace!("Requesting commit information for {}", ref_name_or_oid);
     with_backend(state, |backend| {
         let obj = backend.repo.revparse_single(ref_name_or_oid)?;
@@ -216,10 +207,7 @@ pub async fn get_commit(
 }
 
 #[tauri::command]
-pub async fn get_commit_stats(
-    state: StateType<'_>,
-    oid: &str,
-) -> Result<CommitStats> {
+pub async fn get_commit_stats(state: StateType<'_>, oid: &str) -> Result<CommitStats> {
     with_backend_mut(state, |backend| {
         let commit =
             Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
@@ -244,20 +232,17 @@ pub async fn get_commit_stats(
             .ok();
 
         let commit_stats = CommitStats::Commit(CommitStatsData {
-                commit: FullCommitData::try_from(&commit)?,
-                direct,
-                incoming,
-            });
+            commit: FullCommitData::try_from(&commit)?,
+            direct,
+            incoming,
+        });
         Ok(commit_stats)
     })
     .await
 }
 
 #[tauri::command]
-pub async fn get_affected_branches(
-    state: StateType<'_>,
-    oid: String,
-) -> Result<Vec<String>> {
+pub async fn get_affected_branches(state: StateType<'_>, oid: String) -> Result<Vec<String>> {
     with_backend(state, |backend| {
         let parsed_oid = Oid::from_str(&oid)?;
         let affected_branches = backend.branches.iter().filter(|&b| {

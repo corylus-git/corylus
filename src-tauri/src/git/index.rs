@@ -13,7 +13,7 @@ use crate::{
 use super::{
     history::{do_get_graph, load_history},
     model::{
-        graph::{GraphChangeData, GraphLayoutData},
+        graph::GraphChangeData,
         index::{FileConflict, IndexStatus},
     },
     with_backend, with_backend_mut, GitBackend, StateType,

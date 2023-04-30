@@ -20,22 +20,21 @@ export const HistoryPanel: React.FC = () => {
     const history = useHistory();
     const stats = useSelectedCommit();
 
-    useLayoutEffect(resizer, []);
-
-    function resizer() {
-        Logger().silly('HistoryPanel', 'Resizing graph to', { dimensions: dimensions });
-        if (targetRef.current) {
-            setDimensions({
-                width: targetRef.current.offsetWidth,
-                height: targetRef.current.offsetHeight,
-            });
-        }
-    }
+    const resizeObserverRef = useRef<ResizeObserver>(new ResizeObserver(resizer));
 
     React.useEffect(() => {
-        window.addEventListener('resize', resizer);
-        return () => window.removeEventListener('resize', resizer);
-    }, []);
+        if (targetRef.current) {
+            resizeObserverRef.current.observe(targetRef.current);
+        }
+        return () => resizeObserverRef.current.disconnect();
+    }, [targetRef.current]);
+
+    function resizer(entries: ResizeObserverEntry[]) {
+        Logger().silly('HistoryPanel', 'Resizing graph to', { dimensions: dimensions });
+        for (const entry of entries) {
+            setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+        }
+    }
 
     return (
         <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>

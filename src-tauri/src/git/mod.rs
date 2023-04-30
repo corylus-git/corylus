@@ -146,6 +146,7 @@ pub async fn get_graph_entries(
     start_idx: usize,
     end_idx: usize,
 ) -> Result<Vec<LayoutListEntry>, BackendError> {
+    log::debug!("Getting graph entries from {} to {}", start_idx, end_idx);
     with_backend(state, |backend| {
         Ok(backend
             .graph

@@ -99,34 +99,35 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
             Logger().debug('selectConflictedFile', 'Selecting conflicted file for display', {
                 file,
             });
-            const ours = await repoStore.getState().backend.getCommit('HEAD');
-            try {
-                const theirs = await repoStore.getState().backend.getCommit('MERGE_HEAD');
-                set((state) => {
-                    state.selectedConflict = just({ ours: ours, theirs: theirs, file: file });
-                });
-            } catch {
-                // generate pseudo commit with changes from the marge index
-                set((state) => {
-                    // state.selectedConflict = castDraft(just({
-                    //     ours,
-                    //     theirs: {
-                    //         type: 'stash',
-                    //         author: {
-                    //             name: '',
-                    //             email: '',
-                    //             timestamp: new Date(),
-                    //         },
-                    //         message: '',
-                    //         oid: '',
-                    //         parents: [],
-                    //         ref: 'stash',
-                    //         shortOid: 'stash',
-                    //     },
-                    //     file: file,
-                    // }));
-                });
-            }
+            throw new Error('Not ported to Tauri yet');
+            // const ours = await repoStore.getState().backend.getCommit('HEAD');
+            // try {
+            //     const theirs = await repoStore.getState().backend.getCommit('MERGE_HEAD');
+            //     set((state) => {
+            //         state.selectedConflict = just({ ours: ours, theirs: theirs, file: file });
+            //     });
+            // } catch {
+            //     // generate pseudo commit with changes from the marge index
+            //     set((state) => {
+            //         // state.selectedConflict = castDraft(just({
+            //         //     ours,
+            //         //     theirs: {
+            //         //         type: 'stash',
+            //         //         author: {
+            //         //             name: '',
+            //         //             email: '',
+            //         //             timestamp: new Date(),
+            //         //         },
+            //         //         message: '',
+            //         //         oid: '',
+            //         //         parents: [],
+            //         //         ref: 'stash',
+            //         //         shortOid: 'stash',
+            //         //     },
+            //         //     file: file,
+            //         // }));
+            //     });
+            // }
         },
         deselectConflictedFile: (): void => {
             set((state) => {
@@ -134,28 +135,29 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
             });
         },
         requestManualMerge: async (filePath: string): Promise<void> => {
-            Logger().silly(
-                'requestManualMerge',
-                'Manual merge requested. Loading file content.',
-                {
-                    file: filePath,
-                }
-            );
-            const file = await path.join(repoStore.getState().backend.dir, filePath);
-            const conflict = await loadConflict(file);
-            const blocks = calculateBlocks(
-                conflict.lines.map((l) => ({
-                    ...l,
-                    oursSelected: false,
-                    theirsSelected: false,
-                }))
-            );
-            set((state) => {
-                state.manualMerge = castDraft(just({
-                    blocks,
-                    path: filePath,
-                }));
-            });
+            throw new Error('Not ported to Tauri yet');
+            // Logger().silly(
+            //     'requestManualMerge',
+            //     'Manual merge requested. Loading file content.',
+            //     {
+            //         file: filePath,
+            //     }
+            // );
+            // const file = await path.join(repoStore.getState().backend.dir, filePath);
+            // const conflict = await loadConflict(file);
+            // const blocks = calculateBlocks(
+            //     conflict.lines.map((l) => ({
+            //         ...l,
+            //         oursSelected: false,
+            //         theirsSelected: false,
+            //     }))
+            // );
+            // set((state) => {
+            //     state.manualMerge = castDraft(just({
+            //         blocks,
+            //         path: filePath,
+            //     }));
+            // });
         },
         toggleBlock: (side: 'ours' | 'theirs', index: number): void => {
             set((state) => {
