@@ -11,6 +11,7 @@ import { Tree, TreeNode } from '../util/Tree/Tree';
 import { insertPath } from '../util/Tree/utils';
 // import { Menu, MenuItem, getCurrentWindow } from '@electron/remote';
 import { FileHistory } from './FileHistory';
+import { useDialog } from '../../model/state/dialogs';
 
 const ExplorerPanelView = styled.div`
     > div {
@@ -55,6 +56,7 @@ function openContextMenu(meta: FileStats) {
 }
 
 const FileTree: React.FC<{ files: readonly FileStats[], onPathSelect: (path: string) => void }> = (props) => {
+    const dialog = useDialog();
     const trees = props.files.reduce((existingTree, file) => {
         return insertPath(existingTree, file.path.split(/\//), file);
     }, [] as readonly TreeNode<FileStats>[]);
@@ -68,7 +70,7 @@ const FileTree: React.FC<{ files: readonly FileStats[], onPathSelect: (path: str
                     Logger().debug('FileTree', 'Showing file history', { file: meta!.path });
                     props.onPathSelect(meta!.path);
                 }}>Show file history</MenuItem>
-                <MenuItem>Annotate edits (blame)</MenuItem>
+                <MenuItem onClick={() => dialog.open({ type: 'blame-info-dialog', path: meta!.path })}>Annotate edits (blame)</MenuItem>
             </ControlledMenu>
             <Scrollable>
                 {trees.map((t, i) => (

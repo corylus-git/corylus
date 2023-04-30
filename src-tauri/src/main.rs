@@ -30,7 +30,7 @@ use crate::{
         },
         config::get_config,
         diff::get_diff,
-        files::{get_file_contents, get_files},
+        files::{get_blame, get_file_contents, get_files},
         get_graph_entries,
         graph::{find_commits, get_index},
         history::{get_affected_branches, get_commit, get_commit_stats, get_commits, get_graph},
@@ -113,7 +113,8 @@ fn main() {
             abort_merge,
             get_merge_message,
             get_index,
-            find_commits
+            find_commits,
+            get_blame
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

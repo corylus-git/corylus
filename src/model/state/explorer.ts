@@ -124,4 +124,9 @@ export const useFileHistory = (path: string) => useQuery(['file_history', path],
 
 export const useFilePath = (): Maybe<string> => nothing;
 
-export const useBlameInfo = (): Maybe<readonly BlameInfo[]> => nothing;
+/// get the blame info for a specific path
+export const useBlameInfo = (path: string): UseQueryResult<readonly BlameInfo[]> =>
+    useQuery(['blame_info', path], () => {
+        Logger().debug('useBlameInfo', 'Getting blame info for path', { path });
+        return invoke<readonly BlameInfo[]>('get_blame', { path })
+    });

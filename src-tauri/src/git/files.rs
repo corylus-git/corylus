@@ -1,11 +1,18 @@
-use std::path::Path;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+};
 
-use git2::StatusOptions;
+use git2::{BlameOptions, StatusOptions};
 use log::debug;
 
 use crate::error::{BackendError, Result};
 
-use super::{model::git::FileStats, with_backend, StateType};
+use super::{
+    model::{blameinfo::BlameInfo, git::FileStats},
+    with_backend, StateType,
+};
 
 #[tauri::command]
 pub async fn get_files(state: StateType<'_>) -> Result<Vec<FileStats>> {
@@ -63,6 +70,48 @@ pub async fn get_file_contents(state: StateType<'_>, path: &str, rev: &str) -> R
                 .content()
                 .into())
         }
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_blame(state: StateType<'_>, path: &str) -> Result<Vec<BlameInfo>> {
+    log::trace!("Getting blame for {}", path);
+    with_backend(state, |backend| {
+        let mut blame_options = BlameOptions::new();
+        let p = Path::new(path);
+        let full_path = backend
+            .repo
+            .workdir()
+            .ok_or_else(|| {
+                BackendError::new(
+                    "Repository has no work dir. This should not have cause this request",
+                )
+            })?
+            .join(p);
+        let blame = backend.repo.blame_file(&p, Some(&mut blame_options))?;
+        let file_contents = BufReader::new(File::open(full_path).map_err(|e| {
+            BackendError::new(format!(
+                "Could not read file contents to display blame data. {}",
+                e
+            ))
+        })?)
+        .lines()
+        .collect::<std::io::Result<Vec<String>>>()
+        .map_err(|e| {
+            BackendError::new(format!(
+                "Could not read file contents to display blame data. {}",
+                e
+            ))
+        })?;
+        let blame_infos = blame
+            .iter()
+            .map(|hunk| {
+                let commit = backend.repo.find_commit(hunk.final_commit_id())?;
+                Ok(BlameInfo::from_hunk(hunk, &commit, &file_contents))
+            })
+            .collect();
+        blame_infos
     })
     .await
 }

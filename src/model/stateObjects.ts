@@ -301,9 +301,10 @@ export type CommitStats = CommitStatsData | StashStatsData;
  */
 export interface BlameInfo {
     oid: string;
+    short_oid: string;
     author: string;
     mail: string;
-    timestamp: Date;
+    timestamp: Timestamp;
     summary: string;
     content: readonly string[];
 }

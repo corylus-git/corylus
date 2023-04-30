@@ -102,6 +102,11 @@ export type ConfirmationDialog = {
     message: string;
 } & Required<CallbackDialog>;
 
+export type BlameInfoDialog = {
+    type: 'blame-info-dialog';
+    path: string;
+}
+
 /**
  * pseudo-state marking all dialogs closed
  */
@@ -138,6 +143,7 @@ export type DialogState =
     | Rebase
     | InteractiveRebase
     | AutoStash
+    | BlameInfoDialog
     // Gitflow initialization
     | RequestInitializeGitflow;
 

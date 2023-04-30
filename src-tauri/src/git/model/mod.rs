@@ -1,3 +1,4 @@
+pub mod blameinfo;
 pub mod config;
 pub mod git;
 pub mod graph;
@@ -134,8 +135,7 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
             },
             |v| Ok(v.to_owned()),
         )?
-    }
-    else {
+    } else {
         return Err(BackendError::new("Upstream name cannot be Error here"));
     };
 

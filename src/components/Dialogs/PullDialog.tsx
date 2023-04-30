@@ -82,7 +82,7 @@ export const PullDialog: React.FC = () => {
     const remotes = useRemotes();
     const branches = useBranches();
 
-    if (remotes.isLoading || branches.isLoading || currentBranch.isLoading) {
+    if (dialog.type !== 'request-pull' || remotes.isLoading || branches.isLoading || currentBranch.isLoading) {
         return <></>; // TODO better loading indicator, maybe in the dialog itself
     }
 
