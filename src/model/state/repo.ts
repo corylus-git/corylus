@@ -200,8 +200,8 @@ export const useConfig = (): UseQueryResult<IGitConfig> =>
         }
     });
 
-export function loadRepo(path: string): void {
-    invoke('git_open', { path });
+export function loadRepo(path: string) {
+    return invoke('git_open', { path });
 }
 
 /**

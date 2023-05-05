@@ -38,6 +38,8 @@ import { useAutoFetcher } from '../util/AutoFetcher';
 import { useIndex } from '../model/state';
 import { queryClient } from '../util/queryClient';
 import { ConfirmationDialog } from './Dialogs/ConfirmationDialog';
+import { toast } from 'react-toastify';
+import { structuredToast } from '../util/structuredToast';
 
 export const MainView = styled.div`
     display: grid;
@@ -109,43 +111,43 @@ export const Repository: React.FC<{ path: string }> = ({ path }) => {
     const _autofetcher = useAutoFetcher(repo);
     const workflows = useWorkflows();
     const location = useLocation();
+    const [error, setError] = React.useState<string>();
     React.useEffect(() => {
-        if (repo.active) {
-            Logger().debug('Repository', 'Path changed', { path: path });
-            loadRepo(path);
-            // repo.loadHistory();
-            queryClient.invalidateQueries();
-            // repo.loadRepo().then(() => {
-            //     workflows.registerGitWorkflows([new Gitflow(dialog)]);
-            // });
-        }
+        Logger().debug('Repository', 'Path changed', { path: path });
+        queryClient.invalidateQueries();
+        setError(undefined);
+        loadRepo(path).catch((e) => {
+            Logger().error('Repository', 'Failed to load repo', e);
+            setError(e);
+        });
     }, [path]);
-    React.useEffect(() => {
-        if (repo.active) {
-            queryClient.invalidateQueries('index');
-        }
-    }, [location]);
     return (
-        <MainView>
-            <div>
-                <MergeStatusBar />
-            </div>
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: '4rem minmax(0,1fr)',
-                    height: '100%',
-                }}>
-                <Actions />
-                <Routes>
-                    <Route path="/" element={<HistoryPanel />} />
-                    <Route path="index" element={<IndexPanel />} />
-                    <Route path="config" element={<ConfigurationPanel />} />
-                    <Route path="files" element={<ExplorerPanel />} />
-                </Routes>
-            </div>
-            <MainStatusBar />
-            <DialogsContainer />
-        </MainView>
+        error ? (
+            <dialog open>
+                <h1>Cannot open repository</h1>
+                <p>{error}</p>
+            </dialog>
+        ) :
+            (<MainView>
+                <div>
+                    <MergeStatusBar />
+                </div>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: '4rem minmax(0,1fr)',
+                        height: '100%',
+                    }}>
+                    <Actions />
+                    <Routes>
+                        <Route path="/" element={<HistoryPanel />} />
+                        <Route path="index" element={<IndexPanel />} />
+                        <Route path="config" element={<ConfigurationPanel />} />
+                        <Route path="files" element={<ExplorerPanel />} />
+                    </Routes>
+                </div>
+                <MainStatusBar />
+                <DialogsContainer />
+            </MainView>)
     );
 };

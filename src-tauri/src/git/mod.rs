@@ -50,14 +50,23 @@ pub struct GitBackend {
 
 impl GitBackend {
     pub fn new(path: &str) -> Result<GitBackend, BackendError> {
-        Ok(Repository::open(path).map(|repo| GitBackend {
-            repo,
-            branches: vec![],
-            graph: GraphLayoutData {
-                lines: vec![],
-                rails: vec![],
-            },
-        })?)
+        let repo = Repository::open(path)?;
+
+        if repo.is_shallow() {
+            Err(BackendError::new(format!(
+                "{} is a shallow clone, which is currently not supported.",
+                path
+            )))
+        } else {
+            Ok(GitBackend {
+                repo,
+                branches: vec![],
+                graph: GraphLayoutData {
+                    lines: vec![],
+                    rails: vec![],
+                },
+            })
+        }
     }
 
     // pub fn load_history(&mut self, window: &Window) -> DefaultResult {
