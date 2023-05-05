@@ -15,7 +15,7 @@ import { BranchInfo, Remote, RemoteMeta } from '../../model/stateObjects';
 
 type FormValues = {
     remote: string,
-    remoteBranch: BranchInfo,
+    remoteBranch: string,
     noFF: boolean,
 }
 
@@ -30,7 +30,7 @@ const PullConfigForm: React.FC<{
     const { register, handleSubmit, watch, formState } = useForm({
         defaultValues: {
             remote: currentBranch.remote ?? remotes[0]?.remote,
-            remoteBranch: currentBranch,
+            remoteBranch: currentBranch.refName,
             noFF: false,
         }
     });
@@ -93,7 +93,9 @@ export const PullDialog: React.FC = () => {
             <StyledDialog>
                 <PullConfigForm
                     remotes={remotes.data!} branches={branches.data!} currentBranch={currentBranch.data!} onSubmit={(values) => {
-                        pull(values.remote, values.remoteBranch.refName, values.noFF);
+                        Logger().debug('PullDialog', 'Submitting pull request', values);
+                        pull(values.remote, values.remoteBranch, values.noFF);
+                        dialog.close();
                     }}
                     onCancel={() => dialog.close()} />
             </StyledDialog>
