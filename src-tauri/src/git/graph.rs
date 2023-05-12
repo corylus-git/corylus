@@ -1,5 +1,3 @@
-use std::ops::Index;
-
 use super::{
     model::{
         git::{Commit, FullCommitData},
@@ -10,122 +8,92 @@ use super::{
 
 use crate::error::Result;
 
-/// Place the given entry on the first usable rail
-///
-/// # Arguments
-/// * `rails` - The current state of the rails with expected entries for each rails
-/// * `new_entry` - The new entry to place on the rail. The entry is placed on the left-most rail
-///     that expects it as a parent or on a new empty rail
-///
-/// # Returns
-/// This method returns the position the item was placed and whether the rail was empty before or not
-fn find_first_available_rail(
-    rails: &mut Vec<Rail>,
-    new_entry: &str,
-    may_replace: Option<&str>,
-) -> (usize, bool) {
-    // preferably try to place the entry on a rail where it was requested
-    let requested_idx = rails.iter().position(|r| {
-        r.is_some()
-            && (r.as_ref().unwrap() == new_entry
-                || may_replace.is_some() && may_replace.unwrap() == r.as_ref().unwrap())
-    });
-    if let Some(idx) = requested_idx {
-        (idx, false)
+/// Find the left-most rail that expects us as a parent, or (if none expects us) the left-most empty rail, extending the rails array if necessary
+/// Returns the rail index and whether we were expected there or not
+fn find_leftmost_rail(rails: &mut Vec<Rail>, for_id: &str) -> (usize, bool) {
+    let mut my_rail = rails
+        .iter()
+        .position(|r| r.is_some() && r.as_ref().unwrap() == for_id);
+    if (my_rail.is_some()) {
+        (my_rail.unwrap(), true)
     } else {
-        // try to find a free rail somewhere in the existing ones
-        let free_idx = rails.iter().position(|r| r.is_none());
-        if let Some(idx) = free_idx {
-            (idx, true)
-        } else {
-            // no luck, add a new rails
+        my_rail = rails.iter().position(|r| r.is_none());
+        if my_rail.is_none() {
             rails.push(None);
-            (rails.len() - 1, true)
+            my_rail = Some(rails.len() - 1);
         }
+        (my_rail.unwrap(), false)
     }
 }
 
 pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
-    let mut rails = vec![];
+    let mut rails: Vec<Rail> = vec![];
     let lines: Vec<LayoutListEntry> = ordered_history
         .iter()
         .map(|entry| {
             let graph_node = entry.as_graph_node();
-            // 1. find rail to use: left-most rail that expects us as a parent OR is empty (if no rail expects us)
-            let (my_rail, was_empty) =
-                find_first_available_rail(&mut rails, graph_node.oid(), None);
-            // 2. check whether we have any parents
-            let has_parents = !graph_node.parents().is_empty();
-            // 3. place our first parent on my rail
-            rails[my_rail] = if graph_node.parents().is_empty() {
-                None
-            } else {
-                Some(graph_node.parents()[0].oid.clone())
-            };
-            // 4. calculate outgoing lines as our place to all as-of-yet unplaced parents
-            let outgoing: Vec<usize> = if graph_node.parents().len() > 1 {
-                graph_node.parents()[1..]
-                    .iter()
-                    .filter_map(|p| {
-                        let (rail, was_empty) =
-                            find_first_available_rail(&mut rails, &p.oid, Some(graph_node.oid()));
-                        if was_empty
-                            || rails[rail].is_some()
-                                && rails[rail].as_ref().unwrap() == graph_node.oid()
-                        {
-                            Some(rail)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            } else {
-                vec![]
-            };
-            // 5. calculate incoming lines as our place to all rails requesting us as parent
-            let incoming: Vec<usize> = rails
+            // 1. find our place in the world
+            let (my_rail, has_child) = find_leftmost_rail(&mut rails, graph_node.oid());
+            // 3. incoming are all other rails requesting us as a parent
+            let incoming = rails
                 .iter()
                 .enumerate()
-                .filter_map(|(idx, oid)| {
-                    if oid.is_some() && oid.as_ref().unwrap() == graph_node.oid() && idx != my_rail
-                    {
-                        Some(idx)
+                .filter_map(|(i, r)| {
+                    if r.is_some() && r.as_ref().unwrap() == graph_node.oid() && i != my_rail {
+                        Some(i)
                     } else {
                         None
                     }
                 })
                 .collect();
-            // 6. place all other parents on rails as needed
-            if graph_node.parents().len() > 1 {
-                outgoing
-                    .iter()
-                    .zip(graph_node.parents()[1..].iter())
-                    .for_each(|(&idx, p)| rails[idx] = Some(p.oid.clone()));
-            };
-            // 7. clear all rails requesting us as parent
-            rails = rails
+            // 4. remove us from all rails
+            rails.iter_mut().for_each(|r| {
+                if r.is_some() && r.as_ref().unwrap() == graph_node.oid() {
+                    *r = None
+                }
+            });
+            // 5. find the first of our parents NOT YET PLACED LEFT OF US and place it on our rail
+            let first_unplaced_parent = graph_node
+                .parents()
                 .iter()
-                .map(|r| {
-                    if r.is_some() && r.as_ref().unwrap() == graph_node.oid() {
+                .find(|&p| !rails[..my_rail].contains(&Some(p.oid.clone())));
+            rails[my_rail] = first_unplaced_parent.map(|p| p.oid.clone()); // may be empty, if all our parents are already expected to the left of us
+
+            // 6. place our unplaced parents as needed
+            graph_node.parents().iter().for_each(|p| {
+                if !rails.contains(&Some(p.oid.clone())) {
+                    let (candidate, _) = find_leftmost_rail(&mut rails, &p.oid);
+                    rails[candidate] = Some(p.oid.clone());
+                }
+            });
+            // 7. outgoing are all of our parents _except_ the one that sits on our rail (even if it sits on other rails as well)
+            let outgoing = graph_node
+                .parents()
+                .iter()
+                .filter_map(|p| {
+                    if first_unplaced_parent.is_some()
+                        && p.oid == first_unplaced_parent.unwrap().oid
+                    {
                         None
                     } else {
-                        r.to_owned()
+                        rails
+                            .iter()
+                            .position(|r| r.is_some() && r.as_ref().unwrap() == &p.oid)
                     }
                 })
                 .collect();
             LayoutListEntry {
                 commit: entry.clone(),
                 rail: my_rail,
-                has_parent: has_parents,
-                has_child: !was_empty,
+                has_parent: first_unplaced_parent.is_some(),
+                has_child,
                 outgoing,
                 incoming,
                 rails: rails.clone(),
             }
         })
         .collect();
-
-    GraphLayoutData { lines, rails }
+    GraphLayoutData { rails, lines }
 }
 
 #[tauri::command]
