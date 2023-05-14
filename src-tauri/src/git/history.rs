@@ -192,7 +192,7 @@ pub async fn get_graph(state: StateType<'_>, pathspec: Option<&str>) -> Result<G
 
 pub fn do_get_graph(backend: &GitBackend, pathspec: Option<&str>) -> Result<GraphLayoutData> {
     let commits = load_history(&backend.repo, pathspec)?;
-    Ok(calculate_graph_layout(commits))
+    Ok(calculate_graph_layout(commits.into_iter()))
 }
 
 #[tauri::command]

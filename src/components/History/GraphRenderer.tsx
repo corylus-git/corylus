@@ -12,7 +12,7 @@ import { HoverableDiv } from '../StyleBase';
 import { ListSelector, SelectableList, SelectableListEntryProps } from '../util/SelectableList';
 import { CommitInfo } from './CommitInfo';
 import { GraphNode } from './GraphNode';
-import { RailLine } from './RailLine';
+import { RailLine, x } from './RailLine';
 
 const CommitMessage = styled.div`
     flex-grow: 1;
@@ -102,13 +102,9 @@ export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps & { c
     if (error || !e) {
         return <>Could not load graph line...</>
     }
-    let width = e.rails.length - 1;
-    while (e.rails[width] === undefined && width > 0) {
-        width--;
-    }
-    if (e.incoming.length > 0) {
-        width = Math.max(e.incoming[e.incoming.length - 1], width);
-    }
+    const max_incoming = e.incoming.reduce((existing, candidate) => Math.max(existing, candidate), 0);
+    const max_outgoing = e.outgoing.reduce((existing, candidate) => Math.max(existing, candidate), 0);
+    let width = Math.max(e.rails.length - 1, e.rail, max_incoming, max_outgoing);
     width++;
     return (
         <>
@@ -125,12 +121,13 @@ export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps & { c
                 <RailLine size={width} className="rails">
                     <GraphNode
                         rail={e.rail}
-                        hasChild={e.hasChild}
-                        hasParent={e.hasParent}
+                        hasChildLine={e.hasChildLine}
+                        hasParentLine={e.hasParentLine}
                         incoming={e.incoming}
                         outgoing={e.outgoing}
                         rails={e.rails}
                         reverse={props.reverse}
+                        width={width}
                     />
                 </RailLine>
                 <CommitMessage>

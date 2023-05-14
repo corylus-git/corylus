@@ -1,20 +1,28 @@
 use super::{
     model::{
         git::{Commit, FullCommitData},
-        graph::{GraphLayoutData, LayoutListEntry, Rail},
+        graph::{GraphLayoutData, LayoutListEntry, Rail, RailEntry},
     },
     with_backend, StateType,
 };
 
 use crate::error::Result;
 
+fn contains<U, V>(option: &Option<U>, item: V) -> bool
+where
+    U: PartialEq<V> + std::fmt::Debug,
+    V: std::fmt::Debug,
+{
+    option.is_some() && option.as_ref().unwrap() == &item
+}
+
 /// Find the left-most rail that expects us as a parent, or (if none expects us) the left-most empty rail, extending the rails array if necessary
 /// Returns the rail index and whether we were expected there or not
 fn find_leftmost_rail(rails: &mut Vec<Rail>, for_id: &str) -> (usize, bool) {
     let mut my_rail = rails
         .iter()
-        .position(|r| r.is_some() && r.as_ref().unwrap() == for_id);
-    if (my_rail.is_some()) {
+        .position(|r| contains(&r.as_ref().map(|r| &r.expected_parent), for_id));
+    if my_rail.is_some() {
         (my_rail.unwrap(), true)
     } else {
         my_rail = rails.iter().position(|r| r.is_none());
@@ -26,75 +34,178 @@ fn find_leftmost_rail(rails: &mut Vec<Rail>, for_id: &str) -> (usize, bool) {
     }
 }
 
-pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
+pub fn calculate_graph_layout<Iter>(ordered_history: Iter) -> GraphLayoutData
+where
+    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
+{
     let mut rails: Vec<Rail> = vec![];
-    let lines: Vec<LayoutListEntry> = ordered_history
-        .iter()
-        .map(|entry| {
-            let graph_node = entry.as_graph_node();
-            // 1. find our place in the world
-            let (my_rail, has_child) = find_leftmost_rail(&mut rails, graph_node.oid());
-            // 3. incoming are all other rails requesting us as a parent
-            let incoming = rails
-                .iter()
-                .enumerate()
-                .filter_map(|(i, r)| {
-                    if r.is_some() && r.as_ref().unwrap() == graph_node.oid() && i != my_rail {
-                        Some(i)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            // 4. remove us from all rails
-            rails.iter_mut().for_each(|r| {
-                if r.is_some() && r.as_ref().unwrap() == graph_node.oid() {
-                    *r = None
+    let mut lines: Vec<LayoutListEntry> = vec![];
+    for commit in ordered_history {
+        let graph_node = commit.as_graph_node();
+        // 1. find the left-most rail that expects us as a parent or the left-most empty rail (if none expects us)
+        let (my_rail, has_child) = find_leftmost_rail(&mut rails, &graph_node.oid());
+        // 2. which of our parents do not yet have a place on the graph to our left? -> we wan't to have the graph lines tend to be compact towards the left
+        let unplaced_parents: Vec<String> = graph_node
+            .parents()
+            .iter()
+            .filter_map(|p| {
+                let res = rails[..my_rail].iter().enumerate().rev().find(|(_, r)| {
+                    contains(&r.as_ref().map(|r| &r.expected_parent), p.oid.as_str())
+                });
+                if res.is_none() {
+                    Some(p.oid.clone())
+                } else {
+                    None
                 }
+            })
+            .collect();
+        // 3. place my first unplaced parent on my rail
+        rails[my_rail] = unplaced_parents.first().map(|p| RailEntry {
+            expected_parent: p.clone(),
+            has_through_line: false,
+        });
+        // 4. place all my parents as left as possible (note: this might overwrite parents with the same value)
+        let mut outgoing = vec![];
+        for parent in graph_node.parents() {
+            let (parent_rail, has_through_line) = find_leftmost_rail(&mut rails, &parent.oid);
+            rails[parent_rail] = Some(RailEntry {
+                expected_parent: parent.oid.clone(),
+                has_through_line: has_through_line && parent_rail != my_rail, // we don't count ourselves as a throughline
             });
-            // 5. find the first of our parents NOT YET PLACED LEFT OF US and place it on our rail
-            let first_unplaced_parent = graph_node
-                .parents()
-                .iter()
-                .find(|&p| !rails[..my_rail].contains(&Some(p.oid.clone())));
-            rails[my_rail] = first_unplaced_parent.map(|p| p.oid.clone()); // may be empty, if all our parents are already expected to the left of us
-
-            // 6. place our unplaced parents as needed
-            graph_node.parents().iter().for_each(|p| {
-                if !rails.contains(&Some(p.oid.clone())) {
-                    let (candidate, _) = find_leftmost_rail(&mut rails, &p.oid);
-                    rails[candidate] = Some(p.oid.clone());
-                }
-            });
-            // 7. outgoing are all of our parents _except_ the one that sits on our rail (even if it sits on other rails as well)
-            let outgoing = graph_node
-                .parents()
-                .iter()
-                .filter_map(|p| {
-                    if first_unplaced_parent.is_some()
-                        && p.oid == first_unplaced_parent.unwrap().oid
-                    {
-                        None
-                    } else {
-                        rails
-                            .iter()
-                            .position(|r| r.is_some() && r.as_ref().unwrap() == &p.oid)
-                    }
-                })
-                .collect();
-            LayoutListEntry {
-                commit: entry.clone(),
-                rail: my_rail,
-                has_parent: first_unplaced_parent.is_some(),
-                has_child,
-                outgoing,
-                incoming,
-                rails: rails.clone(),
+            if parent_rail != my_rail {
+                outgoing.push(parent_rail);
             }
+        }
+        // 5. incoming are all other rails requesting us as a parent
+        let incoming = rails
+            .iter()
+            .enumerate()
+            .filter_map(|(i, r)| {
+                if contains(&r.as_ref().map(|r| &r.expected_parent), graph_node.oid()) {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        // 6. remove us from all rails and set the correct thoughline values for all remaining rails
+        let old_rails = lines
+            .iter()
+            .last()
+            .map(|line| line.rails.clone())
+            .unwrap_or_default();
+        rails = rails
+            .into_iter()
+            .enumerate()
+            .map(|(i, r)| {
+                if contains(&r.as_ref().map(|r| &r.expected_parent), graph_node.oid()) {
+                    None
+                } else {
+                    r.map(|r| {
+                        let old_entry = old_rails.get(i).unwrap_or(&None);
+                        let has_through_line = contains(
+                            &old_entry.as_ref().map(|o| &o.expected_parent),
+                            &r.expected_parent,
+                        );
+                        RailEntry {
+                            expected_parent: r.expected_parent,
+                            has_through_line,
+                        }
+                    })
+                }
+            })
+            .collect();
+        // 7. some cleanup -> filter trailing None from the list to make some layout in the UI easier
+        let last_some = rails.iter().rposition(|r| r.is_some());
+        rails.truncate(last_some.map_or(0, |last_some| last_some + 1));
+        lines.push(LayoutListEntry {
+            commit,
+            rail: my_rail,
+            has_parent_line: rails.get(my_rail).unwrap_or(&None).is_some(),
+            has_child_line: has_child,
+            outgoing,
+            incoming,
+            rails: rails.clone(),
         })
-        .collect();
-    GraphLayoutData { rails, lines }
+    }
+    GraphLayoutData { lines, rails }
 }
+
+// pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
+//     let mut rails: Vec<Rail> = vec![];
+// let lines: Vec<LayoutListEntry> = ordered_history
+//     .iter()
+//     .map(|entry| {
+//         let graph_node = entry.as_graph_node();
+//         // 1. find our place in the world
+//         let (my_rail, has_child) = find_leftmost_rail(&mut rails, graph_node.oid());
+//         // 3. incoming are all other rails requesting us as a parent
+//         let incoming = rails
+//             .iter()
+//             .enumerate()
+//             .filter_map(|(i, r)| {
+//                 if r.is_some()
+//                     && r.as_ref().unwrap().expected_parent == graph_node.oid()
+//                     && i != my_rail
+//                 {
+//                     Some(i)
+//                 } else {
+//                     None
+//                 }
+//             })
+//             .collect();
+//         // 4. remove us from all rails
+//         rails.iter_mut().for_each(|r| {
+//             if r.is_some() && r.as_ref().unwrap().expected_parent == graph_node.oid() {
+//                 *r = None
+//             }
+//         });
+//         // 5. find the first of our parents NOT YET PLACED LEFT OF US and place it on our rail
+//         let first_unplaced_parent = graph_node
+//             .parents()
+//             .iter()
+//             .find(|&p| !rails[..my_rail].contains(&Some(p.oid.clone())));
+//         rails[my_rail] = first_unplaced_parent.map(|p| p.oid.clone()); // may be empty, if all our parents are already expected to the left of us
+
+//         // 6. place our unplaced parents as needed
+//         graph_node.parents().iter().for_each(|p| {
+//             if !rails.contains(&Some(p.oid.clone())) {
+//                 let (candidate, _) = find_leftmost_rail(&mut rails, &p.oid);
+//                 rails[candidate] = Some(p.oid.clone());
+//             }
+//         });
+//         // 7. outgoing are all of our parents _except_ the one that sits on our rail (even if it sits on other rails as well)
+//         let outgoing = graph_node
+//             .parents()
+//             .iter()
+//             .filter_map(|p| {
+//                 if first_unplaced_parent.is_some()
+//                     && p.oid == first_unplaced_parent.unwrap().oid
+//                 {
+//                     None
+//                 } else {
+//                     rails
+//                         .iter()
+//                         .position(|r| r.is_some() && r.as_ref().unwrap() == &p.oid)
+//                 }
+//             })
+//             .collect();
+//         LayoutListEntry {
+//             commit: entry.clone(),
+//             rail: my_rail,
+//             has_parent_line: first_unplaced_parent.is_some(),
+//             has_child_line: has_child,
+//             outgoing,
+//             incoming,
+//             rails: rails.clone(),
+//         }
+//     })
+//     .collect();
+//     GraphLayoutData {
+//         rails,
+//         lines: vec![],
+//     }
+// }
 
 #[tauri::command]
 pub async fn get_index(state: StateType<'_>, oid: &str) -> Result<Option<usize>> {
@@ -165,6 +276,13 @@ mod tests {
         })
     }
 
+    fn make_rail_entry(oid: &str, has_through_line: bool) -> Option<RailEntry> {
+        Some(RailEntry {
+            expected_parent: oid.to_owned(),
+            has_through_line,
+        })
+    }
+
     lazy_static! {
         static ref AUTHOR: GitPerson = GitPerson {
             name: String::from("Test"),
@@ -187,26 +305,26 @@ mod tests {
                 lines: vec![
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: false,
+                        has_parent_line: true,
+                        has_child_line: false,
                         outgoing: vec![],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned())],
+                        rails: vec![make_rail_entry("2222", false)],
                         commit: child
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: false,
-                        has_child: true,
+                        has_parent_line: false,
+                        has_child_line: true,
                         outgoing: vec![],
                         incoming: vec![],
-                        rails: vec![None],
+                        rails: vec![],
                         commit: parent
                     }
                 ],
-                rails: vec![None]
+                rails: vec![]
             },
-            calculate_graph_layout(input)
+            calculate_graph_layout(input.into_iter())
         )
     }
 
@@ -222,35 +340,35 @@ mod tests {
                 lines: vec![
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: false,
+                        has_parent_line: true,
+                        has_child_line: false,
                         outgoing: vec![],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned())],
+                        rails: vec![make_rail_entry("2222", false)],
                         commit: child2
                     },
                     LayoutListEntry {
                         rail: 1,
-                        has_parent: true,
-                        has_child: false,
-                        outgoing: vec![],
+                        has_parent_line: false,
+                        has_child_line: false,
+                        outgoing: vec![0],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned()), Some("2222".to_owned())],
+                        rails: vec![make_rail_entry("2222", true)],
                         commit: child1
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: false,
-                        has_child: true,
+                        has_parent_line: false,
+                        has_child_line: true,
                         outgoing: vec![],
-                        incoming: vec![1],
-                        rails: vec![None, None],
+                        incoming: vec![],
+                        rails: vec![],
                         commit: parent
                     }
                 ],
-                rails: vec![None, None]
+                rails: vec![]
             },
-            calculate_graph_layout(input)
+            calculate_graph_layout(input.into_iter())
         )
     }
 
@@ -266,35 +384,38 @@ mod tests {
                 lines: vec![
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: false,
+                        has_parent_line: true,
+                        has_child_line: false,
                         outgoing: vec![1],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned()), Some("1111".to_owned())],
+                        rails: vec![
+                            make_rail_entry("2222", false),
+                            make_rail_entry("1111", false)
+                        ],
                         commit: child
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: false,
-                        has_child: true,
+                        has_parent_line: false,
+                        has_child_line: true,
                         outgoing: vec![],
                         incoming: vec![],
-                        rails: vec![None, Some("1111".to_owned())],
+                        rails: vec![None, make_rail_entry("1111", true)],
                         commit: parent1
                     },
                     LayoutListEntry {
                         rail: 1,
-                        has_parent: false,
-                        has_child: true,
+                        has_parent_line: false,
+                        has_child_line: true,
                         outgoing: vec![],
                         incoming: vec![],
-                        rails: vec![None, None],
+                        rails: vec![],
                         commit: parent2
                     }
                 ],
-                rails: vec![None, None]
+                rails: vec![]
             },
-            calculate_graph_layout(input)
+            calculate_graph_layout(input.into_iter())
         )
     }
 
@@ -317,44 +438,50 @@ mod tests {
                 lines: vec![
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: false,
+                        has_parent_line: true,
+                        has_child_line: false,
                         outgoing: vec![1],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned()), Some("3333".to_owned())],
+                        rails: vec![
+                            make_rail_entry("2222", false),
+                            make_rail_entry("3333", false)
+                        ],
                         commit: grandchild
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: true,
+                        has_parent_line: true,
+                        has_child_line: true,
                         outgoing: vec![],
                         incoming: vec![],
-                        rails: vec![Some("1111".to_owned()), Some("3333".to_owned())],
+                        rails: vec![
+                            make_rail_entry("1111", false),
+                            make_rail_entry("3333", true)
+                        ],
                         commit: child_left
                     },
                     LayoutListEntry {
                         rail: 1,
-                        has_parent: true,
-                        has_child: true,
-                        outgoing: vec![],
+                        has_parent_line: false,
+                        has_child_line: true,
+                        outgoing: vec![0],
                         incoming: vec![],
-                        rails: vec![Some("1111".to_owned()), Some("1111".to_owned())],
+                        rails: vec![make_rail_entry("1111", true)],
                         commit: child_right
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: false,
-                        has_child: true,
+                        has_parent_line: false,
+                        has_child_line: true,
                         outgoing: vec![],
-                        incoming: vec![1],
-                        rails: vec![None, None],
+                        incoming: vec![],
+                        rails: vec![],
                         commit: parent
                     }
                 ],
-                rails: vec![None, None]
+                rails: vec![]
             },
-            calculate_graph_layout(input)
+            calculate_graph_layout(input.into_iter())
         )
     }
 
@@ -378,53 +505,193 @@ mod tests {
                 lines: vec![
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: false,
+                        has_parent_line: true,
+                        has_child_line: false,
                         outgoing: vec![1],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned()), Some("3333".to_owned())],
+                        rails: vec![
+                            make_rail_entry("2222", false),
+                            make_rail_entry("3333", false)
+                        ],
                         commit: grandchild
                     },
                     LayoutListEntry {
                         rail: 1,
-                        has_parent: true,
-                        has_child: true,
-                        outgoing: vec![],
+                        has_parent_line: false,
+                        has_child_line: true,
+                        outgoing: vec![0],
                         incoming: vec![],
-                        rails: vec![Some("2222".to_owned()), Some("2222".to_owned())],
+                        rails: vec![make_rail_entry("2222", true)],
                         commit: child
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: true,
-                        has_child: true,
+                        has_parent_line: true,
+                        has_child_line: true,
                         outgoing: vec![1],
-                        incoming: vec![1],
-                        rails: vec![Some("0000".to_owned()), Some("1111".to_owned())],
+                        incoming: vec![],
+                        rails: vec![
+                            make_rail_entry("0000", false),
+                            make_rail_entry("1111", false)
+                        ],
                         commit: parent
                     },
                     LayoutListEntry {
                         rail: 1,
-                        has_parent: true,
-                        has_child: true,
-                        outgoing: vec![],
+                        has_parent_line: false,
+                        has_child_line: true,
+                        outgoing: vec![0],
                         incoming: vec![],
-                        rails: vec![Some("0000".to_owned()), Some("0000".to_owned())],
+                        rails: vec![make_rail_entry("0000", true)],
                         commit: grandparent
                     },
                     LayoutListEntry {
                         rail: 0,
-                        has_parent: false,
-                        has_child: true,
+                        has_parent_line: false,
+                        has_child_line: true,
                         outgoing: vec![],
-                        incoming: vec![1],
-                        rails: vec![None, None],
+                        incoming: vec![],
+                        rails: vec![],
                         commit: greatgrandparent
                     }
                 ],
-                rails: vec![None, None]
+                rails: vec![]
             },
-            calculate_graph_layout(input)
+            calculate_graph_layout(input.into_iter())
+        )
+    }
+
+    #[test]
+    fn incoming_correct() {
+        let g = make_commit("g", vec![]);
+        let p1 = make_commit("p1", vec![&g]);
+        let c1 = make_commit("c1", vec![&p1]);
+        let c2 = make_commit("c2", vec![&g]);
+        let p2 = make_commit("p2", vec![&g]);
+
+        let history = vec![c1.clone(), c2.clone(), p1.clone(), p2.clone(), g.clone()];
+
+        let layout = calculate_graph_layout(history.into_iter());
+
+        assert_eq!(
+            GraphLayoutData {
+                lines: vec![
+                    LayoutListEntry {
+                        rail: 0,
+                        has_parent_line: true,
+                        has_child_line: false,
+                        outgoing: vec![],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("p1", false)],
+                        commit: c1
+                    },
+                    LayoutListEntry {
+                        rail: 1,
+                        has_parent_line: true,
+                        has_child_line: false,
+                        outgoing: vec![],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("p1", true), make_rail_entry("g", false)],
+                        commit: c2
+                    },
+                    LayoutListEntry {
+                        rail: 0,
+                        has_parent_line: true,
+                        has_child_line: true,
+                        outgoing: vec![],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("g", false), make_rail_entry("g", true)],
+                        commit: p1
+                    },
+                    LayoutListEntry {
+                        rail: 2,
+                        has_parent_line: false,
+                        has_child_line: false,
+                        outgoing: vec![0],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("g", true), make_rail_entry("g", true)],
+                        commit: p2
+                    },
+                    LayoutListEntry {
+                        rail: 0,
+                        has_parent_line: false,
+                        has_child_line: true,
+                        outgoing: vec![],
+                        incoming: vec![1],
+                        rails: vec![],
+                        commit: g
+                    }
+                ],
+                rails: vec![]
+            },
+            layout
+        );
+    }
+
+    #[test]
+    pub fn outgoing_correct() {
+        let p2 = make_commit("p2", vec![]);
+        let p1 = make_commit("p1", vec![]);
+        let c3 = make_commit("c3", vec![&p1]);
+        let c2 = make_commit("c2", vec![&p1, &p2]);
+        let c1 = make_commit("c1", vec![&p2]);
+
+        let history = vec![c1.clone(), c2.clone(), c3.clone(), p1.clone(), p2.clone()];
+
+        let layout = calculate_graph_layout(history.into_iter());
+
+        assert_eq!(
+            GraphLayoutData {
+                lines: vec![
+                    LayoutListEntry {
+                        rail: 0,
+                        has_parent_line: true,
+                        has_child_line: false,
+                        outgoing: vec![],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("p2", false)],
+                        commit: c1
+                    },
+                    LayoutListEntry {
+                        rail: 1,
+                        has_parent_line: true,
+                        has_child_line: false,
+                        outgoing: vec![0],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", false)],
+                        commit: c2
+                    },
+                    LayoutListEntry {
+                        rail: 2,
+                        has_parent_line: false,
+                        has_child_line: false,
+                        outgoing: vec![1],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", true),],
+                        commit: c3
+                    },
+                    LayoutListEntry {
+                        rail: 1,
+                        has_parent_line: false,
+                        has_child_line: true,
+                        outgoing: vec![],
+                        incoming: vec![],
+                        rails: vec![make_rail_entry("p2", true)],
+                        commit: p1
+                    },
+                    LayoutListEntry {
+                        rail: 0,
+                        has_parent_line: false,
+                        has_child_line: true,
+                        outgoing: vec![],
+                        incoming: vec![],
+                        rails: vec![],
+                        commit: p2
+                    }
+                ],
+                rails: vec![]
+            },
+            layout
         )
     }
 }

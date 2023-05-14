@@ -4,7 +4,10 @@ import styled, { useTheme } from 'styled-components';
 export const lineWidth = 2;
 export const nodeRadius = 5.5;
 
-export type Rail = string | null;
+export type Rail = {
+    expectedParent: string,
+    hasThroughLine: boolean
+} | null;
 
 /**
  * Helper function to calculate the middle x coordinate of a rail
@@ -18,7 +21,6 @@ export const BranchMergeLine: React.FC<{
     targetRail: number;
     isBranch?: boolean;
 }> = (props) => {
-    const theme = useTheme();
     const start = {
         x: x(props.sourceRail),
         y: !props.isBranch || props.sourceRail < props.targetRail ? 50 : 0,
@@ -34,9 +36,9 @@ export const BranchMergeLine: React.FC<{
     );
 };
 export const RailLine = styled.div<{
-    size: number;
+    size: number; //< the size (width) in numbers of rails
 }>`
-    width: ${(props) => props.size}rem;
+    width: ${(props) => x(props.size)}px;
     height: 3rem;
     flex-shrink: 0;
     flex-grow: 0;

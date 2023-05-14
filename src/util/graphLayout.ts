@@ -3,8 +3,8 @@ import { Rail } from '../components/History/RailLine';
 
 export interface LayoutListEntry {
     rail: number;
-    hasParent: boolean;
-    hasChild: boolean;
+    hasParentLine: boolean;
+    hasChildLine: boolean;
     outgoing: number[];
     incoming: number[];
     rails: readonly Rail[];
