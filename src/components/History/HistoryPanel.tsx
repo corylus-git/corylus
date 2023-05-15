@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Splitter, SplitterPanel } from '../util/Splitter';
-import { Branches } from '../Branches/Branches';
+import { BranchesPanel } from '../Branches/Branches';
 import { GraphPanel } from './Graph';
 import { CommitDetailsView } from '../Diff/Commit';
 import { useState, useRef } from 'react';
@@ -35,7 +35,7 @@ export const HistoryPanel: React.FC = () => {
 
     return (
         <Splitter onMove={(pos) => (splitterX = `${pos}px`)} initialPosition={splitterX}>
-            <Branches />
+            <BranchesPanel />
             <Splitter
                 horizontal
                 initialPosition={splitterY}

@@ -486,7 +486,7 @@ function createBranchTreeData(
     };
 }
 
-export const Branches: React.FC = () => {
+const Branches: React.FC = () => {
     const { isLoading, error, data } = useBranches();
     const currentBranch = useCurrentBranch();
     const remotes = useRemotes();
@@ -511,15 +511,22 @@ export const Branches: React.FC = () => {
     if (error || remotes.error) {
         return <div>Could not load branch data.</div>
     }
+    return <>
+        {branchTree && (
+            <BranchTree
+                root={branchTree}
+                currentBranch={fromNullable(currentBranch.data)}
+                affected={affected}
+            />
+        )}
+    </>
+}
+
+export const BranchesPanel: React.FC = () => {
+
     return (
         <>
-            {branchTree && (
-                <BranchTree
-                    root={branchTree}
-                    currentBranch={fromNullable(currentBranch.data)}
-                    affected={affected}
-                />
-            )}
+            <Branches />
             <TagsList />
             <Stashes />
         </>
