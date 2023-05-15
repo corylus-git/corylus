@@ -4,7 +4,7 @@ import * as React from 'react';
 import { selectCommit } from '../../model/actions/repo';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
-    HistoryInfo, useBranches, useSelectedCommit, useTags
+    HistoryInfo, useBranches, useHistory, useSelectedCommit, useTags
 } from '../../model/state/repo';
 import { BranchInfo, Commit } from '../../model/stateObjects';
 import { LayoutListEntry } from '../../util/graphLayout';
@@ -25,12 +25,11 @@ function matchCommit(c: Commit, searchTerm: string): boolean {
     );
 }
 
-export const Graph: React.FC<{
+const Graph: React.FC<{
     width: number;
     height: number;
     history: HistoryInfo;
 }> = (props) => {
-    const dialog = useDialog();
     const selectedCommit = useSelectedCommit();
     const [searchTerm, setSearchTerm] = React.useState<string>();
     const [matches, setMatches] = React.useState<number[]>([]);
@@ -40,11 +39,11 @@ export const Graph: React.FC<{
     const listSelector = React.useRef<ListSelector>(null);
 
     React.useEffect(() => {
-        Logger().debug('Graph', 'Requesting index for commit', { commit: selectedCommit});
-        const sc =  toOptional(selectedCommit) as CommitStatsData | undefined;
-        const indexPromise = sc ? invoke<number | undefined>('get_index', {oid: sc.commit.oid}) : Promise.resolve(undefined);
+        Logger().debug('Graph', 'Requesting index for commit', { commit: selectedCommit });
+        const sc = toOptional(selectedCommit) as CommitStatsData | undefined;
+        const indexPromise = sc ? invoke<number | undefined>('get_index', { oid: sc.commit.oid }) : Promise.resolve(undefined);
         indexPromise.then(index => {
-            Logger().debug('Graph', 'Got index for commit', {oid: sc?.commit.oid, idx: index});
+            Logger().debug('Graph', 'Got index for commit', { oid: sc?.commit.oid, idx: index });
             if (index !== undefined) {
                 listSelector.current?.scrollToItem(index);
                 listSelector.current?.selectItems([index]);
@@ -64,16 +63,16 @@ export const Graph: React.FC<{
                 onTermChange={(term) => {
                     const termLowerCase = term.toLocaleLowerCase();
                     const matches: number[] = []; // TODO implement matching in the backend
-                        // termLowerCase.length > 0
-                        //     ? lines.reduce(
-                        //         (existingMatches, current, index) =>
-                        //             matchCommit(current.commit, termLowerCase)
-                        //                 ? existingMatches.concat(index)
-                        //                 : existingMatches,
+                    // termLowerCase.length > 0
+                    //     ? lines.reduce(
+                    //         (existingMatches, current, index) =>
+                    //             matchCommit(current.commit, termLowerCase)
+                    //                 ? existingMatches.concat(index)
+                    //                 : existingMatches,
 
-                        //         [] as number[]
-                        //     )
-                        //     : [];
+                    //         [] as number[]
+                    //     )
+                    //     : [];
                     setMatches(matches);
                     setCurrentMatchIndex(0);
                     if (matches.length !== 0) {
@@ -95,7 +94,7 @@ export const Graph: React.FC<{
                 first={props.history.first}
                 branches={branches ?? []}
                 tags={tags}
-                onOpenContextMenu={(commit) => {}
+                onOpenContextMenu={(commit) => { }
                     // openContextMenu(dialog, commit.oid, commit.shortOid, currentBranch)
                 }
                 onCommitsSelected={(c) => selectCommit(c[0])}
@@ -105,3 +104,11 @@ export const Graph: React.FC<{
         </>
     );
 };
+
+export const GraphPanel: React.FC<{
+    width: number;
+    height: number;
+}> = (props) => {
+    const history = useHistory();
+    return <Graph {...props} history={history} />;
+}

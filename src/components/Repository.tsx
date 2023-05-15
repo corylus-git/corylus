@@ -104,13 +104,10 @@ const MainStatusBar: React.FC = () => {
 
 export const Repository: React.FC<{ path: string }> = ({ path }) => {
     const repo = useRepo();
-    const index = useIndex();
-    const dialog = useDialog();
     // TODO fix
     // const __ = useDirWatcher(path);
     const _autofetcher = useAutoFetcher(repo);
     const workflows = useWorkflows();
-    const location = useLocation();
     const [error, setError] = React.useState<string>();
     React.useEffect(() => {
         Logger().debug('Repository', 'Path changed', { path: path });

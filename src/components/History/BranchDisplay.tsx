@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { BranchInfo } from '../../model/stateObjects';
-import styled, { useTheme } from 'styled-components';
+import styled from 'styled-components';
 
 const BranchName = styled.span`
     display: inline-block;
@@ -17,9 +17,8 @@ export const BranchDisplay: React.FC<{ branch: BranchInfo; rail: number }> = (pr
     return (
         <BranchName
             style={{
-                backgroundColor: `hsl(${
-                    props.rail * 100
-                }, 100%, calc(50% - (var(--lightness) - 50%) / 2))`,
+                backgroundColor: `hsl(${props.rail * 100
+                    }, 100%, calc(50% - (var(--lightness) - 50%) / 2))`,
             }}>
             {props.branch.remote ? `${props.branch.remote}/${props.branch.refName}` : props.branch.refName}
         </BranchName>

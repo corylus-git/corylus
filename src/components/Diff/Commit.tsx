@@ -11,6 +11,7 @@ import { TextFileDiff } from './TextFileDiff';
 import { getMimeType, isSupportedImageType } from '../../util/filetypes';
 import { Maybe } from '../../util/maybe';
 import { selectCommit } from '../../model/actions/repo';
+import { useSelectedCommit } from '../../model/state/repo';
 
 export interface CommitProps {
     commit?: Commit;
@@ -156,7 +157,7 @@ export type CommitDetailsViewProps = {
 };
 
 // TODO this needs cleaning up and split into two components
-export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
+const CommitDetailsContents: React.FC<CommitDetailsViewProps> = (props) => {
     const { stats } = props
 
     if (stats.found) {
@@ -228,3 +229,8 @@ export const CommitDetailsView: React.FC<CommitDetailsViewProps> = (props) => {
     }
     return <div></div>;
 };
+
+export const CommitDetailsView: React.FC = () => {
+    const stats = useSelectedCommit();
+    return <CommitDetailsContents stats={stats} />
+}

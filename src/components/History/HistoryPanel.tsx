@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { Branches } from '../Branches/Branches';
-import { Graph } from './Graph';
+import { GraphPanel } from './Graph';
 import { CommitDetailsView } from '../Diff/Commit';
-import { useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Logger } from '../../util/logger';
 import { NoScrollPanel } from '../util/NoScrollPanel';
-import { useHistory, useSelectedCommit } from '../../model/state/repo';
 
 let splitterX: string | undefined = undefined;
 let splitterY = 'minmax(0,1fr)';
@@ -17,8 +16,6 @@ let splitterY = 'minmax(0,1fr)';
 export const HistoryPanel: React.FC = () => {
     const targetRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const history = useHistory();
-    const stats = useSelectedCommit();
 
     const resizeObserverRef = useRef<ResizeObserver>(new ResizeObserver(resizer));
 
@@ -48,14 +45,13 @@ export const HistoryPanel: React.FC = () => {
                     splitterY = `${position}px`;
                 }}>
                 <NoScrollPanel ref={targetRef}>
-                    <Graph
+                    <GraphPanel
                         width={dimensions.width}
                         height={dimensions.height - 10}
-                        history={history}
                     />
                 </NoScrollPanel>
                 <SplitterPanel>
-                    <CommitDetailsView stats={stats} />
+                    <CommitDetailsView />
                 </SplitterPanel>
             </Splitter>
         </Splitter>
