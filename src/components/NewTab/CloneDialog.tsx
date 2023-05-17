@@ -35,6 +35,7 @@ export const DirectoryInput: React.FC<{
             type="text"
             placeholder="Local directory"
             value={props.dir}
+            autoCorrect='off'
             onChange={(ev) => props.onChange(ev.target.value)}
         />
         <div
@@ -91,6 +92,7 @@ export const CloneDialog: React.FC<{ onClose: () => void }> = (props) => {
             <StyledInput
                 type="text"
                 placeholder="Repository URL"
+                autoCorrect='off'
                 onChange={(ev) => setUrl(ev.target.value)}
             />
             <DirectoryInput dir={dir} suffix={basename} onChange={(newDir) => setDir(newDir)} />

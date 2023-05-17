@@ -48,6 +48,7 @@ export const SearchBox: React.FC<SearchBoxProps> = (props) => {
                     <StyledInput
                         placeholder="Search..."
                         autoFocus
+                        autoCorrect='off'
                         onChange={(ev) => props.onTermChange(ev.currentTarget.value)}
                     />
                     <ButtonGroup>

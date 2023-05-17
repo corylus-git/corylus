@@ -104,6 +104,7 @@ const MainStatusBar: React.FC = () => {
 
 export const Repository: React.FC<{ path: string }> = ({ path }) => {
     const repo = useRepo();
+    Logger().debug('Repository', 'Re-rendering Repository');
     // TODO fix
     // const __ = useDirWatcher(path);
     const _autofetcher = useAutoFetcher(repo);

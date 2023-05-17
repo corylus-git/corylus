@@ -60,6 +60,7 @@ export const RequestCreateTagDialog: React.FC = () => {
                             <StyledInput
                                 id="tag"
                                 placeholder="Tag..."
+                                autoCorrect='off'
                                 {...formik.getFieldProps('tag')}
                                 autoFocus
                                 value={tagName}

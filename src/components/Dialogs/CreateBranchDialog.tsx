@@ -63,6 +63,7 @@ const BranchNameInput: React.FC = () => {
             placeholder="branch name"
             value={fieldValue}
             autoFocus
+            autoCorrect='off'
             onChange={(ev) => {
                 value.current = preNormalize(ev.target.value);
                 setFieldValue(value.current);

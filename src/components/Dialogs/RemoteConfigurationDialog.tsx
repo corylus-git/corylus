@@ -73,12 +73,14 @@ export const RemoteConfigurationDialog: React.FC = () => {
                                         {...formik.getFieldProps('remoteName')}
                                         placeholder="Name"
                                         disabled={dialog.remote.found}
+                                        autoCorrect='off'
                                     />
                                     <label htmlFor="url">URL:</label>
                                     <StyledInput
                                         id="url"
                                         {...formik.getFieldProps('url')}
                                         placeholder="URL / path"
+                                        autoCorrect='off'
                                     />
                                 </DialogView>
                             </>
