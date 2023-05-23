@@ -57,7 +57,7 @@ export const changeBranch = trackError(
             uiStore.getState().startProgress(ref);
             try {
                 Logger().debug('changeBranch', 'Changing branch');
-                await invoke('change_branch', {refName: ref });
+                await invoke('change_branch', { refName: ref });
                 // repoStore.getState().loadBranches();
             } finally {
                 uiStore.getState().stopProgress(ref);
@@ -106,13 +106,12 @@ export const push = trackError(
             await invoke('push', {
                 branch: sourceBranch,
                 remote: remote,
-                    upstream: upstream,
+                upstream: upstream,
                 setUpstream: setUpstream,
                 pushTags
             });
             progress.getState().setProgress('Finished pushing changes', false, 5000);
             // TODO this does not seem to cause an immediate reload
-            console.log('Invalidating branches and remotes query');
             queryClient.invalidateQueries('branches');
             queryClient.invalidateQueries('remotes');
             queryClient.invalidateQueries('graphLine');
@@ -145,7 +144,7 @@ export const addWorktree = trackError(
         Logger().info('addWorktree', 'creating worktree', {
             path, ref
         });
-        await invoke('checkout_worktree', { refName: ref, path});
+        await invoke('checkout_worktree', { refName: ref, path });
         Logger().info('addWorktree', 'Success');
     }
 )
@@ -169,7 +168,7 @@ export const merge = trackError(
     'merge',
     async (from: string, noFF: boolean): Promise<void> => {
         await invoke('merge', { from, noFastForward: noFF });
- });
+    });
 
 export const abortMerge = trackError(
     'abort merge',
@@ -317,7 +316,7 @@ export const stash = trackError(
                 message: message,
                 untracked: untracked,
             });
-            await invoke('stash', {message, untracked});
+            await invoke('stash', { message, untracked });
             Logger().debug('stash', 'Success');
         } catch (e) {
             if (e instanceof Error) {
@@ -336,7 +335,7 @@ export const applyStash = trackError(
             stash: stash,
             deleteAfterApply: deleteAfterApply,
         });
-        await invoke('apply_stash', {oid: stash.oid, deleteAfterApply});
+        await invoke('apply_stash', { oid: stash.oid, deleteAfterApply });
         Logger().debug('applyStash', 'Success');
     }
 );
@@ -362,7 +361,7 @@ export const createTag = trackError(
             tag: tag,
             message: message,
         });
-        await invoke('create_tag', {name: tag, refName: ref, message: message});
+        await invoke('create_tag', { name: tag, refName: ref, message: message });
         Logger().silly('createTag', 'Success.');
     }
 );
@@ -438,7 +437,7 @@ export const remoteCheckout = trackError(
             remote,
             local,
         });
-        await invoke('checkout_remote_branch', { refName: `${remote.remote}/${remote.refName}`, localName: local});
+        await invoke('checkout_remote_branch', { refName: `${remote.remote}/${remote.refName}`, localName: local });
     }
 );
 
@@ -569,7 +568,7 @@ export async function selectCommit(ref: CommitStatsData | string | Commit) {
             typeof ref === 'string'
                 ? ref
                 : (ref as Commit).oid;
-        Logger().debug('selectCommit', 'Requesting commit details', { oid});
+        Logger().debug('selectCommit', 'Requesting commit details', { oid });
         const stats = await getCommitStats(oid);
         repoStore.getState().setSelectedCommit(just(stats));
         requestAffectedCommits(oid, true, true);

@@ -145,7 +145,7 @@ export const Actions: React.FC = () => {
     const dialog = useDialog();
     const remotes = useRemotes()
 
-    if (remotes.data !== undefined && currentBranch.data !== undefined) {
+    if (currentBranch.isFetched && remotes.isFetched) {
         return (
             <ActionsContainer>
                 <RouteAction route="/" title="View the commit history">
@@ -162,10 +162,10 @@ export const Actions: React.FC = () => {
                 <BranchButton />
                 <ActionButton
                     onClick={() => {
-                        if (currentBranch) {
+                        if (currentBranch.data) {
                             dialog.open({
                                 type: 'request-merge',
-                                source: fromNullable(currentBranch.data?.refName),
+                                source: fromNullable(currentBranch.data.refName),
                             });
                         }
                     }}

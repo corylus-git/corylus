@@ -492,16 +492,16 @@ const Branches: React.FC = () => {
     const remotes = useRemotes();
     const affected = useAffectedBranches();
     const branchTree = React.useMemo(
-        () =>
-            data &&
-            currentBranch.data !== undefined &&
-            remotes.data &&
-            createBranchTreeData(
-                data.filter((b) => !b.remote),
-                data.filter((b) => b.remote),
-                remotes.data,
-                currentBranch.data
-            ),
+        () => {
+            if (data && !currentBranch.isLoading && !currentBranch.isError) {
+                return createBranchTreeData(
+                    data.filter((b) => !b.remote),
+                    data.filter((b) => b.remote),
+                    remotes.data ?? [],
+                    currentBranch.data
+                );
+            }
+        },
         [data, currentBranch, remotes.data]
     );
 
