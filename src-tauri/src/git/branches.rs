@@ -138,7 +138,9 @@ pub async fn create_branch(
 #[tauri::command]
 pub async fn change_branch(state: StateType<'_>, window: Window, ref_name: &str) -> DefaultResult {
     with_backend(state, |backend| {
-        let (object, reference) = backend.repo.revparse_ext(ref_name)?;
+        let (object, reference) = backend
+            .repo
+            .revparse_ext(format!("refs/heads/{}", ref_name).as_str())?;
         let commit = object.peel_to_commit()?;
         backend.repo.checkout_tree(
             commit.tree()?.as_object(),
