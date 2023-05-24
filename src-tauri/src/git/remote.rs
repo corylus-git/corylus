@@ -43,14 +43,14 @@ pub async fn push(
     remote: String,
     branch: Option<String>,
     upstream: Option<String>,
-    _set_upstream: Option<bool>,
+    set_upstream: Option<bool>,
     _force: Option<bool>,
     _push_tags: Option<bool>,
 ) -> DefaultResult {
     with_backend_mut(state, |backend| {
-        let mut remote = backend.repo.find_remote(&remote)?;
-        let mut branch_ref = branch.map(|b| format!("refs/heads/{}", b));
-        if let Some(u) = upstream {
+        let mut remote_obj = backend.repo.find_remote(&remote)?;
+        let mut branch_ref = branch.as_ref().map(|b| format!("refs/heads/{}", b));
+        if let Some(u) = upstream.as_ref() {
             branch_ref = branch_ref.map(|br| format!("{}:refs/heads/{}", br, u));
         }
         let mut remote_callbacks = RemoteCallbacks::new();
@@ -62,13 +62,18 @@ pub async fn push(
         } else {
             vec![]
         };
-        debug!(
-            "Pushing to {} {:?}",
-            remote.name().unwrap_or("<invalid>"),
-            refspecs
-        );
-        remote.push(&refspecs, Some(&mut options))?;
+        debug!("Pushing to {} {:?}", remote, refspecs);
+        remote_obj.push(&refspecs, Some(&mut options))?;
         debug!("Success");
+        if let (Some(set_upstream), Some(branch)) = (set_upstream, branch) {
+            if set_upstream {
+                let mut local_branch =
+                    backend.repo.find_branch(&branch, git2::BranchType::Local)?;
+                let upstream_ref = upstream.as_ref().map(|u| format!("{}/{}", remote, u));
+                debug!("Setting upstream of {} to {:?}", branch, upstream_ref);
+                local_branch.set_upstream(upstream_ref.as_ref().map(|u| u.as_str()))?;
+            }
+        }
         window.typed_emit(WindowEvents::BranchesChanged, {})?;
         Ok(())
     })
