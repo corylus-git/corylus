@@ -40,6 +40,7 @@ pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> DefaultR
     with_backend(state, |backend| {
         let mut index = backend.repo.index()?;
         index.add_all([path], git2::IndexAddOption::DEFAULT, None)?;
+        index.write()?;
         window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
@@ -139,11 +140,35 @@ pub async fn apply_diff(
     revert: bool,
 ) -> DefaultResult {
     with_backend(state, |backend| {
-        log::debug!("Applying diff to index: {}", diff);
+        log::debug!("Applying diff to index: {} (revert: {})", diff, revert);
         let diff = git2::Diff::from_buffer(diff.as_bytes())?;
-        let head_tree = backend.repo.head()?.peel_to_tree()?;
-        let mut index = backend.repo.apply_to_tree(&head_tree, &diff, None)?;
-        backend.repo.set_index(&mut index)?;
+
+        // if revert {
+        //     let reverse_diff = Diff::try_from(diff)?.reverse();
+        //     log::trace!("Reverse diff: {:?}", reverse_diff);
+        //     // in order to revert the diff from the index we create the remaining diff between the index and the head where only the dff is applied (i.e. without the diff)
+        //     //  and apply this to the current head tree as the new index state
+        //     // let diff_only_index = backend
+        //     //     .repo
+        //     //     .apply_to_tree(&backend.repo.head()?.peel_to_tree()?, &diff, None)
+        //     //     .map_err(|e| BackendError::new("Failed to create diff-only index"))?;
+        //     // let remaining_changes =
+        //     //     backend
+        //     //         .repo
+        //     //         .diff_index_to_index(&diff_only_index, &backend.repo.index()?, None)?;
+        //     // log::trace!("Remaining changes: {:?}", Diff::try_from(remaining_changes));
+        //     // let mut new_index = backend.repo.apply_to_tree(
+        //     // &backend.repo.head()?.peel_to_tree()?,
+        //     // &remaining_changes,
+        //     // None,
+        //     // )?;
+        //     // new_index.write()?;
+        //     // backend.repo.set_index(&mut new_index)?;
+        // } else {
+        backend
+            .repo
+            .apply(&diff, git2::ApplyLocation::Index, None)?;
+        // }
         window.typed_emit(WindowEvents::StatusChanged, ())?;
         window.typed_emit(WindowEvents::DiffChanged, ())?;
         Ok(())

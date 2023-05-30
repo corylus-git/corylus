@@ -19,22 +19,25 @@ type MouseLineEventHandler = (
 ) => void;
 
 export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
-    let className = 'diff-context';
+    let className = 'diff-line';
     switch (props.line.type) {
         case 'insert':
         case 'delete':
-            className = `diff-${props.line.type}`;
+            className += ` ${props.line.type}`;
             break;
         case 'pseudoContext':
-            className = 'pseudo-context';
+            className += ' pseudo-context';
             break;
         case 'timeout':
-            className = 'timeout';
+            className += ' timeout';
+            break;
+        default:
+            className += ' context';
             break;
     }
     if (props.highlights.spans.every((s) => s.highlight)) {
         // if all spans are highlighted, we highlight the whole line instead of only the text
-        className += ` ${className}-highlight`;
+        className += ' highlight';
     }
     if (props.selected) {
         className += ' selected';

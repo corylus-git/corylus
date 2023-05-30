@@ -29,35 +29,51 @@
 }
 
 /* The diff classes */
-.diff-insert {
+.diff-line::before {
+  box-sizing: border-box;
+  content: ' ';
+  display: inline-block;
+  inline-size: 2rem;
+  border-inline-start: 0.25rem;
+}
+
+.diff-line.selected::before {
+  border-inline-start: 0.25rem solid var(--foreground);
+}
+
+.diff-line.insert {
   background-color: hsl(120, 30%, calc(50% + (var(--lightness) - 50%) / 1.2));
 }
 
-.diff-insert>.line-number::after {
+.diff-line.insert>.line-number::after {
   content: ' + ';
 }
 
-.diff-delete {
+.diff-line.insert.selected {
+  background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.7));
+}
+
+.diff-line.delete {
   background-color: hsl(0, 30%, calc(50% + (var(--lightness) - 50%) / 1.1));
 }
 
-.diff-delete>.line-number::after {
+.diff-line.delete>.line-number::after {
   content: ' - ';
 }
 
-.diff-context {
+.diff-line.context {
   background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) * 1.2));
 }
 
-.diff-context>.line-number::after {
+.diff-line.context>.line-number::after {
   content: '   ';
 }
 
-.diff-insert-highlight {
+.diff-line.insert-highlight {
   background-color: hsl(120, 75%, calc(50% + (var(--lightness) - 50%) / 1.8));
 }
 
-.diff-delete-highlight {
+.diff-line.delete-highlight {
   background-color: hsl(0, 75%, calc(50% + (var(--lightness) - 50%) / 1.8));
 }
 
@@ -69,18 +85,6 @@
   background-color: var(--conflict);
   color: var(--conflict-text);
   font-weight: bold;
-}
-
-.diff-inserted.selected {
-  background-color: hsl(120, 68%, calc(50% + (var(--lightness) - 50%) / 1.7));
-}
-
-.diff-deleted.selected {
-  background-color: hsl(0, 68%, calc(50% + (var(--lightness) - 50%) / 1.6));
-}
-
-.diff-context.selected {
-  background-color: hsl(0, 0%, calc(50% + (var(--lightness) - 50%) / 1.2));
 }
 
 .diff-conflict-ours {

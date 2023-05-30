@@ -56,7 +56,7 @@ export const StagingDiff: React.FC<{
                                                 chunkIndex: props.chunkIndex,
                                                 lineIndex: props.chunk.lines.length - 1,
                                             },
-                                        })
+                                        }, !!isIndex)
                                     )
                                 )
                             }>
@@ -78,7 +78,7 @@ export const StagingDiff: React.FC<{
                                                 chunkIndex: props.chunkIndex,
                                                 lineIndex: props.chunk.lines.length - 1,
                                             },
-                                        })
+                                        }, !!isIndex)
                                     )
                                 )
                             }>
@@ -126,7 +126,7 @@ export const StagingDiff: React.FC<{
                 if (currentSelection) {
                     const newDiff = serializeDiff(
                         diff.header,
-                        modifyDiff(diff, normalize(currentSelection))
+                        modifyDiff(diff, normalize(currentSelection), !!isIndex)
                     );
                     Logger().silly('StagingDiff', 'Adding partial diff', { diff: newDiff });
                     onAddDiff(newDiff);
