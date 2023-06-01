@@ -41,7 +41,7 @@ const Graph: React.FC<{
     React.useEffect(() => {
         Logger().debug('Graph', 'Requesting index for commit', { commit: selectedCommit });
         const sc = toOptional(selectedCommit) as CommitStatsData | undefined;
-        const indexPromise = sc ? invoke<number | undefined>('get_index', { oid: sc.commit.oid }) : Promise.resolve(undefined);
+        const indexPromise = sc?.commit ? invoke<number | undefined>('get_index', { oid: sc.commit.oid }) : Promise.resolve(undefined);
         indexPromise.then(index => {
             Logger().debug('Graph', 'Got index for commit', { oid: sc?.commit.oid, idx: index });
             if (index !== undefined) {

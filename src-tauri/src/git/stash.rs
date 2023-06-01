@@ -69,7 +69,8 @@ fn get_stashes_data(backend: &mut GitBackend) -> Result<Vec<(usize, String, git2
 
 #[tauri::command]
 pub async fn get_stash_stats(state: StateType<'_>, window: Window, oid: &str) -> DefaultResult {
-    with_backend(state, |backend| {
+    with_backend_mut(state, |backend| {
+        let stash_idx = find_stash_idx(oid, backend)?;
         let stash_commit =
             Oid::from_str(oid).and_then(|parsed_oid| backend.repo.find_commit(parsed_oid))?;
         let direct_diff = backend.repo.diff_tree_to_tree(
@@ -102,10 +103,12 @@ pub async fn get_stash_stats(state: StateType<'_>, window: Window, oid: &str) ->
             })
             .ok()
             .map(|diff| map_diff(&diff));
+        let mut stash = StashData::try_from(&stash_commit)?;
+        stash.ref_name = format!("stash@{{{}}}", stash_idx);
         window.typed_emit(
             WindowEvents::CommitStatsChanged,
             CommitStats::Stash(StashStatsData {
-                stash: StashData::try_from(&stash_commit)?,
+                stash,
                 changes: direct,
                 index: index_stats,
                 untracked: untracked_stats,

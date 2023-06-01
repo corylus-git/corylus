@@ -147,11 +147,11 @@ export interface ParentReference {
     shortOid: string;
 }
 
+
 /**
- * Meta-information about a commit without
+ * Meta-information about a stash
  */
-export interface Stash {
-    type: 'stash';
+export interface StashData {
     readonly refName: string;
     readonly oid: string;
     readonly shortOid: string;
@@ -161,10 +161,18 @@ export interface Stash {
 }
 
 /**
+ * Tagged type for a stash to use in the discriminated union below
+ * 
+ * Note: This is separate from the actual data above to align this with the Rust equivalent
+ */
+export type Stash = {
+    type: 'stash';
+} & StashData;
+
+/**
  * meta-information about a commit
  */
-export interface FullCommit {
-    type: 'commit';
+export interface FullCommitData {
     readonly oid: string;
     readonly shortOid: string;
     readonly message: string;
@@ -173,6 +181,20 @@ export interface FullCommit {
     readonly committer: GitPerson;
 }
 
+/**
+ * Tagged type for a commit to use in the discriminated union below
+ * 
+ * Note: This is separate from the actual data above to align this with the Rust equivalent
+ */
+export type FullCommit = {
+    type: 'commit';
+} & FullCommitData;
+
+/**
+ * Possible commit. A commit is either a stash or a full commit.
+ * 
+ * Note: the discriminated union type is added here to have Stash and FullCommit correspond to their Rust equivalent
+ */
 export type Commit = Stash | FullCommit;
 
 /**
@@ -263,7 +285,7 @@ export interface CommitStatsData {
     /**
      * The commit these stats belong to
      */
-    readonly commit: FullCommit;
+    readonly commit: FullCommitData;
 
     /**
      * The changes directly in this commit
@@ -285,7 +307,7 @@ export interface StashStatsData {
     /**
     * The stash these stats belong to
     */
-    readonly stash: Stash;
+    readonly stash: StashData;
 
     readonly changes: readonly DiffStat[];
 

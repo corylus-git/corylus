@@ -1,5 +1,5 @@
 import { Logger } from '../../util/logger';
-import { Tag, BranchInfo, Stash, IndexStatus, Commit, CommitStats, CommitStatsData } from '../stateObjects';
+import { Tag, BranchInfo, StashData, IndexStatus, Commit, CommitStats, CommitStatsData } from '../stateObjects';
 import { just, Maybe, toOptional } from '../../util/maybe';
 import { toast } from 'react-toastify';
 // import { MergeResult } from 'simple-git/promise';
@@ -330,7 +330,7 @@ export const stash = trackError(
 export const applyStash = trackError(
     'apply stash to working directory',
     'applyStash',
-    async (stash: Stash, deleteAfterApply: boolean): Promise<void> => {
+    async (stash: StashData, deleteAfterApply: boolean): Promise<void> => {
         Logger().debug('applyStash', 'Applying stash', {
             stash: stash,
             deleteAfterApply: deleteAfterApply,
@@ -343,7 +343,7 @@ export const applyStash = trackError(
 export const dropStash = trackError(
     'drop stash',
     'dropStash',
-    async (stash: Stash): Promise<void> => {
+    async (stash: StashData): Promise<void> => {
         Logger().debug('dropStash', 'Dropping stash', {
             stash: stash,
         });

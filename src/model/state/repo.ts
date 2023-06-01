@@ -14,7 +14,7 @@ import { listen } from '../../util/typesafeListen';
 import { getDiff } from '../actions/repo';
 import { GitConfigValue, IGitConfig, IGitConfigValues, NamedGitConfigValue } from '../IGitConfig';
 import {
-    BranchInfo, Commit, CommitStats, PendingCommit, RebaseStatusInfo, RemoteMeta, Stash, Tag
+    BranchInfo, Commit, CommitStats, PendingCommit, RebaseStatusInfo, RemoteMeta, StashData, Tag
 } from '../stateObjects';
 import { SelectedConflict, SelectedFile } from './stagingArea';
 
@@ -231,8 +231,8 @@ export const useRemotes = () =>
 /**
  * Get the current available stashes in the repo
  */
-export const useStashes = (): UseQueryResult<readonly Stash[]> =>
-    useQuery('stashes', () => invoke<readonly Stash[]>('get_stashes'));
+export const useStashes = (): UseQueryResult<readonly StashData[]> =>
+    useQuery('stashes', () => invoke<readonly StashData[]>('get_stashes'));
 
 listen('StashesChanged', (_) => queryClient.invalidateQueries('stashes'));
 

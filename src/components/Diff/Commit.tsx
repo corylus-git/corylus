@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styled from 'styled-components';
 
-import { Commit, CommitStats, DiffStat, formatTimestamp } from '../../model/stateObjects';
+import { Commit, CommitStats, DiffStat, FullCommit, StashData, formatTimestamp } from '../../model/stateObjects';
 import '../../style/app.css';
 import { ArrowRight } from '../icons/ArrowRight';
 import { ArrowDown } from '../icons/ArrowDown';
@@ -79,6 +79,7 @@ export const CommitMetaData: React.FC<{ commit: Commit }> = (props) => {
 };
 
 export const CommitHeader: React.FC<{ commit: Commit }> = (props) => {
+    console.log("CommitHeader", props.commit);
     return (
         <CommitHeaderFrame>
             {props.commit.type === 'stash' && <h3>{props.commit.refName}</h3>}
@@ -168,7 +169,10 @@ const CommitDetailsContents: React.FC<CommitDetailsViewProps> = (props) => {
                         height: '100%',
                         overflow: 'auto',
                     }}>
-                    <CommitHeader commit={stats.value.commit} />
+                    <CommitHeader commit={{
+                        type: 'commit',
+                        ...stats.value.commit
+                    }} />
                     {stats.value.incoming && stats.value.direct.length > 0 && <h2>Conflicts</h2>}
                     <DiffView
                         commit={stats.value.commit.oid}
@@ -195,7 +199,10 @@ const CommitDetailsContents: React.FC<CommitDetailsViewProps> = (props) => {
                         height: '100%',
                         overflow: 'auto',
                     }}>
-                    <CommitHeader commit={stats.value.stash} />
+                    <CommitHeader commit={{
+                        type: 'stash',
+                        ...stats.value.stash
+                    }} />
                     <h2>Changes</h2>
                     <DiffView
                         commit={stats.value.stash.oid}
