@@ -1,4 +1,5 @@
 import { SelectedLines } from '../components/Diff/DiffViewer';
+import { chunks } from './ImmutableArrayUtils';
 import { FileDiff, DiffChunk, DiffLine } from './diff-parser';
 import { Logger } from './logger';
 
@@ -32,8 +33,9 @@ function parseHeader(header: string): ChunkHeader | undefined {
  *
  * @param file The parsed diff to modify
  * @param lines The selection to use to modify the diff
+ * @param reverse Reverse the diff, i.e. turn additions into deletions and vice versa
  */
-export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
+export function modifyDiff(file: FileDiff, lines: SelectedLines, reverse: boolean): FileDiff {
     Logger().silly('modifyDiff', 'Received diff for modification', {
         diff: file,
         selection: lines,
@@ -57,20 +59,24 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
                     index < lines.first.lineIndex ||
                     (i === lines.last.chunkIndex && index > lines.last.lineIndex)
                 ) {
-                    if (l.type !== 'insert') {
+                    if (!reverse && l.type !== 'insert'
+                        || reverse && l.type !== 'delete') {
                         return newLines.concat({
                             ...l,
                             type: 'context',
                             content: l.content,
                         } as DiffLine);
                     }
-                    Logger().silly('modifyDiff', 'Leaving insert outside the collection', {
+                    Logger().silly('modifyDiff', `Leaving ${reverse ? 'delete' : 'insert'} outside the collection`, {
                         line: l,
                         index: index,
                     });
                     return newLines; // leave out inserts outside the selection
                 }
-                return newLines.concat(l);
+                return newLines.concat({
+                    ...l,
+                    type: reverse ? reverseOp(l.type) : l.type,
+                });
             }, [] as DiffLine[]);
             const [correctBlock, lineDelta] = correctHeader(chunk, accumulatedDelta);
             accumulatedDelta += lineDelta;
@@ -85,20 +91,24 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
                     return newLines.concat(l); // pseudo-context lines must be left untouched
                 }
                 if (index > lines.last.lineIndex) {
-                    if (l.type !== 'insert') {
+                    if (!reverse && l.type !== 'insert'
+                        || reverse && l.type !== 'delete') {
                         return newLines.concat({
                             ...l,
                             type: 'context',
                             content: l.content,
                         } as DiffLine);
                     }
-                    Logger().silly('modifyDiff', 'Leaving insert outside the collection', {
+                    Logger().silly('modifyDiff', `Leaving ${reverse ? 'delete' : 'insert'} outside the collection`, {
                         line: l,
                         index: index,
                     });
                     return newLines; // leave out inserts outside the selection
                 }
-                return newLines.concat(l);
+                return newLines.concat({
+                    ...l,
+                    type: reverse ? reverseOp(l.type) : l.type,
+                });
             }, [] as DiffLine[]);
             const [correctchunk, lineDelta] = correctHeader(chunk, accumulatedDelta);
             accumulatedDelta += lineDelta;
@@ -115,6 +125,36 @@ export function modifyDiff(file: FileDiff, lines: SelectedLines): FileDiff {
     return ret;
 }
 
+function reverseOp(op: DiffLine["type"]): DiffLine["type"] {
+    switch (op) {
+        case 'insert':
+            return 'delete';
+        case 'delete':
+            return 'insert';
+        default:
+            return op;
+    }
+}
+
+/**
+ * Reverse the diff, i.e. turn all deletions into insertions and vice versa
+ * 
+ * @param diff The diff to reverse
+ * @returns A diff that is the reverse of the input
+ */
+export function reverseDiff(diff: FileDiff): FileDiff {
+    return {
+        ...diff,
+        chunks: diff.chunks.map((c) => ({
+            ...c,
+            lines: c.lines.map(l => ({
+                ...l,
+                type: reverseOp(l.type),
+            }))
+        }))
+    };
+}
+
 function correctHeader(block: DiffChunk, newStartCorrection: number): [DiffChunk, number] {
     const header = parseHeader(block.header);
     if (!header) {
@@ -129,9 +169,8 @@ function correctHeader(block: DiffChunk, newStartCorrection: number): [DiffChunk
     return [
         {
             ...block,
-            header: `@@ -${header!.oldstartline},${oldlength} +${
-                header!.newstartline - newStartCorrection
-            },${newLength} @@${header!.description}`,
+            header: `@@ -${header!.oldstartline},${oldlength} +${header!.newstartline - newStartCorrection
+                },${newLength} @@${header!.description}`,
         },
         header!.newlength - newLength,
     ]; // return the delta in length between the existing diff block and the fixed one -> used to fix the start positions of subsequent blocks
@@ -142,8 +181,7 @@ export function serializeDiff(diffHeader: string[], diff: FileDiff): string {
     const diffLines = diffHeader.filter(h => h.length != 0).concat(
         ...diff.chunks.map((b) => [b.header].concat(b.lines.map((l) => {
             l.content = l.content.replace('\n', '');
-            switch (l.type)
-            {
+            switch (l.type) {
                 case 'context':
                     return ` ${l.content}`;
                 case 'delete':
