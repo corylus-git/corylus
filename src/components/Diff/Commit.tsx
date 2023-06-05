@@ -158,7 +158,7 @@ export type CommitDetailsViewProps = {
 };
 
 // TODO this needs cleaning up and split into two components
-const CommitDetailsContents: React.FC<CommitDetailsViewProps> = (props) => {
+export const CommitDetailsContent: React.FC<CommitDetailsViewProps> = (props) => {
     const { stats } = props
 
     if (stats.found) {
@@ -239,5 +239,5 @@ const CommitDetailsContents: React.FC<CommitDetailsViewProps> = (props) => {
 
 export const CommitDetailsView: React.FC = () => {
     const stats = useSelectedCommit();
-    return <CommitDetailsContents stats={stats} />
+    return <CommitDetailsContent stats={stats} />
 }

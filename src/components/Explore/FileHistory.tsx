@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { StyledButton } from '../util/StyledButton';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { NoScrollPanel } from '../util/NoScrollPanel';
-import { CommitDetailsView } from '../Diff/Commit';
+import { CommitDetailsContent } from '../Diff/Commit';
 import { useFileHistory } from '../../model/state/explorer';
 import { GraphRenderer } from '../History/GraphRenderer';
 import { useBranches, useTags } from '../../model/state/repo';
@@ -85,7 +85,7 @@ export const FileHistory: React.FC<{ path: string, onClose: () => void }> = ({ p
                         />
                     </NoScrollPanel>
                     <SplitterPanel>
-                        <CommitDetailsView stats={stats.value ? just(stats.value) : nothing} />
+                        <CommitDetailsContent stats={stats.value ? just(stats.value) : nothing} />
                     </SplitterPanel>
                 </Splitter>
                 <div className="button">
