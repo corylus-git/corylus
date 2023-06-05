@@ -78,7 +78,7 @@ export const StagingDiff: React.FC<{
                                                 chunkIndex: props.chunkIndex,
                                                 lineIndex: props.chunk.lines.length - 1,
                                             },
-                                        }, !!isIndex)
+                                        }, true)
                                     )
                                 )
                             }>

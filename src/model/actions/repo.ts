@@ -284,23 +284,20 @@ export const init = trackError(
 //     }
 // );
 
-export const addDiff = trackError(
-    'add partial diff to index',
-    'addDiff',
+export const applyDiff = trackError(
+    'apply a partial diff to index or work dir',
+    'applyDiff',
     async (
         diff: string,
         path: string,
-        source: 'workdir' | 'index',
-        revert: boolean
+        toWorkingCopy: boolean
     ): Promise<void> => {
         try {
-            await invoke('apply_diff', { diff, revert });
+            await invoke('apply_diff', { diff, toWorkingCopy });
         } catch (e: any) {
             Logger().debug('addDiff', 'Could not add diff to index', {
                 diff: diff,
                 path: path,
-                source: source,
-                revert: revert,
                 error: e.toString(),
             });
         }

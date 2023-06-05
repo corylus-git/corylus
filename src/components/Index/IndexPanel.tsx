@@ -11,7 +11,7 @@ import { StagingDiffPanel } from './StagingDiffPanel';
 import { ConflictResolutionPanel } from '../Merging/ConflictResolutionPanel';
 import { Logger } from '../../util/logger';
 import { nothing, just, Maybe } from '../../util/maybe';
-import { commit, addDiff, continueRebase } from '../../model/actions/repo';
+import { commit, applyDiff, continueRebase } from '../../model/actions/repo';
 import {
     usePendingCommit,
     repoStore,
@@ -50,8 +50,8 @@ const DiffDisplayPanel: React.FC<{ selectedFile: SelectedFile | undefined }> = (
             <div>
                 <StagingDiffPanel
                     file={props.selectedFile}
-                    onAddDiff={(diff, path, source, isIndex) =>
-                        addDiff(diff, path, source, isIndex)
+                    onAddDiff={(diff, path) =>
+                        applyDiff(diff, path, false)
                     }
                 />
             </div>

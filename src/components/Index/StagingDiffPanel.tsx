@@ -1,11 +1,11 @@
 import React from 'react';
 import { StagingDiff } from './StagingDiff';
-import { discardDiff } from '../../model/actions/repo';
+import { applyDiff, discardDiff } from '../../model/actions/repo';
 import { useDiff } from '../../model/state/repo';
 
 export const StagingDiffPanel: React.FC<{
     file: { path: string; source: 'workdir' | 'index', untracked: boolean };
-    onAddDiff: (diff: string, path: string, source: 'workdir' | 'index', isIndex: boolean) => void;
+    onAddDiff: (diff: string, path: string) => void;
 }> = (props) => {
     const { isLoading, error, data } = useDiff(props.file.source, props.file.path, undefined, undefined, props.file.untracked);
     if (error) {
@@ -24,12 +24,9 @@ export const StagingDiffPanel: React.FC<{
                 onAddDiff={(diff) =>
                     props.onAddDiff(
                         diff,
-                        props.file.path,
-                        props.file.source,
-                        props.file.source === 'index'
-                    )
+                        props.file.path)
                 }
-                onDiscardDiff={(diff) => discardDiff(props.file.path, diff)}
+                onDiscardDiff={(diff) => applyDiff(diff, props.file.path, true)}
                 isIndex={props.file.source === 'index'}
             />
         </>
