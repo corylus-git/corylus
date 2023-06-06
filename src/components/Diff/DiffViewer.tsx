@@ -42,6 +42,8 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
     if (props.selected) {
         className += ' selected';
     }
+    Logger().silly("DiffLineDisplay", "Rendering line", { props })
+
     return (
         <DiffLineDisplay
             className={className}
@@ -52,11 +54,11 @@ export const DefaultDiffLine: React.FC<LineRendererProps> = (props) => {
                 props.onLineMouseEnter?.(ev, props.parentChunkIndex, props.lineIndex)
             }
             onClick={(ev) => props.onLineClick?.(ev, props.parentChunkIndex, props.lineIndex)}>
-            <span className="line-number">
+            {props.line.type !== 'pseudoContext' && <span className="line-number">
                 {`${props.line.newNumber ?? props.line.oldNumber ?? ''}`.padStart(
                     props.maxLineNumberLength
                 )}
-            </span>
+            </span>}
             {props.highlights.spans.map((s, i) => (
                 <span
                     key={`s-${i}`}

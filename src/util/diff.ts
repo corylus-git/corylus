@@ -189,7 +189,7 @@ export function serializeDiff(diffHeader: string[], diff: FileDiff): string {
                 case 'insert':
                     return `+${l.content}`;
                 case 'pseudoContext':
-                    return ` ${l.content}`;
+                    return l.content;
                 default:
                     return "";
             }

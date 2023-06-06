@@ -1,5 +1,5 @@
 use git2::Signature;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::error::BackendError;
 
@@ -92,7 +92,10 @@ impl TryFrom<&git2::Commit<'_>> for FullCommitData {
                 .as_str()
                 .unwrap()
                 .to_owned(),
-            message: commit.message_raw().unwrap_or("<invalid message>").to_owned(),
+            message: commit
+                .message_raw()
+                .unwrap_or("<invalid message>")
+                .to_owned(),
             parents: commit
                 .parents()
                 .into_iter()
@@ -108,16 +111,32 @@ impl TryFrom<&git2::Commit<'_>> for FullCommitData {
                 })
                 .collect(),
             author: GitPerson {
-                name: commit.author().name().unwrap_or("<invalid author>").to_owned(),
-                email: commit.author().email().unwrap_or("<invalid email>").to_owned(),
+                name: commit
+                    .author()
+                    .name()
+                    .unwrap_or("<invalid author>")
+                    .to_owned(),
+                email: commit
+                    .author()
+                    .email()
+                    .unwrap_or("<invalid email>")
+                    .to_owned(),
                 timestamp: TimeWithOffset {
                     utc_seconds: commit.time().seconds(),
                     offset_seconds: commit.time().offset_minutes() * 60,
                 },
             },
             committer: GitPerson {
-                name: commit.committer().name().unwrap_or("<invalid committer>").to_owned(),
-                email: commit.committer().email().unwrap_or("<invalid email>").to_owned(),
+                name: commit
+                    .committer()
+                    .name()
+                    .unwrap_or("<invalid committer>")
+                    .to_owned(),
+                email: commit
+                    .committer()
+                    .email()
+                    .unwrap_or("<invalid email>")
+                    .to_owned(),
                 timestamp: TimeWithOffset {
                     utc_seconds: commit.time().seconds(),
                     offset_seconds: commit.time().offset_minutes() * 60,
@@ -220,12 +239,11 @@ pub struct FileStats {
     pub path: Option<String>,
 }
 
-impl From<git2::StatusEntry<'_>> for FileStats
-{
+impl From<git2::StatusEntry<'_>> for FileStats {
     fn from(status: git2::StatusEntry) -> Self {
         Self {
             status: get_workdir_status(&status),
-            path: status.path().map(|p| p.to_owned())
+            path: status.path().map(|p| p.to_owned()),
         }
     }
 }
@@ -390,7 +408,9 @@ impl TryFrom<git2::DiffLine<'_>> for DiffLineData {
     type Error = String;
     fn try_from(diff_line: git2::DiffLine) -> Result<Self, Self::Error> {
         Ok(DiffLineData {
-            content: String::from_utf8_lossy(diff_line.content()).into_owned(),
+            content: String::from_utf8_lossy(diff_line.content())
+                .trim_matches('\n')
+                .to_owned(),
             old_number: diff_line.old_lineno(),
             new_number: diff_line.new_lineno(),
         })
@@ -486,7 +506,6 @@ fn push_line(line: git2::DiffLine<'_>, diffs: &mut [FileDiff]) -> bool {
         .unwrap_or(false)
 }
 
-
 #[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Worktree {
@@ -494,7 +513,7 @@ pub struct Worktree {
     pub path: String,
     pub branch: Option<String>,
     pub oid: Option<String>,
-    pub is_valid: bool
+    pub is_valid: bool,
 }
 
 /**
@@ -516,7 +535,7 @@ pub struct Tag {
     /**
      * The OID of the commit this tag refers to
      */
-    pub tagged_oid: String
+    pub tagged_oid: String,
 }
 
 /**

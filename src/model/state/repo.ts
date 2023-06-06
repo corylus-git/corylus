@@ -318,6 +318,9 @@ listen<{ commit?: string, path?: string, source: 'commit' | 'stash' | 'index' | 
     Logger().debug('diff-changed', 'Diff changed', { paylod: ev.payload });
     queryClient.invalidateQueries(['diff', ev.payload.commit, ev.payload.path, ev.payload.source, ev.payload.parent, ev.payload.untracked]);
 });
+export function invalidateDiffQuery(source: 'commit' | 'stash' | 'index' | 'workdir', path: string, commit?: string, parent?: string, untracked?: boolean) {
+    queryClient.invalidateQueries(['diff', commit, path, source, parent, untracked]);
+}
 
 export function useHead() {
     return useCommit('HEAD');
