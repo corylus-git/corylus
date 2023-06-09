@@ -211,11 +211,16 @@ pub async fn pull(
             .repo
             .revparse_ext(&format!("{}/{}", remote, remote_branch))?
             .1
-            .ok_or_else(|| BackendError::new("Could not parse remote branch reference"))?
-            .name()
-            .ok_or_else(|| BackendError::new("Target reference has no valid name"))?
-            .to_owned();
-        do_merge(backend, window, &from_ref, no_fast_forward)?;
+            .ok_or_else(|| BackendError::new("Could not parse remote branch reference"))?;
+        if from_ref.peel_to_commit()?.id() != backend.repo.head()?.peel_to_commit()?.id() {
+            log::debug!("Remote has a updates. Merging.");
+            let ref_name = from_ref
+                .name()
+                .ok_or_else(|| BackendError::new("Target reference has no valid name"))?
+                .to_owned();
+            drop(from_ref); // no longer needed, but referenced indirectly, causing the do_merge call to not be able to borrow mutably
+            do_merge(backend, window, &ref_name, no_fast_forward)?;
+        }
         // TODO merge
         // window.typed_emit(WindowEvents::BranchesChanged, ())?;
         // window.typed_emit(WindowEvents::HistoryChanged, ())?;
