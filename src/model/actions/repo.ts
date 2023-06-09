@@ -15,6 +15,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { FileDiff } from '../../util/diff-parser';
 import { queryClient } from '../../util/queryClient';
 import { INDEX_QUERY, INDEX_QUERY_FN } from '../state';
+import { listen } from '../../util/typesafeListen';
 
 export const commit = trackError(
     'commit',
@@ -218,15 +219,20 @@ export const clone = trackError(
     'clone remote repository',
     'clone',
     async (url: string, localDir: string): Promise<void> => {
+        const unlisten = await listen<number>('Progress', (event) => {
+            progress.getState().setProgress(`Cloning ${url} into ${localDir} (${event.payload}%).`, true);
+        });
         try {
             Logger().debug('clone', 'Cloning remote URL', { url: url, localDir: localDir });
-            progress.getState().setProgress(`Cloning ${url} into ${localDir}.`, true, 5000);
+            progress.getState().setProgress(`Cloning ${url} into ${localDir}.`, true);
             await invoke('clone', { url, localDir });
             Logger().debug('clone', 'Success');
             progress.getState().setProgress(`Finished cloning ${url}.`, false, 5000);
         } catch (e) {
             progress.getState().setProgress(`Failed cloning ${url}.`, false, 5000);
             throw e;
+        } finally {
+            unlisten();
         }
     }
 );

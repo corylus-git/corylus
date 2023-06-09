@@ -1,4 +1,8 @@
-use git2::{AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks};
+use std::path::Path;
+
+use git2::{
+    build::RepoBuilder, AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks,
+};
 use log::debug;
 use tauri::Window;
 
@@ -242,7 +246,22 @@ pub async fn clone(
         ))
     })?;
     debug!("Starting clone from {} to {}", url, local_dir);
-    git2::Repository::clone(url, local_dir)?;
+    {
+        let mut builder = RepoBuilder::new();
+        let mut fetch_opts = FetchOptions::new();
+        let mut cbs = RemoteCallbacks::new();
+        cbs.transfer_progress(|progress| {
+            window.typed_emit(
+                WindowEvents::Progress,
+                progress.received_objects() * 100 / progress.total_objects(),
+            );
+            true
+        });
+        fetch_opts.remote_callbacks(cbs);
+        builder.fetch_options(fetch_opts);
+        builder.clone(url, Path::new(local_dir))?;
+    }
+    // git2::Repository::clone(url, local_dir)?;
     debug!("Finished clone from {} to {}", url, local_dir);
     git_open(state, window, local_dir).await
 }

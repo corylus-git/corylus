@@ -12,6 +12,8 @@ import styled from 'styled-components';
 import { StyledDialog } from '../util/StyledDialog';
 import OpenIcon from '../icons/OpenIcon.svg';
 import { open } from '@tauri-apps/api/dialog';
+import { useProgress } from '../../model/state/progress';
+import { listen } from '../../util/typesafeListen';
 
 export const CloneDialogView = styled(StyledDialog)`
     width: 40rem;
@@ -90,6 +92,8 @@ export const CloneDialog: React.FC<{ onClose: () => void }> = (props) => {
     const [url, setUrl] = useState<string>('');
     const [dir, setDir] = useState<string>('');
     const basename = useMemo(() => getRepoBaseName(url), [url]);
+    const progress = useProgress();
+
     return (
         <CloneDialogView>
             <StyledInput

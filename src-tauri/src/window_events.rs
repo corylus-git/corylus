@@ -16,6 +16,7 @@ pub enum WindowEvents {
     StashesChanged,
     CommitStatsChanged,
     TagsChanged,
+    Progress,
 }
 
 pub trait TypedEmit {
