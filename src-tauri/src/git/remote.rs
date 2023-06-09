@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    credentials::make_credentials_callback, merge::do_merge, model::remote::RemoteMeta,
+    credentials::make_credentials_callback, git_open, merge::do_merge, model::remote::RemoteMeta,
     with_backend, with_backend_mut, StateType,
 };
 
@@ -219,12 +219,30 @@ pub async fn pull(
                 .ok_or_else(|| BackendError::new("Target reference has no valid name"))?
                 .to_owned();
             drop(from_ref); // no longer needed, but referenced indirectly, causing the do_merge call to not be able to borrow mutably
-            do_merge(backend, window, &ref_name, no_fast_forward)?;
+            do_merge(backend, window.clone(), &ref_name, no_fast_forward)?;
         }
-        // TODO merge
-        // window.typed_emit(WindowEvents::BranchesChanged, ())?;
-        // window.typed_emit(WindowEvents::HistoryChanged, ())?;
+        window.typed_emit(WindowEvents::BranchesChanged, ())?;
+        window.typed_emit(WindowEvents::HistoryChanged, ())?;
         Ok(())
     })
     .await
+}
+
+#[tauri::command]
+pub async fn clone(
+    state: StateType<'_>,
+    window: Window,
+    url: &str,
+    local_dir: &str,
+) -> DefaultResult {
+    std::fs::create_dir(local_dir).map_err(|e| {
+        BackendError::new(format!(
+            "Cannot create new directory to clone into. {}",
+            e.to_string()
+        ))
+    })?;
+    debug!("Starting clone from {} to {}", url, local_dir);
+    git2::Repository::clone(url, local_dir)?;
+    debug!("Finished clone from {} to {}", url, local_dir);
+    git_open(state, window, local_dir).await
 }

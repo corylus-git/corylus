@@ -11,6 +11,7 @@ import { structuredToast } from '../../util/structuredToast';
 import styled from 'styled-components';
 import { StyledDialog } from '../util/StyledDialog';
 import OpenIcon from '../icons/OpenIcon.svg';
+import { open } from '@tauri-apps/api/dialog';
 
 export const CloneDialogView = styled(StyledDialog)`
     width: 40rem;
@@ -49,11 +50,13 @@ export const DirectoryInput: React.FC<{
         <DirOpenButton
             onClick={() =>
                 (async () => {
-                    // TODO
-                    // const dir = await dialog.showOpenDialog(getCurrentWindow(), {
-                    //     properties: ['openDirectory', 'promptToCreate'],
-                    // });
-                    // dir.filePaths && dir.filePaths.length > 0 && props.onChange(dir.filePaths[0]);
+                    const dir = await open({
+                        title: 'Select parent directory',
+                        directory: true
+                    });
+                    if (dir) {
+                        props.onChange(Array.isArray(dir) ? dir[0] : dir);
+                    }
                 })()
             }>
             <OpenIcon />

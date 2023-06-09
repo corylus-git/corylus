@@ -221,13 +221,7 @@ export const clone = trackError(
         try {
             Logger().debug('clone', 'Cloning remote URL', { url: url, localDir: localDir });
             progress.getState().setProgress(`Cloning ${url} into ${localDir}.`, true, 5000);
-            // TODO
-            // if (!await exists(localDir)) {
-            //     Logger().debug('clone', 'Target directory does not exist. Creating.');
-            //     fs.mkdirSync(localDir, { recursive: true });
-            // }
-            // const backend = new SimpleGitBackend(localDir);
-            // await backend.clone(url, localDir);
+            await invoke('clone', { url, localDir });
             Logger().debug('clone', 'Success');
             progress.getState().setProgress(`Finished cloning ${url}.`, false, 5000);
         } catch (e) {
