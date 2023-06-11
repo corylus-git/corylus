@@ -5,7 +5,7 @@ import create from 'zustand/vanilla';
 import { Logger } from '../../util/logger';
 import { Maybe, nothing } from '../../util/maybe';
 import { RequestInitializeGitflow } from '../../util/workflows/gitflow';
-import { BranchInfo, RemoteMeta, Stash, UpstreamInfo } from '../stateObjects';
+import { BranchInfo, RemoteMeta, Stash, StashData, UpstreamInfo } from '../stateObjects';
 
 export type RequestPull = {
     type: 'request-pull';
@@ -46,12 +46,12 @@ export type RequestStash = {
 
 export type RequestStashApply = {
     type: 'request-stash-apply';
-    stash: Stash;
+    stash: StashData;
 };
 
 export type RequestStashDrop = {
     type: 'request-stash-drop';
-    stash: Stash;
+    stash: StashData;
 };
 
 export type RequestUpstream = {

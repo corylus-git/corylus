@@ -4,7 +4,7 @@ import { just, Maybe, toOptional } from '../../util/maybe';
 import { toast } from 'react-toastify';
 // import { MergeResult } from 'simple-git/promise';
 // import fs from 'fs';
-import { repoStore } from '../state/repo';
+import { getStashes, repoStore } from '../state/repo';
 import { progress } from '../state/progress';
 import { trackError } from '../../util/error-display';
 import { dialogStore } from '../state/dialogs';
@@ -44,7 +44,11 @@ export const changeBranch = trackError(
                         'changeBranch',
                         'Requested auto-stashing changes during checkout'
                     );
-                    throw new Error("Not ported to Tauri yet");
+                    await stash('Auto-stash during branch change', true);
+                    Logger().debug('changeBranch', 'Changing branch');
+                    await invoke('change_branch', { refName: ref });
+                    const stashes = await getStashes();
+                    await applyStash(stashes[0], true);
                     // await repoStore.getState().backend.stash('Auto-stash during checkout', true);
                     // await repoStore.getState().backend.checkout(ref);
                     // const stashes = await repoStore.getState().backend.listStashes();

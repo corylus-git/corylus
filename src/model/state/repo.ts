@@ -232,9 +232,17 @@ export const useRemotes = () =>
  * Get the current available stashes in the repo
  */
 export const useStashes = (): UseQueryResult<readonly StashData[]> =>
-    useQuery('stashes', () => invoke<readonly StashData[]>('get_stashes'));
+    useQuery('stashes', getStashes);
 
 listen('StashesChanged', (_) => queryClient.invalidateQueries('stashes'));
+
+
+/**
+ * Retrieves stash data from the backend.
+ */
+export async function getStashes(): Promise<readonly StashData[]> {
+    return invoke<readonly StashData[]>('get_stashes')
+}
 
 /**
  * get the current pending commit (e.g. after a failed merge)

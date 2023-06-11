@@ -158,14 +158,14 @@ export const Tabs: React.FC = () => {
         activeRef.current?.scrollIntoView();
     }, [tabs.active]);
 
-    const getActiveTabPath = () => {
+    const getActiveTabPath = React.useCallback(() => {
         if (tabs.active.found) {
             const activeTab = tabs.tabs.find(t => tabs.active.found && t.id === tabs.active.value);
             return activeTab?.path?.found ? activeTab.path.value : undefined;
         }
-    }
+    }, [tabs.active, tabs.tabs]);
 
-    const activePath = getActiveTabPath(); 333
+    const activePath = getActiveTabPath();
 
     return (
         <TabContainer onMouseUp={() => intervalRef.current && clearInterval(intervalRef.current)}>

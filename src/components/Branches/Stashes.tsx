@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stash } from '../../model/stateObjects';
+import { Stash, StashData } from '../../model/stateObjects';
 import { HoverableDiv } from '../StyleBase';
 import styled from 'styled-components';
 import { Tree, TreeNode } from '../util/Tree/Tree';
@@ -19,7 +19,7 @@ const RefDisplay = styled.span`
     margin-left: -0.5rem;
 `;
 
-const ContextMenu: React.FC<{ stash: Stash, dialog: DialogActions } & ControlledMenuProps> = (props) => (
+const ContextMenu: React.FC<{ stash: StashData, dialog: DialogActions } & ControlledMenuProps> = (props) => (
     <ControlledMenu {...props} portal>
         <MenuItem onClick={() => props.dialog.open({ type: 'request-stash-apply', stash: props.stash })}>Apply {props.stash.refName} to working copy</MenuItem>
         <MenuItem onClick={() =>
@@ -30,7 +30,7 @@ const ContextMenu: React.FC<{ stash: Stash, dialog: DialogActions } & Controlled
     </ControlledMenu>
 );
 
-const StashEntry: React.FC<{ stash: Stash, dialog: DialogActions }> = (props) => {
+const StashEntry: React.FC<{ stash: StashData, dialog: DialogActions }> = (props) => {
     const [menuProps, toggleMenu] = useMenuState();
     const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
     return <>
@@ -68,7 +68,7 @@ export const Stashes: React.FC = () => {
                 }
                 root={{
                     label: 'Stashes',
-                    children: stashes.map<TreeNode<Stash>>((entry) => ({
+                    children: stashes.map<TreeNode<StashData>>((entry) => ({
                         key: entry.oid,
                         label: entry.message,
                         children: [],
