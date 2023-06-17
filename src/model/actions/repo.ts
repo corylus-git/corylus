@@ -400,11 +400,7 @@ export const saveManualMerge = trackError(
             path: filePath,
             code: code,
         });
-        // TODO
-        // fs.writeFileSync(await join(repoStore.getState().backend.dir, filePath), code);
-        throw new Error("Not ported to Tauri yet");
-        // await repoStore.getState().backend.addPath(filePath);
-        // repoStore.getState().getStatus();
+        await invoke('resolve_conflict_manually', { path: filePath, code });
         Logger().debug('saveManualMerge', 'Success');
     }
 );

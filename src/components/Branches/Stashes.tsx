@@ -21,7 +21,10 @@ const RefDisplay = styled.span`
 
 const ContextMenu: React.FC<{ stash: StashData, dialog: DialogActions } & ControlledMenuProps> = (props) => (
     <ControlledMenu {...props} portal>
-        <MenuItem onClick={() => props.dialog.open({ type: 'request-stash-apply', stash: props.stash })}>Apply {props.stash.refName} to working copy</MenuItem>
+        <MenuItem onClick={() => props.dialog.open({
+            type
+                : 'request-stash-apply', stash: props.stash
+        })}>Apply {props.stash.refName} to working copy</MenuItem>
         <MenuItem onClick={() =>
             props.dialog.open({
                 type: 'request-stash-drop',

@@ -309,6 +309,10 @@ export function useMergeStatus() {
     Logger().debug('useMergeStatus', `Merge status ${result.data}`);
     return result.data;
 }
+listen('RepoStateChanged', () => {
+    queryClient.invalidateQueries('is_rebase');
+    queryClient.invalidateQueries('is_merge');
+});
 
 /**
  * Query the diff of a specific file

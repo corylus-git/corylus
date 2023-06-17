@@ -1,21 +1,19 @@
 use std::path::Path;
 
-use git2::{build::CheckoutBuilder, Commit, MergeOptions, Status};
+use git2::{build::CheckoutBuilder, RepositoryState, Status};
 use log::{debug, error};
 use serde::Deserialize;
 use tauri::Window;
 
 use crate::{
-    error::{DefaultResult, Result},
+    error::{BackendError, DefaultResult, Result},
     window_events::{TypedEmit, WindowEvents},
 };
 
 use super::{
+    git_merge_file::get_merge_conflict,
     history::{do_get_graph, load_history},
-    model::{
-        graph::GraphChangeData,
-        index::{FileConflict, IndexStatus},
-    },
+    model::{graph::GraphChangeData, index::IndexStatus},
     with_backend, with_backend_mut, GitBackend, StateType,
 };
 
@@ -30,6 +28,7 @@ pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
                 output.push(IndexStatus::try_from(status)?);
             }
         }
+
         Ok(output)
     })
     .await
@@ -38,13 +37,18 @@ pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
 #[tauri::command]
 pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
-        let mut index = backend.repo.index()?;
-        index.add_all([path], git2::IndexAddOption::DEFAULT, None)?;
-        index.write()?;
+        do_stage(&backend.repo, path)?;
         window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })
     .await
+}
+
+pub fn do_stage(repo: &git2::Repository, path: &str) -> DefaultResult {
+    let mut index = repo.index()?;
+    index.add_all([path], git2::IndexAddOption::DEFAULT, None)?;
+    index.write()?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -89,6 +93,7 @@ pub fn do_commit(
     let tree_id = backend.repo.index()?.write_tree()?;
     {
         backend.repo.index()?.write()?;
+
         let tree = backend.repo.find_tree(tree_id)?;
         let head = backend.repo.head().and_then(|h| h.peel_to_commit())?;
         let signature = backend.repo.signature()?;
@@ -103,6 +108,18 @@ pub fn do_commit(
                     .map(|id| backend.repo.find_commit(*id))
                     .collect();
             parents.extend(additional_parent_commits?);
+            if backend.repo.state() == RepositoryState::Merge {
+                let mut repo = git2::Repository::open(backend.repo.path())?;
+                repo.mergehead_foreach(|head| {
+                    let commit = backend.repo.find_commit(*head);
+                    if let Ok(commit) = commit {
+                        parents.push(commit);
+                        true
+                    } else {
+                        false
+                    }
+                })?;
+            }
             let parent_refs: Vec<&git2::Commit> = parents.iter().collect(); // the call below expects references to the commits, which is a bit complicated with the owned commits above
 
             let oid = backend.repo.commit(
@@ -113,6 +130,13 @@ pub fn do_commit(
                 &tree,
                 &parent_refs,
             )?;
+
+            if backend.repo.state() == git2::RepositoryState::Merge
+                && !backend.repo.index()?.has_conflicts()
+            {
+                backend.repo.cleanup_state()?;
+                window.typed_emit(WindowEvents::RepoStateChanged, ())?;
+            }
             debug!("Committed {}", oid);
         }
     }
@@ -221,6 +245,52 @@ pub async fn checkout(
         } else {
             backend.repo.checkout_head(Some(&mut co))?;
         }
+        window.typed_emit(WindowEvents::StatusChanged, ())?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_conflicts(state: StateType<'_>, path: &str) -> Result<Option<String>> {
+    with_backend(state, |backend| {
+        let p = path.as_bytes();
+        let matching_conflict = backend.repo.index()?.conflicts()?.find_map(|c| {
+            c.ok().and_then(|conflict| {
+                if conflict.our.is_some() && conflict.our.as_ref().unwrap().path == p {
+                    Some(conflict)
+                } else {
+                    None
+                }
+            })
+        });
+
+        let mut opts = git2::MergeOptions::new();
+        opts.patience(true)
+            .fail_on_conflict(false)
+            .standard_style(true);
+        matching_conflict
+            .map(|c| get_merge_conflict(&backend.repo, c, opts))
+            .transpose()
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn resolve_conflict_manually(
+    state: StateType<'_>,
+    window: Window,
+    path: &str,
+    code: &str,
+) -> DefaultResult {
+    with_backend(state, |backend| {
+        let file_path = backend
+            .repo
+            .workdir()
+            .map(|p| p.join(path))
+            .ok_or_else(|| BackendError::new("Cannot resolve conflict repo without workdir"))?;
+        std::fs::write(file_path, code).map_err(|e| BackendError::new(e.to_string()))?;
+        do_stage(&backend.repo, path)?;
         window.typed_emit(WindowEvents::StatusChanged, ())?;
         Ok(())
     })

@@ -4,13 +4,14 @@ import createHook from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
 import { calculateBlocks, IConflictBlock } from '../../components/Merging/util/blocks';
-import { IConflictedFile } from '../../util/conflict-parser';
+import { IConflictedFile, parseConflictFile } from '../../util/conflict-parser';
 import { FileDiff } from '../../util/diff-parser';
 import { splice } from '../../util/ImmutableArrayUtils';
 import { Logger } from '../../util/logger';
 import { just, Maybe, nothing } from '../../util/maybe';
 import { Commit, IndexStatus } from '../stateObjects';
 import { repoStore } from './repo';
+import { invoke } from '@tauri-apps/api';
 
 export interface SelectedFile {
     path: string;
@@ -135,29 +136,23 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
             });
         },
         requestManualMerge: async (filePath: string): Promise<void> => {
-            throw new Error('Not ported to Tauri yet');
-            // Logger().silly(
-            //     'requestManualMerge',
-            //     'Manual merge requested. Loading file content.',
-            //     {
-            //         file: filePath,
-            //     }
-            // );
+            const conflict = await loadConflict(filePath);
+            Logger().debug('requestManualMerge', 'Parsed conflict', conflict);
             // const file = await path.join(repoStore.getState().backend.dir, filePath);
             // const conflict = await loadConflict(file);
-            // const blocks = calculateBlocks(
-            //     conflict.lines.map((l) => ({
-            //         ...l,
-            //         oursSelected: false,
-            //         theirsSelected: false,
-            //     }))
-            // );
-            // set((state) => {
-            //     state.manualMerge = castDraft(just({
-            //         blocks,
-            //         path: filePath,
-            //     }));
-            // });
+            const blocks = calculateBlocks(
+                conflict.lines.map((l) => ({
+                    ...l,
+                    oursSelected: false,
+                    theirsSelected: false,
+                }))
+            );
+            set((state) => {
+                state.manualMerge = castDraft(just({
+                    blocks,
+                    path: filePath,
+                }));
+            });
         },
         toggleBlock: (side: 'ours' | 'theirs', index: number): void => {
             set((state) => {
@@ -201,21 +196,32 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
 );
 
 async function loadConflict(path: string): Promise<IConflictedFile> {
-    return await new Promise((resolve) => {
-        // TODO
-        // fs.readFile(path, (err, buffer) => {
-        //     const fileContents = buffer.toString();
-        //     Logger().silly('loadConflict', 'Loaded merged file contents', {
-        //         content: fileContents,
-        //     });
-        //     const parsedLines = parseConflictFile(fileContents);
-        //     Logger().silly('loadConflict', 'Parsed conflict', { lines: parsedLines });
-        //     resolve({
-        //         path: path,
-        //         lines: parsedLines,
-        //     });
-        // });
+    const conflictString = await invoke<string | undefined>('get_conflicts', { path });
+    Logger().silly('loadConflict', 'Loaded merged file contents', {
+        content: conflictString,
     });
+    const parsedLines = parseConflictFile(conflictString || '');
+    Logger().silly('loadConflict', 'Parsed conflict', { lines: parsedLines });
+    return {
+        path: path,
+        lines: parsedLines,
+    };
+
+    // return await new Promise((resolve) => {
+    //     // TODO
+    //     // fs.readFile(path, (err, buffer) => {
+    //     //     const fileContents = buffer.toString();
+    //     //     Logger().silly('loadConflict', 'Loaded merged file contents', {
+    //     //         content: fileContents,
+    //     //     });
+    //     //     const parsedLines = parseConflictFile(fileContents);
+    //     //     Logger().silly('loadConflict', 'Parsed conflict', { lines: parsedLines });
+    //     //     resolve({
+    //     //         path: path,
+    //     //         lines: parsedLines,
+    //     //     });
+    //     // });
+    // });
 }
 
 export const useStagingArea = createHook(stagingArea);

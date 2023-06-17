@@ -1,4 +1,4 @@
-use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
+use git2::{build::CheckoutBuilder, DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
 
 use crate::{

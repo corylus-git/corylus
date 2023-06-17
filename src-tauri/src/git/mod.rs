@@ -3,6 +3,7 @@ pub mod config;
 pub mod credentials;
 pub mod diff;
 pub mod files;
+pub mod git_merge_file;
 pub mod graph;
 pub mod history;
 pub mod index;

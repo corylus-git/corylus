@@ -6,6 +6,7 @@ import { Logger } from '../../util/logger';
 import { resolveConflict } from '../../model/actions/repo';
 import { SelectedConflict, useStagingArea } from '../../model/state/stagingArea';
 import { useHead, useMergeHead, useRepo } from '../../model/state/repo';
+import { invoke } from '@tauri-apps/api';
 
 export interface ConflictResolutionPanelProps {
     path: string;
@@ -38,6 +39,11 @@ const ResolutionButton = styled(StyledButton)`
 export const ConflictResolutionPanel: React.FC<ConflictResolutionPanelProps> = (props) => {
     const ours = useHead();
     const theirs = useMergeHead();
+    const stagingArea = useStagingArea();
+
+    React.useEffect(() => {
+        invoke('get_conflicts', {});
+    });
 
     if (ours.isFetching || theirs.isFetching) {
         return <>Loading conflicting commits...</>
@@ -99,7 +105,7 @@ export const ConflictResolutionPanel: React.FC<ConflictResolutionPanelProps> = (
                     className="full"
                     onClick={() => {
                         Logger().silly('ConflictResolutionPanel', 'Requesting manual merge');
-                        // stagingArea.requestManualMerge(props.conflict.file.path);
+                        stagingArea.requestManualMerge(props.path);
                     }}>
                     <h2>Merge file manually</h2>
                 </ResolutionButton>

@@ -34,7 +34,10 @@ use crate::{
         get_graph_entries,
         graph::{find_commits, get_index},
         history::{get_affected_branches, get_commit, get_commit_stats, get_commits, get_graph},
-        index::{apply_diff, checkout, commit, discard_changes, get_status, stage, unstage},
+        index::{
+            apply_diff, checkout, commit, discard_changes, get_conflicts, get_status,
+            resolve_conflict_manually, stage, unstage,
+        },
         merge::{abort_merge, get_merge_message, is_merge, merge},
         rebase::{rebase, rebase_status},
         remote::{add_remote, clone, delete_remote, fetch, get_remotes, pull, push, update_remote},
@@ -115,7 +118,9 @@ fn main() {
             get_merge_message,
             get_index,
             find_commits,
-            get_blame
+            get_blame,
+            get_conflicts,
+            resolve_conflict_manually
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

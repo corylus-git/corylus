@@ -417,10 +417,12 @@ name = "corylus"
 version = "0.2.0"
 dependencies = [
  "config",
+ "cty",
  "directories",
  "enum-display-derive",
  "git2",
  "lazy_static",
+ "libgit2-sys",
  "log",
  "serde",
  "serde_json",
@@ -1460,9 +1462,9 @@ dependencies = [
 
 [[package]]
 name = "libgit2-sys"
-version = "0.15.1+1.6.4"
+version = "0.15.2+1.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb4577bde8cdfc7d6a2a4bcb7b049598597de33ffd337276e9c7db6cd4a2cee7"
+checksum = "a80df2e11fb4a61f4ba2ab42dbe7f74468da143f1a75c74e11dee7c813f694fa"
 dependencies = [
  "cc",
  "libc",
