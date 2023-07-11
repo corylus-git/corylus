@@ -36,6 +36,10 @@ export type StagingAreaState = {
     selectedFile: Maybe<SelectedFile>;
     selectedConflict: Maybe<SelectedConflict>;
     manualMerge: Maybe<ManualMergeState>;
+    /**
+     * The state of the commit form
+     */
+    commitFormState: { message: string; amend: boolean };
 };
 
 export type StagingAreaActions = {
@@ -47,6 +51,7 @@ export type StagingAreaActions = {
     toggleBlock: (side: 'ours' | 'theirs', index: number) => void;
     finishManualMerge: () => void;
     reset: () => void;
+    setCommitFormState(message: string, amend: boolean): void;
 };
 
 export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
@@ -55,6 +60,7 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
         selectedFile: nothing,
         selectedConflict: nothing,
         manualMerge: nothing,
+        commitFormState: { message: '', amend: false },
         deselectDiff: (): void => {
             set((state) => {
                 state.selectedDiff = nothing;
@@ -185,13 +191,23 @@ export const stagingArea = create<StagingAreaState & StagingAreaActions>()(
             });
         },
         reset: (): void => {
+            Logger().debug('reset', 'Resetting staging area state');
             set((state) => {
                 state.selectedDiff = nothing;
                 state.selectedFile = nothing;
                 state.selectedConflict = nothing;
                 state.manualMerge = nothing;
+                state.commitFormState = { message: '', amend: false };
             });
         },
+        setCommitFormState: (message, amend): void => {
+            console.error("Called setCommitFormState", message, amend);
+            set((state) => {
+                state.commitFormState = {
+                    message, amend
+                };
+            });
+        }
     }))
 );
 

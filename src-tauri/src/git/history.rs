@@ -181,6 +181,11 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
 }
 
 #[tauri::command]
+pub async fn get_history_size(state: StateType<'_>) -> Result<usize> {
+    with_backend(state, |backend| Ok(backend.graph.lines.len())).await
+}
+
+#[tauri::command]
 pub async fn get_commits(state: StateType<'_>, pathspec: Option<&str>) -> Result<Vec<Commit>> {
     with_backend(state, |backend| load_history(&backend.repo, pathspec)).await
 }

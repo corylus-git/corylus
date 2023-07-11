@@ -8,7 +8,7 @@ use tauri::Window;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
-    git::model::graph::GraphChangeData,
+    git::{load_repo, model::graph::GraphChangeData},
     window_events::{TypedEmit, WindowEvents},
 };
 
@@ -263,5 +263,6 @@ pub async fn clone(
     }
     // git2::Repository::clone(url, local_dir)?;
     debug!("Finished clone from {} to {}", url, local_dir);
-    git_open(state, window, local_dir).await
+    git_open(state.clone(), local_dir).await?;
+    load_repo(state, window).await
 }

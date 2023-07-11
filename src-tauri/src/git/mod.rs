@@ -171,13 +171,18 @@ pub async fn get_graph_entries(
 }
 
 #[tauri::command]
-pub async fn git_open(state: StateType<'_>, window: Window, path: &str) -> DefaultResult {
+pub async fn git_open(state: StateType<'_>, path: &str) -> DefaultResult {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
     let mut s = state.lock().await;
     s.git = Some(GitBackend::new(path)?);
     // TODO spawn of extra thread and possibly lock inside the backend
     info!("Successfully opened repo at {}", path);
-    if let Some(backend) = s.git.as_mut() {
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn load_repo(state: StateType<'_>, window: Window) -> DefaultResult {
+    with_backend_mut(state, |backend| {
         backend.graph = do_get_graph(backend, None)?;
         log::debug!(
             "Graph changed. Emitting event. {}",
@@ -192,8 +197,9 @@ pub async fn git_open(state: StateType<'_>, window: Window, path: &str) -> Defau
                 change_end_idx: backend.graph.lines.len(),
             },
         )?;
-    }
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 #[tauri::command]

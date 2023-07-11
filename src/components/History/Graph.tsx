@@ -4,7 +4,7 @@ import * as React from 'react';
 import { selectCommit } from '../../model/actions/repo';
 import { DialogActions, useDialog } from '../../model/state/dialogs';
 import {
-    HistoryInfo, useBranches, useHistory, useSelectedCommit, useTags
+    useBranches, useHistorySize, useSelectedCommit, useTags
 } from '../../model/state/repo';
 import { BranchInfo, Commit } from '../../model/stateObjects';
 import { LayoutListEntry } from '../../util/graphLayout';
@@ -28,7 +28,7 @@ function matchCommit(c: Commit, searchTerm: string): boolean {
 const Graph: React.FC<{
     width: number;
     height: number;
-    history: HistoryInfo;
+    historySize: number;
 }> = (props) => {
     const selectedCommit = useSelectedCommit();
     const [searchTerm, setSearchTerm] = React.useState<string>();
@@ -90,8 +90,8 @@ const Graph: React.FC<{
                 width={props.width}
                 height={props.height}
                 getLine={async idx => (await invoke<LayoutListEntry[]>('get_graph_entries', { startIdx: idx, endIdx: idx + 1 }))[0]} // TODO directly request from the backend
-                totalCommits={props.history.total}
-                first={props.history.first}
+                totalCommits={props.historySize}
+                first={0}
                 branches={branches ?? []}
                 tags={tags}
                 onOpenContextMenu={(commit) => { }
@@ -109,6 +109,10 @@ export const GraphPanel: React.FC<{
     width: number;
     height: number;
 }> = (props) => {
-    const history = useHistory();
-    return <Graph {...props} history={history} />;
+    const historySize = useHistorySize();
+    Logger().silly('GraphPanel', 'Got history size', { historySize: historySize.data });
+    if (historySize.data) {
+        return <Graph {...props} historySize={historySize.data} />;
+    }
+    return <></>;
 }

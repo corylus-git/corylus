@@ -1,7 +1,5 @@
 import * as React from 'react';
 import styled from 'styled-components';
-import { Formik, Form, Field } from 'formik';
-import mime from 'mime-types';
 
 import { Splitter } from '../util/Splitter';
 import { Commit } from '../../model/stateObjects';
@@ -10,19 +8,18 @@ import { StyledButton } from '../util/StyledButton';
 import { StagingDiffPanel } from './StagingDiffPanel';
 import { ConflictResolutionPanel } from '../Merging/ConflictResolutionPanel';
 import { Logger } from '../../util/logger';
-import { nothing, just, Maybe } from '../../util/maybe';
 import { commit, applyDiff, continueRebase } from '../../model/actions/repo';
 import {
-    usePendingCommit,
-    repoStore,
     useRebaseStatus,
-    useMergeMessage,
+    getMergeMessage,
+    useRepo,
 } from '../../model/state/repo';
-import { SelectedFile } from '../../model/state/stagingArea';
+import { SelectedFile, useStagingArea } from '../../model/state/stagingArea';
 import { ImageDiff } from '../Diff/ImageDiff';
 import { getMimeType, isSupportedImageType } from '../../util/filetypes';
 import { invoke } from '@tauri-apps/api';
 import { useIndex } from '../../model/state';
+import { Controller, useForm } from 'react-hook-form';
 
 let splitterX: string | undefined = undefined;
 
@@ -57,9 +54,6 @@ const DiffDisplayPanel: React.FC<{ selectedFile: SelectedFile | undefined }> = (
             </div>
         );
     }
-    // TODO
-    // if (stagingArea.selectedConflict.found) {
-    // }
     return <></>;
 };
 
@@ -123,114 +117,66 @@ const CommitMessage = styled.textarea`
     }
 `;
 
-let commitMessage: Maybe<string> = nothing;
-let savedAmend = false;
-
 function CommitForm(props: { onCommit?: () => void }) {
-    const pendingCommit = usePendingCommit();
     const rebaseStatus = useRebaseStatus();
-    const { data } = useMergeMessage();
-    let pendingCommitMessage = pendingCommit.found
-        ? just(pendingCommit.value.message)
-        : commitMessage;
-    if (rebaseStatus.found) {
-        pendingCommitMessage = just(rebaseStatus.value.message);
+    const stagingArea = useStagingArea();
+    const index = useIndex();
+
+    const triggerCommit = (values: { commitmsg: string; amend: boolean }) => {
+        if (rebaseStatus.found) {
+            continueRebase();
+        } else {
+            commit(values.commitmsg, values.amend);
+            props.onCommit?.();
+        }
+        stagingArea.setCommitFormState('', false);
     }
-    React.useEffect(() => {
-        commitMessage = nothing;
-        savedAmend = rebaseStatus.found;
-    }, [repoStore.getState().path]);
+
     return (
         <div
             style={{
                 height: '100%',
             }}>
-            <Formik
-                onSubmit={(values, formik) => {
-                    if (rebaseStatus.found) {
-                        continueRebase();
-                    } else {
-                        commit(values.commitmsg, values.amend);
-                        props.onCommit?.();
-                    }
-                    formik.resetForm();
-                    commitMessage = nothing;
-                    savedAmend = false;
-                }}
-                enableReinitialize
-                initialValues={{
-                    commitmsg: data ?? '',
-                    amend: savedAmend,
-                }}
-                initialErrors={
-                    !pendingCommitMessage ? { commitmsg: 'No commit message supplied' } : {}
-                }
-                validate={(values) => {
-                    const errors: any = {};
-                    if (!values.commitmsg || values.commitmsg.length === 0) {
-                        errors.commitMessage = 'No commit message supplied';
-                    }
-                    return errors;
-                }}>
-                {(formik) => (
-                    <Form
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'fit-content(10rem) 1fr',
-                            gridTemplateRows: '1fr fit-content(1rem)',
-                            gridGap: '1rem',
-                            padding: '0.5rem',
-                            height: '100%',
-                            boxSizing: 'border-box',
-                        }}>
-                        <label htmlFor="commitmsg">Commit Message</label>
-                        <Field
-                            as={CommitMessage}
-                            disabled={rebaseStatus.found}
-                            id="commitmsg"
-                            name="commitmsg"
-                            onChange={(ev: any) => {
-                                formik.handleChange(ev);
-                                commitMessage = just(ev.target.value);
-                            }}
-                        />
-                        <div style={{ gridColumn: 2, marginLeft: 'auto' }}>
-                            <Field
-                                type="checkbox"
-                                id="amend"
-                                name="amend"
-                                disabled={rebaseStatus.found}
-                                onChange={(ev: any) => {
-                                    formik.handleChange(ev);
-                                    savedAmend = ev.target.checked;
-                                    if (!formik.values.amend) {
-                                        // this needs to be the "wrong" way around, as we're seeing the value before re-rendering
-                                        Logger().debug(
-                                            'CommitForm',
-                                            'Loading parent commit message to amend commit'
-                                        );
-                                        getLastCommitMessage()
-                                            .then((msg) => {
-                                                formik.setFieldValue('commitmsg', msg);
-                                                commitMessage = just(msg);
-                                            });
-                                    }
-                                    else {
-                                        formik.setFieldValue('commitmsg', '');
-                                    }
-                                }}
-                            />
-                            <label htmlFor="amend" style={{ marginRight: '1rem' }}>
-                                Amend latest commit
-                            </label>
-                            <StyledButton type="submit" disabled={!formik.isValid}>
-                                {rebaseStatus.found ? 'Continue rebase' : 'Commit'}
-                            </StyledButton>
-                        </div>
-                    </Form>
-                )}
-            </Formik>
-        </div>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'fit-content(10rem) 1fr',
+                gridTemplateRows: '1fr fit-content(1rem)',
+                gridGap: '1rem',
+                padding: '0.5rem',
+                height: '100%',
+                boxSizing: 'border-box',
+            }}>
+                <label htmlFor="commitmsg">Commit Message</label>
+                <CommitMessage
+                    disabled={rebaseStatus.found}
+                    value={stagingArea.commitFormState.message}
+                    onChange={(e) => stagingArea.setCommitFormState(e.target.value, stagingArea.commitFormState.amend)}
+                />
+                <div style={{ gridColumn: 2, marginLeft: 'auto' }}>
+                    <input
+                        type="checkbox"
+                        disabled={rebaseStatus.found}
+                        checked={stagingArea.commitFormState.amend}
+                        onChange={() => {
+                            if (!stagingArea.commitFormState.amend) { // wrong way around because we see the value before the change
+                                getLastCommitMessage().then((msg) => {
+                                    stagingArea.setCommitFormState(msg, !stagingArea.commitFormState.amend);
+                                })
+                            }
+                            else {
+                                stagingArea.setCommitFormState('', !stagingArea.commitFormState.amend);
+                            }
+                        }}
+                    />
+                    <label htmlFor="amend" style={{ marginRight: '1rem' }}>
+                        Amend latest commit
+                    </label>
+                    <StyledButton type="submit" onClick={() => triggerCommit({ commitmsg: stagingArea.commitFormState.message, amend: stagingArea.commitFormState.amend })} disabled={!stagingArea.commitFormState.message || !index.data?.some(e => e.isStaged)}>
+                        {rebaseStatus.found ? 'Continue rebase' : 'Commit'}
+                    </StyledButton>
+                </div>
+            </div>
+        </div >
     );
 }
 

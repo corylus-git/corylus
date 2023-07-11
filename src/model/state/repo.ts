@@ -54,10 +54,6 @@ export type RepoState = {
      */
     rebaseStatus: Maybe<RebaseStatusInfo>;
     /**
-     * The pending commit, if any
-     */
-    pendingCommit: Maybe<PendingCommit>;
-    /**
      * The currently selected commit, if any
      */
     selectedCommit: Maybe<CommitStats>;
@@ -93,9 +89,11 @@ export const repoStore = create<RepoState & RepoActions>()(
         historyLoader: undefined,
         lock: new AsyncLock(),
         affected: { branches: [], tags: [], refs: [] },
-        openRepo: (path: string): Promise<void> => {
+        openRepo: async (path: string): Promise<void> => {
             Logger().debug('openRepo', 'Opening repo', { path });
-            invoke('git_open', { path });
+            await invoke('git_open', { path });
+            queryClient.invalidateQueries();
+            await invoke('load_repo', {});
             set(
                 (state) => ({
                     ...state,
@@ -205,6 +203,15 @@ export function loadRepo(path: string) {
 }
 
 /**
+ * Get the number of commits in the repo
+ * 
+ * @returns the number of commits in the repo
+ */
+export const useHistorySize = () => useQuery('historySize', () => invoke<number>('get_history_size', {}));
+
+listen('HistoryChanged', (_) => queryClient.invalidateQueries('historySize'));
+
+/**
  * Access the history of the repo
  */
 export const useHistory = (): { entries: readonly Commit[]; first: number; total: number } =>
@@ -243,12 +250,6 @@ listen('StashesChanged', (_) => queryClient.invalidateQueries('stashes'));
 export async function getStashes(): Promise<readonly StashData[]> {
     return invoke<readonly StashData[]>('get_stashes')
 }
-
-/**
- * get the current pending commit (e.g. after a failed merge)
- */
-export const usePendingCommit = (): Maybe<PendingCommit> =>
-    useRepo((state: RepoState & RepoActions) => state.pendingCommit);
 
 /**
  * get the currently selected commit (e.g. for displaying commit details)
@@ -347,7 +348,12 @@ export function useCommit(ref: string | undefined) {
 }
 
 export function useMergeMessage() {
-    return useQuery(['merge_message'], () => invoke<string | undefined>('get_merge_message', {}));
+    return useQuery(['merge_message'], getMergeMessage);
+}
+listen('MergeMessageChanged', ev => queryClient.invalidateQueries(['merge_message']));
+
+export function getMergeMessage() {
+    return invoke<string | undefined>('get_merge_message', {});
 }
 
 /**

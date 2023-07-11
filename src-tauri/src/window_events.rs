@@ -18,6 +18,7 @@ pub enum WindowEvents {
     TagsChanged,
     Progress,
     RepoStateChanged,
+    MergeMessageChanged,
 }
 
 pub trait TypedEmit {

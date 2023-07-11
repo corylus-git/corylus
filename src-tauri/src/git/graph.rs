@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::{
     model::{
         git::{Commit, FullCommitData},
@@ -41,6 +43,7 @@ where
     let mut rails: Vec<Rail> = vec![];
     let mut lines: Vec<LayoutListEntry> = vec![];
     for commit in ordered_history {
+        let old_rails = rails.clone();
         let graph_node = commit.as_graph_node();
         // 1. find the left-most rail that expects us as a parent or the left-most empty rail (if none expects us)
         let (my_rail, has_child) = find_leftmost_rail(&mut rails, &graph_node.oid());
@@ -65,17 +68,22 @@ where
             has_through_line: false,
         });
         // 4. place all my parents as left as possible (note: this might overwrite parents with the same value)
-        let mut outgoing = vec![];
-        for parent in graph_node.parents() {
-            let (parent_rail, has_through_line) = find_leftmost_rail(&mut rails, &parent.oid);
-            rails[parent_rail] = Some(RailEntry {
-                expected_parent: parent.oid.clone(),
-                has_through_line: has_through_line && parent_rail != my_rail, // we don't count ourselves as a throughline
-            });
-            if parent_rail != my_rail {
-                outgoing.push(parent_rail);
-            }
-        }
+        let outgoing = graph_node
+            .parents()
+            .iter()
+            .filter_map(|parent| {
+                let (parent_rail, has_through_line) = find_leftmost_rail(&mut rails, &parent.oid);
+                rails[parent_rail] = Some(RailEntry {
+                    expected_parent: parent.oid.clone(),
+                    has_through_line: has_through_line && parent_rail != my_rail, // we don't count ourselves as a throughline
+                });
+                if parent_rail != my_rail {
+                    Some(parent_rail)
+                } else {
+                    None
+                }
+            })
+            .collect();
         // 5. incoming are all other rails requesting us as a parent
         let incoming = rails
             .iter()
@@ -89,11 +97,6 @@ where
             })
             .collect();
         // 6. remove us from all rails and set the correct thoughline values for all remaining rails
-        let old_rails = lines
-            .iter()
-            .last()
-            .map(|line| line.rails.clone())
-            .unwrap_or_default();
         rails = rails
             .into_iter()
             .enumerate()
@@ -130,82 +133,6 @@ where
     }
     GraphLayoutData { lines, rails }
 }
-
-// pub fn calculate_graph_layout(ordered_history: Vec<Commit>) -> GraphLayoutData {
-//     let mut rails: Vec<Rail> = vec![];
-// let lines: Vec<LayoutListEntry> = ordered_history
-//     .iter()
-//     .map(|entry| {
-//         let graph_node = entry.as_graph_node();
-//         // 1. find our place in the world
-//         let (my_rail, has_child) = find_leftmost_rail(&mut rails, graph_node.oid());
-//         // 3. incoming are all other rails requesting us as a parent
-//         let incoming = rails
-//             .iter()
-//             .enumerate()
-//             .filter_map(|(i, r)| {
-//                 if r.is_some()
-//                     && r.as_ref().unwrap().expected_parent == graph_node.oid()
-//                     && i != my_rail
-//                 {
-//                     Some(i)
-//                 } else {
-//                     None
-//                 }
-//             })
-//             .collect();
-//         // 4. remove us from all rails
-//         rails.iter_mut().for_each(|r| {
-//             if r.is_some() && r.as_ref().unwrap().expected_parent == graph_node.oid() {
-//                 *r = None
-//             }
-//         });
-//         // 5. find the first of our parents NOT YET PLACED LEFT OF US and place it on our rail
-//         let first_unplaced_parent = graph_node
-//             .parents()
-//             .iter()
-//             .find(|&p| !rails[..my_rail].contains(&Some(p.oid.clone())));
-//         rails[my_rail] = first_unplaced_parent.map(|p| p.oid.clone()); // may be empty, if all our parents are already expected to the left of us
-
-//         // 6. place our unplaced parents as needed
-//         graph_node.parents().iter().for_each(|p| {
-//             if !rails.contains(&Some(p.oid.clone())) {
-//                 let (candidate, _) = find_leftmost_rail(&mut rails, &p.oid);
-//                 rails[candidate] = Some(p.oid.clone());
-//             }
-//         });
-//         // 7. outgoing are all of our parents _except_ the one that sits on our rail (even if it sits on other rails as well)
-//         let outgoing = graph_node
-//             .parents()
-//             .iter()
-//             .filter_map(|p| {
-//                 if first_unplaced_parent.is_some()
-//                     && p.oid == first_unplaced_parent.unwrap().oid
-//                 {
-//                     None
-//                 } else {
-//                     rails
-//                         .iter()
-//                         .position(|r| r.is_some() && r.as_ref().unwrap() == &p.oid)
-//                 }
-//             })
-//             .collect();
-//         LayoutListEntry {
-//             commit: entry.clone(),
-//             rail: my_rail,
-//             has_parent_line: first_unplaced_parent.is_some(),
-//             has_child_line: has_child,
-//             outgoing,
-//             incoming,
-//             rails: rails.clone(),
-//         }
-//     })
-//     .collect();
-//     GraphLayoutData {
-//         rails,
-//         lines: vec![],
-//     }
-// }
 
 #[tauri::command]
 pub async fn get_index(state: StateType<'_>, oid: &str) -> Result<Option<usize>> {
@@ -255,6 +182,8 @@ pub async fn find_commits(state: StateType<'_>, search_term: &str) -> Result<Vec
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::git::model::git::{FullCommitData, GitPerson, ParentReference, TimeWithOffset};
 
     use super::*;
@@ -307,8 +236,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("2222", false)],
                         commit: child
                     },
@@ -316,8 +245,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![],
                         commit: parent
                     }
@@ -342,8 +271,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("2222", false)],
                         commit: child2
                     },
@@ -351,8 +280,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: false,
                         has_child_line: false,
-                        outgoing: vec![0],
-                        incoming: vec![],
+                        outgoing: Arc::new([0]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("2222", true)],
                         commit: child1
                     },
@@ -360,8 +289,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![],
                         commit: parent
                     }
@@ -386,8 +315,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![1],
-                        incoming: vec![],
+                        outgoing: Arc::new([1]),
+                        incoming: Arc::new([]),
                         rails: vec![
                             make_rail_entry("2222", false),
                             make_rail_entry("1111", false)
@@ -398,8 +327,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![None, make_rail_entry("1111", true)],
                         commit: parent1
                     },
@@ -407,8 +336,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![],
                         commit: parent2
                     }
@@ -440,8 +369,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![1],
-                        incoming: vec![],
+                        outgoing: Arc::new([1]),
+                        incoming: Arc::new([]),
                         rails: vec![
                             make_rail_entry("2222", false),
                             make_rail_entry("3333", false)
@@ -452,8 +381,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![
                             make_rail_entry("1111", false),
                             make_rail_entry("3333", true)
@@ -464,8 +393,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![0],
-                        incoming: vec![],
+                        outgoing: Arc::new([0]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("1111", true)],
                         commit: child_right
                     },
@@ -473,8 +402,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![],
                         commit: parent
                     }
@@ -507,8 +436,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![1],
-                        incoming: vec![],
+                        outgoing: Arc::new([1]),
+                        incoming: Arc::new([]),
                         rails: vec![
                             make_rail_entry("2222", false),
                             make_rail_entry("3333", false)
@@ -519,8 +448,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![0],
-                        incoming: vec![],
+                        outgoing: Arc::new([0]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("2222", true)],
                         commit: child
                     },
@@ -528,8 +457,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: true,
-                        outgoing: vec![1],
-                        incoming: vec![],
+                        outgoing: Arc::new([1]),
+                        incoming: Arc::new([]),
                         rails: vec![
                             make_rail_entry("0000", false),
                             make_rail_entry("1111", false)
@@ -540,8 +469,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![0],
-                        incoming: vec![],
+                        outgoing: Arc::new([0]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("0000", true)],
                         commit: grandparent
                     },
@@ -549,8 +478,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![],
                         commit: greatgrandparent
                     }
@@ -580,8 +509,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("p1", false)],
                         commit: c1
                     },
@@ -589,8 +518,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("p1", true), make_rail_entry("g", false)],
                         commit: c2
                     },
@@ -598,8 +527,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("g", false), make_rail_entry("g", true)],
                         commit: p1
                     },
@@ -607,8 +536,8 @@ mod tests {
                         rail: 2,
                         has_parent_line: false,
                         has_child_line: false,
-                        outgoing: vec![0],
-                        incoming: vec![],
+                        outgoing: Arc::new([0]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("g", true), make_rail_entry("g", true)],
                         commit: p2
                     },
@@ -616,8 +545,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![1],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([1]),
                         rails: vec![],
                         commit: g
                     }
@@ -647,8 +576,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("p2", false)],
                         commit: c1
                     },
@@ -656,8 +585,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: true,
                         has_child_line: false,
-                        outgoing: vec![0],
-                        incoming: vec![],
+                        outgoing: Arc::new([0]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", false)],
                         commit: c2
                     },
@@ -665,8 +594,8 @@ mod tests {
                         rail: 2,
                         has_parent_line: false,
                         has_child_line: false,
-                        outgoing: vec![1],
-                        incoming: vec![],
+                        outgoing: Arc::new([1]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", true),],
                         commit: c3
                     },
@@ -674,8 +603,8 @@ mod tests {
                         rail: 1,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![make_rail_entry("p2", true)],
                         commit: p1
                     },
@@ -683,8 +612,8 @@ mod tests {
                         rail: 0,
                         has_parent_line: false,
                         has_child_line: true,
-                        outgoing: vec![],
-                        incoming: vec![],
+                        outgoing: Arc::new([]),
+                        incoming: Arc::new([]),
                         rails: vec![],
                         commit: p2
                     }

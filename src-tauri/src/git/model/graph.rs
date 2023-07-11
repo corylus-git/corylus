@@ -1,4 +1,7 @@
-use std::fmt::{Debug, Write};
+use std::{
+    fmt::{Debug, Write},
+    sync::Arc,
+};
 
 use serde::Serialize;
 
@@ -57,11 +60,11 @@ pub struct LayoutListEntry {
      * The line has an outgoing connection to another rail. Outgoing is relative to the direction of the list (top down),
      * i.e. an outgoing connection is a merge (Corylus currently only supports merges with two parent, no Octopus merges)
      */
-    pub outgoing: Vec<usize>,
+    pub outgoing: Arc<[usize]>,
     /**
      * The line has incoming connections from other rails. Incoming lines are in top-down direction, i.e. branch lines.
      */
-    pub incoming: Vec<usize>,
+    pub incoming: Arc<[usize]>,
     /**
      * The rails currently assigned a line
      */

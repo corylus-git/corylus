@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Route } from 'react-router-dom';
 import { Actions } from './Actions';
 import { HistoryPanel } from './History/HistoryPanel';
@@ -24,10 +24,8 @@ import { BlameInfoDialog } from './Dialogs/BlameInfoDialog';
 import { ConfigureGitFlow } from './Dialogs/ConfigureGitFlow';
 import { Logger } from '../util/logger';
 import { BranchResetDialog } from './Dialogs/BranchResetDialog';
-import { useDialog } from '../model/state/dialogs';
-import { loadRepo, useCurrentBranch, useRepo } from '../model/state/repo';
+import { getMergeMessage, loadRepo, useCurrentBranch, useRepo } from '../model/state/repo';
 import { useWorkflows } from '../model/state/workflows';
-import { Gitflow } from '../util/workflows/gitflow';
 import { RemoteConfigurationDialog } from './Dialogs/RemoteConfigurationDialog';
 import { Routes, useLocation } from 'react-router';
 import { AddIgnoreListItem } from './Dialogs/AddIgnoreListItem';
@@ -38,8 +36,7 @@ import { useAutoFetcher } from '../util/AutoFetcher';
 import { useIndex } from '../model/state';
 import { queryClient } from '../util/queryClient';
 import { ConfirmationDialog } from './Dialogs/ConfirmationDialog';
-import { toast } from 'react-toastify';
-import { structuredToast } from '../util/structuredToast';
+import { stagingArea } from '../model/state/stagingArea';
 
 export const MainView = styled.div`
     display: grid;
@@ -118,15 +115,22 @@ export const Repository: React.FC<{ path: string }> = ({ path }) => {
             Logger().error('Repository', 'Failed to load repo', e);
             setError(e);
         });
+        stagingArea.getState().reset();
+        getMergeMessage().then((msg) => {
+            stagingArea.getState().setCommitFormState(
+                msg ?? '',
+                false
+            );
+        })
     }, [path]);
-    return (
-        error ? (
-            <dialog open>
-                <h1>Cannot open repository</h1>
-                <p>{error}</p>
-            </dialog>
-        ) :
-            (<MainView>
+    return error ? (
+        <dialog open>
+            <h1>Cannot open repository</h1>
+            <p>{error}</p>
+        </dialog>
+    ) :
+        (
+            <MainView>
                 <div>
                     <MergeStatusBar />
                 </div>
@@ -146,6 +150,6 @@ export const Repository: React.FC<{ path: string }> = ({ path }) => {
                 </div>
                 <MainStatusBar />
                 <DialogsContainer />
-            </MainView>)
-    );
+            </MainView>
+        );
 };

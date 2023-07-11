@@ -1,3 +1,5 @@
+use std::{fs::File, io::Write};
+
 use git2::{
     build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository, RepositoryState,
 };
@@ -63,6 +65,26 @@ pub fn do_merge(
             Some(&mut checkout_opts),
         )?;
         if backend.repo.index()?.has_conflicts() {
+            if is_branch {
+                // prettify the merge message if the source was a branch because we'll just see something like: "Merge commit <id>" otherwise
+                let message_file = backend.repo.path().join("MERGE_MSG");
+                let message_content = backend.repo.message()?;
+                let message_body = message_content.splitn(2, '\n').last();
+                let mut merge_file = File::create(message_file).map_err(|e| {
+                    BackendError::new(format!("Could not update merge message: {}", e))
+                })?;
+                writeln!(
+                    &mut merge_file,
+                    "Merge branch '{}' into {}",
+                    from, target_ref
+                )
+                .map_err(|e| BackendError::new(format!("Could not update merge message: {}", e)))?;
+                if let Some(body) = message_body {
+                    merge_file.write_all(body.as_bytes()).map_err(|e| {
+                        BackendError::new(format!("Could not update merge message: {}", e))
+                    })?;
+                }
+            }
             window.typed_emit(WindowEvents::StatusChanged, ())?;
             return Err(BackendError::new(
                 "Merge cannot be committed due to conflicts. Please check the index for details.",
@@ -76,8 +98,15 @@ pub fn do_merge(
         let parent_commit_ids = source_commit.id();
         drop(source_obj);
         drop(source_commit);
-        do_commit(backend, window, &message, false, vec![parent_commit_ids])?;
+        do_commit(
+            backend,
+            window.clone(),
+            &message,
+            false,
+            vec![parent_commit_ids],
+        )?;
         backend.repo.cleanup_state()?;
+        window.typed_emit(WindowEvents::MergeMessageChanged, ())?;
     };
     Ok(())
 }
@@ -151,7 +180,9 @@ pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult 
             git2::ResetType::Hard,
             Some(&mut checkout_opts),
         )?;
+        backend.repo.cleanup_state()?;
         window.typed_emit(WindowEvents::StatusChanged, ())?;
+        window.typed_emit(WindowEvents::MergeMessageChanged, ())?;
         Ok(())
     })
     .await
@@ -159,5 +190,17 @@ pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult 
 
 #[tauri::command]
 pub async fn get_merge_message(state: StateType<'_>) -> Result<Option<String>> {
-    with_backend(state, |backend| Ok(Some(backend.repo.message()?))).await
+    with_backend(state, |backend| {
+        backend.repo.message().map_or_else(
+            |e| {
+                if e.code() == git2::ErrorCode::NotFound {
+                    Ok(Some("".into()))
+                } else {
+                    Err(e.into())
+                }
+            },
+            |m| Ok(Some(m)),
+        )
+    })
+    .await
 }
