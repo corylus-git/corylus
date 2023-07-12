@@ -1,9 +1,8 @@
 use std::{collections::HashMap, time::Instant};
 
 use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Sort};
-use tauri::Window;
 
-use crate::error::{BackendError, DefaultResult, Result};
+use crate::error::Result;
 
 use super::{
     graph::calculate_graph_layout,
@@ -138,6 +137,46 @@ fn transitive_reduction(commits: Vec<Commit>) -> Vec<Commit> {
     result
 }
 
+// TODO this is missing the pathspec case because we don't have a way to retroactively change the commits we've already returned.
+// maybe we need to consume the revwalk until we've stabilised all parents for a specific commit before returning this commit
+pub fn load_history_iter<'a>(
+    repo: &'a git2::Repository,
+    pathspec: Option<&'a str>,
+) -> Result<impl Iterator<Item = Result<git2::Commit<'a>>>> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
+    revwalk.push_glob("heads")?;
+    revwalk.push_glob("remotes")?;
+    let ps = Pathspec::new(pathspec)?;
+    let mut diffopts = DiffOptions::new();
+    if let Some(p) = pathspec {
+        log::debug!("Loading history for path spec {}", p);
+        diffopts.pathspec(p);
+    }
+
+    Ok(revwalk.filter_map(move |res| {
+        let commit = res.and_then(|oid| repo.find_commit(oid));
+
+        commit
+            .map(|commit| {
+                if pathspec.is_none() {
+                    return Some(Ok(commit));
+                }
+                has_changes(&commit, &ps, &mut diffopts, repo)
+                    .map(|has_changes| {
+                        if has_changes {
+                            Some(Ok(commit))
+                        } else {
+                            // TODO here we need to "rewrite" history
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|e| Some(Err(e)))
+            })
+            .unwrap_or_else(|e| Some(Err(e.into())))
+    }))
+}
+
 pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<Vec<Commit>> {
     let start = Instant::now();
     let mut revwalk = repo.revwalk()?;
@@ -196,8 +235,18 @@ pub async fn get_graph(state: StateType<'_>, pathspec: Option<&str>) -> Result<G
 }
 
 pub fn do_get_graph(backend: &GitBackend, pathspec: Option<&str>) -> Result<GraphLayoutData> {
-    let commits = load_history(&backend.repo, pathspec)?;
-    Ok(calculate_graph_layout(commits.into_iter()))
+    // TODO once we got the iter-variant to support pathspec we can remove this distinction
+    if pathspec.is_some() {
+        Ok(calculate_graph_layout(
+            load_history(&backend.repo, pathspec)?.into_iter(),
+        ))
+    } else {
+        Ok(calculate_graph_layout(
+            load_history_iter(&backend.repo, pathspec)?
+                .filter_map(|res| res.ok())
+                .filter_map(|c| map_commit(&c, false).ok()),
+        ))
+    }
 }
 
 #[tauri::command]
