@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::{
     model::{
         git::{Commit, FullCommitData},
@@ -36,102 +34,153 @@ fn find_leftmost_rail(rails: &mut Vec<Rail>, for_id: &str) -> (usize, bool) {
     }
 }
 
+struct GraphGenerator<Iter>
+where
+    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
+{
+    rails: Vec<Rail>,
+    ordered_history: Iter,
+}
+
+impl<Iter> GraphGenerator<Iter>
+where
+    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
+{
+    pub fn new(ordered_history: Iter) -> Self
+    where
+        Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
+    {
+        Self {
+            rails: vec![],
+            ordered_history,
+        }
+    }
+}
+
+impl<Iter> Iterator for GraphGenerator<Iter>
+where
+    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
+{
+    type Item = LayoutListEntry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let commit = self.ordered_history.next();
+        commit.map(|commit| {
+            let old_rails = self.rails.clone();
+            let graph_node = commit.as_graph_node();
+            // 1. find the left-most rail that expects us as a parent or the left-most empty rail (if none expects us)
+            let (my_rail, has_child) = find_leftmost_rail(&mut self.rails, &graph_node.oid());
+            // 2. which of our parents do not yet have a place on the graph to our left? -> we wan't to have the graph lines tend to be compact towards the left
+            let unplaced_parents: Vec<String> = graph_node
+                .parents()
+                .iter()
+                .filter_map(|p| {
+                    let res = self.rails[..my_rail]
+                        .iter()
+                        .enumerate()
+                        .rev()
+                        .find(|(_, r)| {
+                            contains(&r.as_ref().map(|r| &r.expected_parent), p.oid.as_str())
+                        });
+                    if res.is_none() {
+                        Some(p.oid.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            // 3. place my first unplaced parent on my rail
+            self.rails[my_rail] = unplaced_parents.first().map(|p| RailEntry {
+                expected_parent: p.clone(),
+                has_through_line: false,
+            });
+            // 4. place all my parents as left as possible (note: this might overwrite parents with the same value)
+            let outgoing = graph_node
+                .parents()
+                .iter()
+                .filter_map(|parent| {
+                    let (parent_rail, has_through_line) =
+                        find_leftmost_rail(&mut self.rails, &parent.oid);
+                    self.rails[parent_rail] = Some(RailEntry {
+                        expected_parent: parent.oid.clone(),
+                        has_through_line: has_through_line && parent_rail != my_rail, // we don't count ourselves as a throughline
+                    });
+                    if parent_rail != my_rail {
+                        Some(parent_rail)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            // 5. incoming are all other rails requesting us as a parent
+            let incoming = self
+                .rails
+                .iter()
+                .enumerate()
+                .filter_map(|(i, r)| {
+                    if contains(&r.as_ref().map(|r| &r.expected_parent), graph_node.oid()) {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            // 6. remove us from all rails and set the correct thoughline values for all remaining rails
+            self.rails = self
+                .rails
+                .clone() // TODO this clone is not ideal, but currently needed because self.rails is between a mutable reference
+                .into_iter()
+                .enumerate()
+                .map(|(i, r)| {
+                    if contains(&r.as_ref().map(|r| &r.expected_parent), graph_node.oid()) {
+                        None
+                    } else {
+                        r.map(|r| {
+                            let old_entry = old_rails.get(i).unwrap_or(&None);
+                            let has_through_line = contains(
+                                &old_entry.as_ref().map(|o| &o.expected_parent),
+                                &r.expected_parent,
+                            );
+                            RailEntry {
+                                expected_parent: r.expected_parent,
+                                has_through_line,
+                            }
+                        })
+                    }
+                })
+                .collect();
+            // 7. some cleanup -> filter trailing None from the list to make some layout in the UI easier
+            let last_some = self.rails.iter().rposition(|r| r.is_some());
+            self.rails
+                .truncate(last_some.map_or(0, |last_some| last_some + 1));
+            LayoutListEntry {
+                commit,
+                rail: my_rail,
+                has_parent_line: self.rails.get(my_rail).unwrap_or(&None).is_some(),
+                has_child_line: has_child,
+                outgoing,
+                incoming,
+                rails: self.rails.clone(),
+            }
+        })
+    }
+}
+
 pub fn calculate_graph_layout<Iter>(ordered_history: Iter) -> GraphLayoutData
 where
     Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
 {
-    let mut rails: Vec<Rail> = vec![];
-    let mut lines: Vec<LayoutListEntry> = vec![];
-    for commit in ordered_history {
-        let old_rails = rails.clone();
-        let graph_node = commit.as_graph_node();
-        // 1. find the left-most rail that expects us as a parent or the left-most empty rail (if none expects us)
-        let (my_rail, has_child) = find_leftmost_rail(&mut rails, &graph_node.oid());
-        // 2. which of our parents do not yet have a place on the graph to our left? -> we wan't to have the graph lines tend to be compact towards the left
-        let unplaced_parents: Vec<String> = graph_node
-            .parents()
-            .iter()
-            .filter_map(|p| {
-                let res = rails[..my_rail].iter().enumerate().rev().find(|(_, r)| {
-                    contains(&r.as_ref().map(|r| &r.expected_parent), p.oid.as_str())
-                });
-                if res.is_none() {
-                    Some(p.oid.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
-        // 3. place my first unplaced parent on my rail
-        rails[my_rail] = unplaced_parents.first().map(|p| RailEntry {
-            expected_parent: p.clone(),
-            has_through_line: false,
-        });
-        // 4. place all my parents as left as possible (note: this might overwrite parents with the same value)
-        let outgoing = graph_node
-            .parents()
-            .iter()
-            .filter_map(|parent| {
-                let (parent_rail, has_through_line) = find_leftmost_rail(&mut rails, &parent.oid);
-                rails[parent_rail] = Some(RailEntry {
-                    expected_parent: parent.oid.clone(),
-                    has_through_line: has_through_line && parent_rail != my_rail, // we don't count ourselves as a throughline
-                });
-                if parent_rail != my_rail {
-                    Some(parent_rail)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        // 5. incoming are all other rails requesting us as a parent
-        let incoming = rails
-            .iter()
-            .enumerate()
-            .filter_map(|(i, r)| {
-                if contains(&r.as_ref().map(|r| &r.expected_parent), graph_node.oid()) {
-                    Some(i)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        // 6. remove us from all rails and set the correct thoughline values for all remaining rails
-        rails = rails
-            .into_iter()
-            .enumerate()
-            .map(|(i, r)| {
-                if contains(&r.as_ref().map(|r| &r.expected_parent), graph_node.oid()) {
-                    None
-                } else {
-                    r.map(|r| {
-                        let old_entry = old_rails.get(i).unwrap_or(&None);
-                        let has_through_line = contains(
-                            &old_entry.as_ref().map(|o| &o.expected_parent),
-                            &r.expected_parent,
-                        );
-                        RailEntry {
-                            expected_parent: r.expected_parent,
-                            has_through_line,
-                        }
-                    })
-                }
-            })
-            .collect();
-        // 7. some cleanup -> filter trailing None from the list to make some layout in the UI easier
-        let last_some = rails.iter().rposition(|r| r.is_some());
-        rails.truncate(last_some.map_or(0, |last_some| last_some + 1));
-        lines.push(LayoutListEntry {
-            commit,
-            rail: my_rail,
-            has_parent_line: rails.get(my_rail).unwrap_or(&None).is_some(),
-            has_child_line: has_child,
-            outgoing,
-            incoming,
-            rails: rails.clone(),
-        })
+    // start timer
+    let start = std::time::Instant::now();
+    let lines = GraphGenerator::new(ordered_history).collect::<Vec<_>>();
+    // how many milliseconds did it take to calculate the layout?
+    let end = std::time::Instant::now();
+    let duration = end - start;
+    log::debug!("Graph layout calculation took {} ms", duration.as_millis());
+    GraphLayoutData {
+        lines,
+        rails: vec![],
     }
-    GraphLayoutData { lines, rails }
 }
 
 #[tauri::command]
