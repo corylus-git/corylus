@@ -37,6 +37,7 @@ import { useIndex } from '../model/state';
 import { queryClient } from '../util/queryClient';
 import { ConfirmationDialog } from './Dialogs/ConfirmationDialog';
 import { stagingArea } from '../model/state/stagingArea';
+import { listen } from '../util/typesafeListen';
 
 export const MainView = styled.div`
     display: grid;
@@ -98,6 +99,13 @@ const MainStatusBar: React.FC = () => {
         </StatusBar>
     );
 };
+
+listen('GraphChanged', (ev) => {
+    Logger().debug('GraphChanged', '---------------------------------- invalidating graphLine queries');
+    for (let i = 0; i < 1000; i++) {
+        queryClient.invalidateQueries(['graphLine', i]);
+    }
+})
 
 export const Repository: React.FC<{ path: string }> = ({ path }) => {
     const repo = useRepo();

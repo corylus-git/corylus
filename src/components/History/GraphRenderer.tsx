@@ -13,6 +13,7 @@ import { ListSelector, SelectableList, SelectableListEntryProps } from '../util/
 import { CommitInfo } from './CommitInfo';
 import { GraphNode } from './GraphNode';
 import { RailLine, x } from './RailLine';
+import { Logger } from '../../util/logger';
 
 const CommitMessage = styled.div`
     flex-grow: 1;
@@ -93,7 +94,8 @@ const ContextMenu: React.FC<{
 }
 
 export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps & { currentBranch: BranchInfo | undefined }> = (props) => {
-    const { isLoading, error, data: e } = useQuery(["graphLine", props.index], () => props.getLine(props.index));
+    Logger().debug('GraphLine', 'Rendering GraphLine', { index: props.index });
+    const { isLoading, error, data: e } = useQuery(["graphLine", props.index], () => props.getLine(props.index), { cacheTime: 0 });
     const [menuProps, toggleMenu] = useMenuState();
     const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
     if (isLoading) {

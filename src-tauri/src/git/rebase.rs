@@ -1,4 +1,4 @@
-use git2::RepositoryState;
+use git2::{Repository, RepositoryState};
 use tauri::Window;
 
 use crate::{
@@ -8,7 +8,10 @@ use crate::{
 
 use super::{
     history::do_get_graph,
-    model::{graph::GraphChangeData, index::RebaseStatusInfo},
+    model::{
+        graph::{GraphChangeData, GraphLayoutData},
+        index::RebaseStatusInfo,
+    },
     with_backend, with_backend_mut, StateType,
 };
 
@@ -62,7 +65,12 @@ pub async fn rebase(state: StateType<'_>, window: Window, target: &str) -> Defau
         window.typed_emit(WindowEvents::StatusChanged, ())?;
         window.typed_emit(WindowEvents::BranchesChanged, ())?;
         // TODO this repeats code from git_open -> don't like this current setup
-        backend.graph = do_get_graph(backend, None)?;
+        let lines = do_get_graph(&backend.repo, None)?.collect();
+        backend.graph = GraphLayoutData {
+            lines,
+            rails: vec![],
+        };
+
         window.typed_emit(
             WindowEvents::HistoryChanged,
             GraphChangeData {

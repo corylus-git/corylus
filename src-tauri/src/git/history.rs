@@ -1,11 +1,11 @@
 use std::{collections::HashMap, time::Instant};
 
-use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Sort};
+use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Repository, Sort};
 
-use crate::error::Result;
+use crate::error::{BackendError, Result};
 
 use super::{
-    graph::calculate_graph_layout,
+    graph::GraphGenerator,
     model::{
         git::{
             Commit, CommitStats, CommitStatsData, DiffStat, DiffStatus, FileStats, FullCommitData,
@@ -13,7 +13,7 @@ use super::{
         },
         graph::GraphLayoutData,
     },
-    with_backend, with_backend_mut, GitBackend, StateType,
+    with_backend, with_backend_mut, StateType,
 };
 
 fn replace_in_history(
@@ -142,11 +142,18 @@ fn transitive_reduction(commits: Vec<Commit>) -> Vec<Commit> {
 pub fn load_history_iter<'a>(
     repo: &'a git2::Repository,
     pathspec: Option<&'a str>,
+    from_oids: Option<&[git2::Oid]>,
 ) -> Result<impl Iterator<Item = Result<git2::Commit<'a>>>> {
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME)?;
-    revwalk.push_glob("heads")?;
-    revwalk.push_glob("remotes")?;
+    if let Some(oids) = from_oids {
+        for &reference in oids {
+            revwalk.push(reference)?;
+        }
+    } else {
+        revwalk.push_glob("heads")?;
+        revwalk.push_glob("remotes")?;
+    }
     let ps = Pathspec::new(pathspec)?;
     let mut diffopts = DiffOptions::new();
     if let Some(p) = pathspec {
@@ -221,7 +228,16 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
 
 #[tauri::command]
 pub async fn get_history_size(state: StateType<'_>) -> Result<usize> {
-    with_backend(state, |backend| Ok(backend.graph.lines.len())).await
+    with_backend(state, |backend| {
+        let additional_lines_estimate =
+            backend
+                .graph
+                .lines
+                .last()
+                .map_or(100, |line| if line.has_parent_line { 100 } else { 0 }); // we'll just tack some additional lines onto the end in case there are parents, but we don't load them yet
+        Ok(backend.graph.lines.len() + additional_lines_estimate)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -231,21 +247,100 @@ pub async fn get_commits(state: StateType<'_>, pathspec: Option<&str>) -> Result
 
 #[tauri::command]
 pub async fn get_graph(state: StateType<'_>, pathspec: Option<&str>) -> Result<GraphLayoutData> {
-    with_backend(state, |backend| do_get_graph(backend, pathspec)).await
+    with_backend(state, |backend| {
+        Ok(GraphLayoutData {
+            lines: do_get_graph(&backend.repo, pathspec)?.collect(),
+            rails: vec![],
+        })
+    })
+    .await
 }
 
-pub fn do_get_graph(backend: &GitBackend, pathspec: Option<&str>) -> Result<GraphLayoutData> {
+pub struct CommitBatchIterator<'iter_lifetime> {
+    repo: &'iter_lifetime Repository,
+    unseen_oids: Vec<git2::Oid>,
+    batch_size: usize,
+}
+
+impl CommitBatchIterator<'_> {
+    pub fn new<'repo_lifetime>(
+        repo: &'repo_lifetime Repository,
+        batch_size: usize,
+        from_revs: &[&str],
+    ) -> Result<CommitBatchIterator<'repo_lifetime>> {
+        let rev_oids: Result<Vec<git2::Oid>> = from_revs
+            .iter()
+            .filter_map(|rev| {
+                repo.revparse_ext(rev)
+                    .ok()
+                    .and_then(|(_, reference)| reference)
+            })
+            .map(|reference| {
+                reference
+                    .peel_to_commit()
+                    .map(|c| c.id())
+                    .map_err(|e| BackendError::new(format!("Could not map OID {}", e.message())))
+            })
+            .collect();
+        Ok(CommitBatchIterator {
+            repo,
+            unseen_oids: rev_oids?,
+            batch_size,
+        })
+    }
+}
+
+impl Iterator for CommitBatchIterator<'_> {
+    type Item = Vec<Commit>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let iter = load_history_iter(&self.repo, None, Some(&self.unseen_oids)).ok()?; // TODO log the error instead of turning it into a missing element
+        let next_batch: Vec<Commit> = iter
+            .filter_map(|res| res.ok())
+            .filter_map(|c| map_commit(&c, false).ok())
+            .collect();
+        self.unseen_oids.extend(next_batch.iter().flat_map(|entry| {
+            entry
+                .as_graph_node()
+                .parents()
+                .iter()
+                .filter_map(|parent| Oid::from_str(&parent.oid).ok())
+        }));
+        self.unseen_oids = self
+            .unseen_oids
+            .iter()
+            .cloned() // TODO don't like this here. Actually we want to replace the unseen_oids above in one step
+            .filter(|oid| {
+                next_batch
+                    .iter()
+                    .any(|entry| oid.to_string() == entry.as_graph_node().oid())
+            })
+            .collect();
+        if next_batch.is_empty() {
+            None
+        } else {
+            Some(next_batch)
+        }
+    }
+}
+
+pub fn do_get_graph<'repo_lifetime>(
+    repo: &'repo_lifetime git2::Repository,
+    pathspec: Option<&'repo_lifetime str>,
+) -> Result<GraphGenerator<'repo_lifetime>> {
     // TODO once we got the iter-variant to support pathspec we can remove this distinction
     if pathspec.is_some() {
-        Ok(calculate_graph_layout(
-            load_history(&backend.repo, pathspec)?.into_iter(),
-        ))
+        // let commits = load_history(&backend.repo, pathspec)?.into_iter();
+        // let graph_layout = GraphGenerator::new(commits);
+        // Ok(graph_layout)
+        Err(BackendError::new("Currently broken due to type errors"))
     } else {
-        Ok(calculate_graph_layout(
-            load_history_iter(&backend.repo, pathspec)?
-                .filter_map(|res| res.ok())
-                .filter_map(|c| map_commit(&c, false).ok()),
-        ))
+        let commits = load_history_iter(&repo, pathspec, None)?
+            .filter_map(|res| res.ok())
+            .filter_map(|c| map_commit(&c, false).ok());
+        let graph_layout = GraphGenerator::new(Box::new(commits), None);
+
+        Ok(graph_layout)
     }
 }
 

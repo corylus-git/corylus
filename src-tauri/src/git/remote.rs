@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use git2::{
     build::RepoBuilder, AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks,

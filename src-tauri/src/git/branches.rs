@@ -8,7 +8,12 @@ use crate::{
 
 use super::{
     history::do_get_graph,
-    model::{get_upstream, git::SourceType, graph::GraphChangeData, BranchInfo},
+    model::{
+        get_upstream,
+        git::SourceType,
+        graph::{GraphChangeData, GraphLayoutData},
+        BranchInfo,
+    },
     with_backend, with_backend_mut,
     worktree::load_worktrees,
     StateType,
@@ -223,7 +228,11 @@ pub async fn reset(
         window.typed_emit(WindowEvents::StatusChanged, ())?;
         window.typed_emit(WindowEvents::BranchesChanged, ())?;
         // TODO this repeats code from git_open -> don't like this current setup
-        backend.graph = do_get_graph(backend, None)?;
+        let new_graph = GraphLayoutData {
+            lines: do_get_graph(&backend.repo, None)?.collect(),
+            rails: vec![],
+        };
+        backend.graph = new_graph;
         window.typed_emit(
             WindowEvents::HistoryChanged,
             GraphChangeData {

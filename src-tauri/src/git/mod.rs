@@ -31,7 +31,7 @@ use crate::{
 use self::{
     history::do_get_graph,
     model::{
-        graph::{GraphChangeData, GraphLayoutData, LayoutListEntry},
+        graph::{GraphChangeData, GraphLayoutData},
         BranchInfo,
     },
 };
@@ -50,8 +50,9 @@ pub struct GitBackend {
 }
 
 impl GitBackend {
-    pub fn new(path: &str) -> Result<GitBackend, BackendError> {
-        let repo = Repository::open(path)?;
+    pub fn new(path: String) -> Result<GitBackend, BackendError> {
+        let path = String::from(path);
+        let repo = Repository::open(&path)?;
 
         if repo.is_shallow() {
             Err(BackendError::new(format!(
@@ -151,31 +152,11 @@ fn split_branch_name(
 }
 
 #[tauri::command]
-pub async fn get_graph_entries(
-    state: StateType<'_>,
-    start_idx: usize,
-    end_idx: usize,
-) -> Result<Vec<LayoutListEntry>, BackendError> {
-    log::debug!("Getting graph entries from {} to {}", start_idx, end_idx);
-    with_backend(state, |backend| {
-        Ok(backend
-            .graph
-            .lines
-            .iter()
-            .skip(start_idx)
-            .take(end_idx - start_idx)
-            .cloned()
-            .collect())
-    })
-    .await
-}
-
-#[tauri::command]
-pub async fn git_open(state: StateType<'_>, path: &str) -> DefaultResult {
+pub async fn git_open<'a>(state: StateType<'a>, path: &str) -> DefaultResult {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
     let mut s = state.lock().await;
-    s.git = Some(GitBackend::new(path)?);
-    // TODO spawn of extra thread and possibly lock inside the backend
+    let backend = GitBackend::new(String::from(path))?;
+    s.git = Some(backend);
     info!("Successfully opened repo at {}", path);
     Ok(())
 }
@@ -183,16 +164,32 @@ pub async fn git_open(state: StateType<'_>, path: &str) -> DefaultResult {
 #[tauri::command]
 pub async fn load_repo(state: StateType<'_>, window: Window) -> DefaultResult {
     with_backend_mut(state, |backend| {
-        backend.graph = do_get_graph(backend, None)?;
+        // start the performance timer
+        let start = std::time::Instant::now();
+        // TODO this is a bit of a hack. We need to load more of the history later
+        let lines = do_get_graph(&backend.repo, None)?.take(50).collect();
+        backend.graph = GraphLayoutData {
+            lines,
+            rails: vec![],
+        };
+        // print time taken by loading the graph
+        log::debug!("Graph loaded in {:?} ms", start.elapsed().as_millis());
+
         log::debug!(
             "Graph changed. Emitting event. {}",
             backend.graph.lines.len()
         );
         window.typed_emit(WindowEvents::GraphChanged, &backend.graph)?;
+        let additional_lines_estimate =
+            backend
+                .graph
+                .lines
+                .last()
+                .map_or(0, |line| if line.has_parent_line { 100 } else { 0 }); // we'll just tack some additional lines onto the end in case there are parents, but we don't load them yet
         window.typed_emit(
             WindowEvents::HistoryChanged,
             GraphChangeData {
-                total: backend.graph.lines.len(),
+                total: backend.graph.lines.len() + dbg!(additional_lines_estimate),
                 change_start_idx: 0,
                 change_end_idx: backend.graph.lines.len(),
             },

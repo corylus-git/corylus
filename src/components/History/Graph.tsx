@@ -14,6 +14,7 @@ import { ListSelector } from '../util/SelectableList';
 import { GraphRenderer } from './GraphRenderer';
 import { CommitStatsData } from '../../model/stateObjects';
 import { Logger } from '../../util/logger';
+import { getGraphEntries } from '../../model/state/graph';
 
 function matchCommit(c: Commit, searchTerm: string): boolean {
     return (
@@ -89,7 +90,11 @@ const Graph: React.FC<{
             <GraphRenderer
                 width={props.width}
                 height={props.height}
-                getLine={async idx => (await invoke<LayoutListEntry[]>('get_graph_entries', { startIdx: idx, endIdx: idx + 1 }))[0]} // TODO directly request from the backend
+                getLine={async idx => {
+                    Logger().debug('getLine', '------------ getting line', { idx });
+                    return (await getGraphEntries(idx, idx + 1))[0]
+                }
+                } // TODO directly request from the backend
                 totalCommits={props.historySize}
                 first={0}
                 branches={branches ?? []}

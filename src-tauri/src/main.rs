@@ -31,8 +31,7 @@ use crate::{
         config::get_config,
         diff::get_diff,
         files::{get_blame, get_file_contents, get_files},
-        get_graph_entries,
-        graph::{find_commits, get_index},
+        graph::{find_commits, get_graph_entries, get_index},
         history::{
             get_affected_branches, get_commit, get_commit_stats, get_commits, get_graph,
             get_history_size,

@@ -1,3 +1,7 @@
+use std::sync::{Arc, Mutex};
+
+use tauri::Window;
+
 use super::{
     model::{
         git::{Commit, FullCommitData},
@@ -6,7 +10,15 @@ use super::{
     with_backend, StateType,
 };
 
-use crate::error::Result;
+use crate::{
+    error::{BackendError, Result},
+    git::{
+        history::{do_get_graph, load_history_iter, map_commit},
+        model::graph::GraphChangeData,
+        with_backend_mut,
+    },
+    window_events::{TypedEmit, WindowEvents},
+};
 
 fn contains<U, V>(option: &Option<U>, item: V) -> bool
 where
@@ -34,37 +46,35 @@ fn find_leftmost_rail(rails: &mut Vec<Rail>, for_id: &str) -> (usize, bool) {
     }
 }
 
-struct GraphGenerator<Iter>
-where
-    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
-{
+pub struct GraphGenerator<'generator_lifetime> {
     rails: Vec<Rail>,
-    ordered_history: Iter,
+    ordered_history: Box<Mutex<dyn Iterator<Item = Commit> + 'generator_lifetime>>,
 }
 
-impl<Iter> GraphGenerator<Iter>
-where
-    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
-{
-    pub fn new(ordered_history: Iter) -> Self
-    where
-        Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
-    {
+impl<'generator_lifetime> GraphGenerator<'generator_lifetime> {
+    pub fn new(
+        ordered_history: impl Iterator<Item = Commit>
+            + IntoIterator<Item = Commit>
+            + 'generator_lifetime,
+        rails: Option<Vec<Rail>>,
+    ) -> Self {
         Self {
-            rails: vec![],
-            ordered_history,
+            rails: rails.unwrap_or_default(),
+            ordered_history: Box::new(Mutex::new(ordered_history)),
         }
     }
 }
 
-impl<Iter> Iterator for GraphGenerator<Iter>
-where
-    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
-{
+unsafe impl Send for GraphGenerator<'_> {}
+
+impl Iterator for GraphGenerator<'_> {
     type Item = LayoutListEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let commit = self.ordered_history.next();
+        let history_iter = self.ordered_history.get_mut().ok();
+        // track how long the layout of a single line takes
+        let commit = history_iter.and_then(|i| i.next());
+        // log how long did it take to access the next commit?
         commit.map(|commit| {
             let old_rails = self.rails.clone();
             let graph_node = commit.as_graph_node();
@@ -166,21 +176,94 @@ where
     }
 }
 
-pub fn calculate_graph_layout<Iter>(ordered_history: Iter) -> GraphLayoutData
-where
-    Iter: Iterator<Item = Commit> + IntoIterator<Item = Commit>,
-{
-    // start timer
-    let start = std::time::Instant::now();
-    let lines = GraphGenerator::new(ordered_history).collect::<Vec<_>>();
-    // how many milliseconds did it take to calculate the layout?
-    let end = std::time::Instant::now();
-    let duration = end - start;
-    log::debug!("Graph layout calculation took {} ms", duration.as_millis());
-    GraphLayoutData {
-        lines,
-        rails: vec![],
-    }
+#[tauri::command]
+pub async fn get_graph_entries(
+    state: StateType<'_>,
+    window: Window,
+    start_idx: usize,
+    end_idx: usize,
+) -> Result<Vec<LayoutListEntry>> {
+    log::debug!("Getting graph entries from {} to {}", start_idx, end_idx);
+    with_backend_mut(state, |backend| {
+        let old_length = backend.graph.lines.len();
+        if start_idx > old_length {
+            log::debug!(
+                "Need to calculate {} more graph lines. Currently have {}",
+                end_idx - backend.graph.lines.len(),
+                backend.graph.lines.len()
+            );
+            let missing_oids: Vec<git2::Oid> = backend
+                .graph
+                .lines
+                .last()
+                .unwrap() // TODO I don't like this unwrap here
+                .rails
+                .iter()
+                .filter_map(|entry| {
+                    entry
+                        .as_ref()
+                        .and_then(|e| git2::Oid::from_str(e.expected_parent.as_str()).ok())
+                })
+                .collect();
+            log::debug!("Missing OIDs: {:?}", missing_oids);
+            let new_commits = load_history_iter(&backend.repo, None, Some(&missing_oids))?
+                .filter_map(|c| {
+                    log::debug!("Result: {:?}", c);
+                    c.ok()
+                })
+                .filter_map(|c| map_commit(&c, false).ok());
+            let new_lines = GraphGenerator::new(
+                new_commits,
+                Some(backend.graph.lines.last().unwrap().rails.clone()),
+            )
+            .take(end_idx - backend.graph.lines.len() + 50);
+
+            backend.graph.lines.extend(new_lines);
+            backend.graph.rails = backend.graph.lines.last().unwrap().rails.clone();
+            log::debug!("Graph now has {} lines", backend.graph.lines.len());
+            if backend.graph.lines.len() != old_length {
+                // TODO do a proper detection whether there are more lines to be had
+                window.typed_emit(
+                    WindowEvents::HistoryChanged,
+                    GraphChangeData {
+                        total: backend.graph.lines.len() + 50,
+                        change_start_idx: 0,
+                        change_end_idx: backend.graph.lines.len(),
+                    },
+                )?;
+            } else {
+                // when the graph length has stabilized, we can emit the proper length
+                window.typed_emit(
+                    WindowEvents::HistoryChanged,
+                    GraphChangeData {
+                        total: backend.graph.lines.len(),
+                        change_start_idx: 0,
+                        change_end_idx: backend.graph.lines.len(),
+                    },
+                )?;
+            }
+        }
+        log::debug!(
+            "Returning graph entries: {:?}",
+            backend
+                .graph
+                .lines
+                .iter()
+                .skip(start_idx)
+                .take(end_idx - start_idx)
+                .map(|e| e.commit.as_graph_node().oid())
+                .collect::<Vec<&str>>(),
+        );
+        Ok(backend
+            .graph
+            .lines
+            .iter()
+            .skip(start_idx)
+            .take(end_idx - start_idx)
+            .cloned()
+            .collect())
+    })
+    .await
 }
 
 #[tauri::command]
@@ -279,30 +362,27 @@ mod tests {
         let input: Vec<Commit> = vec![child.clone(), parent.clone()];
 
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("2222", false)],
-                        commit: child
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![],
-                        commit: parent
-                    }
-                ],
-                rails: vec![]
-            },
-            calculate_graph_layout(input.into_iter())
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("2222", false)],
+                    commit: child
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![],
+                    commit: parent
+                }
+            ],
+            GraphGenerator::new(input.into_iter(), None).collect::<Vec<LayoutListEntry>>()
         )
     }
 
@@ -314,39 +394,36 @@ mod tests {
         let input: Vec<Commit> = vec![child2.clone(), child1.clone(), parent.clone()];
 
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("2222", false)],
-                        commit: child2
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: false,
-                        has_child_line: false,
-                        outgoing: Arc::new([0]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("2222", true)],
-                        commit: child1
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![],
-                        commit: parent
-                    }
-                ],
-                rails: vec![]
-            },
-            calculate_graph_layout(input.into_iter())
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("2222", false)],
+                    commit: child2
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: false,
+                    has_child_line: false,
+                    outgoing: Arc::new([0]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("2222", true)],
+                    commit: child1
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![],
+                    commit: parent
+                }
+            ],
+            GraphGenerator::new(input.into_iter(), None).collect::<Vec<LayoutListEntry>>()
         )
     }
 
@@ -358,42 +435,39 @@ mod tests {
         let input: Vec<Commit> = vec![child.clone(), parent1.clone(), parent2.clone()];
 
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([1]),
-                        incoming: Arc::new([]),
-                        rails: vec![
-                            make_rail_entry("2222", false),
-                            make_rail_entry("1111", false)
-                        ],
-                        commit: child
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![None, make_rail_entry("1111", true)],
-                        commit: parent1
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![],
-                        commit: parent2
-                    }
-                ],
-                rails: vec![]
-            },
-            calculate_graph_layout(input.into_iter())
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([1]),
+                    incoming: Arc::new([]),
+                    rails: vec![
+                        make_rail_entry("2222", false),
+                        make_rail_entry("1111", false)
+                    ],
+                    commit: child
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![None, make_rail_entry("1111", true)],
+                    commit: parent1
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![],
+                    commit: parent2
+                }
+            ],
+            GraphGenerator::new(input.into_iter(), None).collect::<Vec<LayoutListEntry>>()
         )
     }
 
@@ -412,54 +486,51 @@ mod tests {
         ];
 
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([1]),
-                        incoming: Arc::new([]),
-                        rails: vec![
-                            make_rail_entry("2222", false),
-                            make_rail_entry("3333", false)
-                        ],
-                        commit: grandchild
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![
-                            make_rail_entry("1111", false),
-                            make_rail_entry("3333", true)
-                        ],
-                        commit: child_left
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([0]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("1111", true)],
-                        commit: child_right
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![],
-                        commit: parent
-                    }
-                ],
-                rails: vec![]
-            },
-            calculate_graph_layout(input.into_iter())
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([1]),
+                    incoming: Arc::new([]),
+                    rails: vec![
+                        make_rail_entry("2222", false),
+                        make_rail_entry("3333", false)
+                    ],
+                    commit: grandchild
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![
+                        make_rail_entry("1111", false),
+                        make_rail_entry("3333", true)
+                    ],
+                    commit: child_left
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([0]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("1111", true)],
+                    commit: child_right
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![],
+                    commit: parent
+                }
+            ],
+            GraphGenerator::new(input.into_iter(), None).collect::<Vec<LayoutListEntry>>()
         )
     }
 
@@ -479,63 +550,60 @@ mod tests {
             greatgrandparent.clone(),
         ];
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([1]),
-                        incoming: Arc::new([]),
-                        rails: vec![
-                            make_rail_entry("2222", false),
-                            make_rail_entry("3333", false)
-                        ],
-                        commit: grandchild
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([0]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("2222", true)],
-                        commit: child
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: true,
-                        outgoing: Arc::new([1]),
-                        incoming: Arc::new([]),
-                        rails: vec![
-                            make_rail_entry("0000", false),
-                            make_rail_entry("1111", false)
-                        ],
-                        commit: parent
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([0]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("0000", true)],
-                        commit: grandparent
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![],
-                        commit: greatgrandparent
-                    }
-                ],
-                rails: vec![]
-            },
-            calculate_graph_layout(input.into_iter())
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([1]),
+                    incoming: Arc::new([]),
+                    rails: vec![
+                        make_rail_entry("2222", false),
+                        make_rail_entry("3333", false)
+                    ],
+                    commit: grandchild
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([0]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("2222", true)],
+                    commit: child
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: true,
+                    outgoing: Arc::new([1]),
+                    incoming: Arc::new([]),
+                    rails: vec![
+                        make_rail_entry("0000", false),
+                        make_rail_entry("1111", false)
+                    ],
+                    commit: parent
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([0]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("0000", true)],
+                    commit: grandparent
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![],
+                    commit: greatgrandparent
+                }
+            ],
+            GraphGenerator::new(input.into_iter(), None).collect::<Vec<LayoutListEntry>>()
         )
     }
 
@@ -549,59 +617,57 @@ mod tests {
 
         let history = vec![c1.clone(), c2.clone(), p1.clone(), p2.clone(), g.clone()];
 
-        let layout = calculate_graph_layout(history.into_iter());
+        let layout =
+            GraphGenerator::new(history.into_iter(), None).collect::<Vec<LayoutListEntry>>();
 
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("p1", false)],
-                        commit: c1
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("p1", true), make_rail_entry("g", false)],
-                        commit: c2
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("g", false), make_rail_entry("g", true)],
-                        commit: p1
-                    },
-                    LayoutListEntry {
-                        rail: 2,
-                        has_parent_line: false,
-                        has_child_line: false,
-                        outgoing: Arc::new([0]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("g", true), make_rail_entry("g", true)],
-                        commit: p2
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([1]),
-                        rails: vec![],
-                        commit: g
-                    }
-                ],
-                rails: vec![]
-            },
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("p1", false)],
+                    commit: c1
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("p1", true), make_rail_entry("g", false)],
+                    commit: c2
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("g", false), make_rail_entry("g", true)],
+                    commit: p1
+                },
+                LayoutListEntry {
+                    rail: 2,
+                    has_parent_line: false,
+                    has_child_line: false,
+                    outgoing: Arc::new([0]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("g", true), make_rail_entry("g", true)],
+                    commit: p2
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([1]),
+                    rails: vec![],
+                    commit: g
+                }
+            ],
             layout
         );
     }
@@ -616,59 +682,57 @@ mod tests {
 
         let history = vec![c1.clone(), c2.clone(), c3.clone(), p1.clone(), p2.clone()];
 
-        let layout = calculate_graph_layout(history.into_iter());
+        let layout =
+            GraphGenerator::new(history.into_iter(), None).collect::<Vec<LayoutListEntry>>();
 
         assert_eq!(
-            GraphLayoutData {
-                lines: vec![
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("p2", false)],
-                        commit: c1
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: true,
-                        has_child_line: false,
-                        outgoing: Arc::new([0]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", false)],
-                        commit: c2
-                    },
-                    LayoutListEntry {
-                        rail: 2,
-                        has_parent_line: false,
-                        has_child_line: false,
-                        outgoing: Arc::new([1]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", true),],
-                        commit: c3
-                    },
-                    LayoutListEntry {
-                        rail: 1,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![make_rail_entry("p2", true)],
-                        commit: p1
-                    },
-                    LayoutListEntry {
-                        rail: 0,
-                        has_parent_line: false,
-                        has_child_line: true,
-                        outgoing: Arc::new([]),
-                        incoming: Arc::new([]),
-                        rails: vec![],
-                        commit: p2
-                    }
-                ],
-                rails: vec![]
-            },
+            vec![
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("p2", false)],
+                    commit: c1
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: true,
+                    has_child_line: false,
+                    outgoing: Arc::new([0]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", false)],
+                    commit: c2
+                },
+                LayoutListEntry {
+                    rail: 2,
+                    has_parent_line: false,
+                    has_child_line: false,
+                    outgoing: Arc::new([1]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("p2", true), make_rail_entry("p1", true),],
+                    commit: c3
+                },
+                LayoutListEntry {
+                    rail: 1,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![make_rail_entry("p2", true)],
+                    commit: p1
+                },
+                LayoutListEntry {
+                    rail: 0,
+                    has_parent_line: false,
+                    has_child_line: true,
+                    outgoing: Arc::new([]),
+                    incoming: Arc::new([]),
+                    rails: vec![],
+                    commit: p2
+                }
+            ],
             layout
         )
     }

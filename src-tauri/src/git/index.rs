@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use git2::{build::CheckoutBuilder, RepositoryState, Status};
+use git2::{build::CheckoutBuilder, Repository, RepositoryState, Status};
 use log::{debug, error};
 use serde::Deserialize;
 use tauri::Window;
@@ -13,7 +13,10 @@ use crate::{
 use super::{
     git_merge_file::get_merge_conflict,
     history::{do_get_graph, load_history},
-    model::{graph::GraphChangeData, index::IndexStatus},
+    model::{
+        graph::{GraphChangeData, GraphLayoutData},
+        index::IndexStatus,
+    },
     with_backend, with_backend_mut, GitBackend, StateType,
 };
 
@@ -140,11 +143,15 @@ pub fn do_commit(
             debug!("Committed {}", oid);
         }
     }
-    load_history(&backend.repo, None)?;
+    // load_history(&backend.repo, None)?;
     window.typed_emit(WindowEvents::StatusChanged, ())?;
     window.typed_emit(WindowEvents::BranchesChanged, ())?;
     // TODO this repeats code from git_open -> don't like this current setup
-    backend.graph = do_get_graph(backend, None)?;
+    let lines = do_get_graph(&backend.repo, None)?.collect();
+    backend.graph = GraphLayoutData {
+        lines,
+        rails: vec![],
+    };
     window.typed_emit(
         WindowEvents::HistoryChanged,
         GraphChangeData {
