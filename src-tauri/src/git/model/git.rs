@@ -509,7 +509,7 @@ fn push_line(line: git2::DiffLine<'_>, diffs: &mut [FileDiff]) -> bool {
 #[derive(Clone, Serialize, PartialEq, Debug, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Worktree {
-    pub name: String,
+    pub name: Option<String>,
     pub path: String,
     pub branch: Option<String>,
     pub oid: Option<String>,

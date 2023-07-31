@@ -1,4 +1,4 @@
-use git2::{build::CheckoutBuilder, DiffOptions, Oid, StashApplyOptions, StashFlags};
+use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
 use super::{
     history::map_diff,
     model::git::{Commit, CommitStats, StashData, StashStatsData},
-    with_backend, with_backend_mut, GitBackend, StateType,
+    with_backend_mut, GitBackend, StateType,
 };
 
 #[tauri::command]

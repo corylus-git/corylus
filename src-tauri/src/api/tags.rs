@@ -3,8 +3,8 @@ use tauri::Window;
 use crate::error::{DefaultResult, Result};
 use crate::window_events::{TypedEmit, WindowEvents};
 
-use super::model::git::Tag;
-use super::{with_backend, StateType};
+use crate::git::model::git::Tag;
+use crate::git::{with_backend, StateType};
 
 #[tauri::command]
 pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>> {

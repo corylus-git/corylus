@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use git2::{Reference, Repository, WorktreeAddOptions};
+use git2::{Repository, WorktreeAddOptions};
 
-use crate::error::{BackendError, Result, DefaultResult};
+use crate::error::{BackendError, DefaultResult, LoggingDefaultUnwrapper, Result};
 
 use super::model::git::Worktree;
 use super::{with_backend, GitBackend, StateType};
@@ -13,44 +13,40 @@ pub async fn get_worktrees(state: StateType<'_>) -> Result<Vec<Worktree>> {
     with_backend(state, load_worktrees).await
 }
 
+fn map_worktree(repo: &Repository, name: &str) -> Result<Worktree> {
+    let wt = repo.find_worktree(name)?;
+    let wt_instance = Repository::open_from_worktree(&wt)?;
+    let wt_head = wt_instance.head()?;
+    let wt_head_commit = wt_head.peel_to_commit()?.id().to_string();
+    let wt_branch = wt_head.name().map(|n| n.to_string());
+    Ok(Worktree {
+        name: wt.name().map(|n| n.to_string()),
+        path: wt
+            .path()
+            .to_str()
+            .map(|n| n.to_string())
+            .ok_or_else(|| BackendError::new("Worktree does not have a path assigned."))?,
+        branch: wt_branch,
+        oid: Some(wt_head_commit),
+        is_valid: wt.validate().is_ok(),
+    })
+}
+
 pub fn load_worktrees(backend: &GitBackend) -> Result<Vec<Worktree>> {
     Ok(backend
         .repo
         .worktrees()?
         .iter()
         .filter_map(|name| {
-            name.map(|n| {
-                backend.repo.find_worktree(n).ok().map(|wt| {
-                    let r = Repository::open_from_worktree(&wt);
-                    Worktree {
-                        name: wt.name().unwrap_or_default().to_string(),
-                        path: wt.path().to_string_lossy().to_string(),
-                        branch: r
-                            .as_ref()
-                            .ok()
-                            .and_then(|rep| rep.head().ok())
-                            .and_then(|h| h.name().map(|n| n.to_owned())),
-                        oid: r
-                            .as_ref()
-                            .ok()
-                            .and_then(|rep| rep.head().ok())
-                            .and_then(|h| h.peel_to_commit().ok())
-                            .map(|c| c.id().to_string()),
-                        is_valid: wt.validate().is_ok(),
-                    }
-                })
+            name.and_then(|n| {
+                map_worktree(&backend.repo, n).ok_or_log("Could not map worktree info")
             })
         })
-        .map(|o| o.unwrap())
         .collect())
 }
 
 #[tauri::command]
-pub async fn checkout_worktree(
-    state: StateType<'_>,
-    ref_name: &str,
-    path: &str,
-) -> DefaultResult {
+pub async fn checkout_worktree(state: StateType<'_>, ref_name: &str, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
         let reference = backend.repo.find_reference(ref_name)?;
 
@@ -59,7 +55,9 @@ pub async fn checkout_worktree(
         let name = target_path
             .file_name()
             .and_then(|n| n.to_str())
-            .ok_or(BackendError::new("Could not derive worktree name from path"))?;
+            .ok_or(BackendError::new(
+                "Could not derive worktree name from path",
+            ))?;
         log::debug!(
             "Creating worktree with name {} from {} at {}",
             ref_name,
@@ -72,9 +70,16 @@ pub async fn checkout_worktree(
                 .map(|d| d.count() != 0)
                 .map_err(|e| BackendError::new(format!("Could not read target directory. {}", e)))?
             {
-                return Err(BackendError::new("Cannot create worktree in non-empty directory."));
+                return Err(BackendError::new(
+                    "Cannot create worktree in non-empty directory.",
+                ));
             }
-            fs::remove_dir(target_path).map_err(|e| BackendError::new(format!("Could not remove and recreate target directory. {}", e)))?;
+            fs::remove_dir(target_path).map_err(|e| {
+                BackendError::new(format!(
+                    "Could not remove and recreate target directory. {}",
+                    e
+                ))
+            })?;
         }
         let worktree = backend.repo.worktree(name, target_path, Some(&options))?;
         let r = Repository::open_from_worktree(&worktree)?;

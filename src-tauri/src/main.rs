@@ -24,19 +24,21 @@ use tauri::async_runtime::Mutex;
 
 use crate::{
     api::{
-        graph::{find_commits, get_graph_entries, get_index},
-        index::{
-            apply_diff, checkout, commit, discard_changes, get_conflicts, get_status,
-            resolve_conflict_manually, stage, unstage,
-        },
-    },
-    git::{
-        add_to_gitignore,
         branches::{
             change_branch, checkout_remote_branch, create_branch, delete_branch, get_branches,
             get_unmerged_branches, reset,
         },
         config::get_config,
+        graph::{find_commits, get_graph_entries, get_index},
+        index::{
+            apply_diff, checkout, commit, discard_changes, get_conflicts, get_status,
+            resolve_conflict_manually, stage, unstage,
+        },
+        rebase::{rebase, rebase_status},
+        tags::{create_tag, get_tags},
+    },
+    git::{
+        add_to_gitignore,
         diff::get_diff,
         files::{get_blame, get_file_contents, get_files},
         history::{
@@ -45,10 +47,8 @@ use crate::{
         },
         load_repo,
         merge::{abort_merge, get_merge_message, is_merge, merge},
-        rebase::{rebase, rebase_status},
         remote::{add_remote, clone, delete_remote, fetch, get_remotes, pull, push, update_remote},
         stash::{apply_stash, drop_stash, get_stash_stats, get_stashes, stash},
-        tags::{create_tag, get_tags},
         worktree::{checkout_worktree, get_worktrees},
     },
     log::send_log,

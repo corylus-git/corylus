@@ -207,7 +207,7 @@ pub async fn pull(
     window: Window,
     remote: &str,
     remote_branch: &str,
-    no_fast_forward: bool, // TODO I don't like this name, that results from serializing 'noFF' on the typescript side of things
+    no_fast_forward: bool,
 ) -> DefaultResult {
     with_backend_mut(state, |backend| {
         do_fetch(&backend.repo, remote, false, false, Some(remote_branch))?;

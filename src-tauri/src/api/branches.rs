@@ -1,4 +1,4 @@
-use git2::{build::CheckoutBuilder, Branch, BranchType, Oid, Repository, ResetType};
+use git2::{build::CheckoutBuilder, BranchType, Oid, Repository, ResetType};
 use tauri::Window;
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     window_events::{TypedEmit, WindowEvents},
 };
 
-use super::{
+use crate::git::{
     history::do_get_graph,
     model::{
         get_upstream,

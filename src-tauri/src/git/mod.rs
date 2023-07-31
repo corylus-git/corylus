@@ -1,5 +1,3 @@
-pub mod branches;
-pub mod config;
 pub mod credentials;
 pub mod diff;
 pub mod files;
@@ -9,10 +7,8 @@ pub mod history;
 pub mod index;
 pub mod merge;
 pub mod model;
-pub mod rebase;
 pub mod remote;
 pub mod stash;
-pub mod tags;
 pub mod worktree;
 
 use std::{fs::OpenOptions, io::Write, sync::Arc};

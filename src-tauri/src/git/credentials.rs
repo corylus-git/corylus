@@ -1,7 +1,6 @@
 use std::{collections::HashSet, path::Path};
 
-use git2::{Cred, CredentialType, Repository, ErrorCode, ErrorClass};
-use tauri::Window;
+use git2::{Cred, CredentialType, ErrorClass, ErrorCode, Repository};
 
 pub fn make_credentials_callback<'a>(
     repo: &'a Repository,
@@ -44,7 +43,7 @@ fn get_credentials(
         previous_calls.insert(call_key);
         return get_ssh_key(repo, url, username);
     } else if cred_type.is_user_pass_plaintext() {
-         // return get_user_password(window: Window, url, username);
+        // return get_user_password(window: Window, url, username);
     }
     Err(git2::Error::new(
         git2::ErrorCode::GenericError,
@@ -53,15 +52,14 @@ fn get_credentials(
     ))
 }
 
-fn get_ssh_key(repo: &Repository, url: &str, username: Option<&str>) -> std::result::Result<Cred, git2::Error> {
+fn get_ssh_key(
+    repo: &Repository,
+    url: &str,
+    username: Option<&str>,
+) -> std::result::Result<Cred, git2::Error> {
     let key_path = get_key_path(repo, url)?;
     if let Some(kp) = key_path {
-        let cred = Cred::ssh_key(
-            username.unwrap(),
-            None,
-            Path::new(&kp),
-            None,
-        );
+        let cred = Cred::ssh_key(username.unwrap(), None, Path::new(&kp), None);
         if let Err(e) = &cred {
             log::error!("SSH error: {}", e);
         } else {
@@ -76,20 +74,18 @@ fn get_ssh_key(repo: &Repository, url: &str, username: Option<&str>) -> std::res
     ))
 }
 
-fn get_key_path(repo: &Repository, url: &str) -> std::result::Result<Option<String>, git2::Error>
-{
+fn get_key_path(repo: &Repository, url: &str) -> std::result::Result<Option<String>, git2::Error> {
     let config = repo.config()?;
     let config_key = format!("corylus.{}.ssh-pub-key", url);
     let config_value_result = config.get_string(&config_key);
     if let Err(config_error) = config_value_result {
-        if config_error.code() == ErrorCode::NotFound && config_error.class() == ErrorClass::Config {
+        if config_error.code() == ErrorCode::NotFound && config_error.class() == ErrorClass::Config
+        {
             Ok(None)
-        }
-        else {
+        } else {
             Err(config_error)
         }
-    }
-    else {
+    } else {
         config_value_result.map(Some)
     }
 }
