@@ -5,6 +5,7 @@ pub mod diff;
 pub mod files;
 pub mod git_merge_file;
 pub mod graph;
+pub mod graph_generator;
 pub mod history;
 pub mod index;
 pub mod merge;

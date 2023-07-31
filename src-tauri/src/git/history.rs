@@ -5,7 +5,7 @@ use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Repository, 
 use crate::error::{BackendError, Result};
 
 use super::{
-    graph::GraphGenerator,
+    graph_generator::GraphGenerator,
     model::{
         git::{
             Commit, CommitStats, CommitStatsData, DiffStat, DiffStatus, FileStats, FullCommitData,

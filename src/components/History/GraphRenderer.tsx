@@ -95,6 +95,7 @@ const ContextMenu: React.FC<{
 
 export const GraphLine: React.FC<SelectableListEntryProps & GraphLineProps & { currentBranch: BranchInfo | undefined }> = (props) => {
     Logger().debug('GraphLine', 'Rendering GraphLine', { index: props.index });
+    // TODO this breaks when caching is enabled and I currently don't know why...
     const { isLoading, error, data: e } = useQuery(["graphLine", props.index], () => props.getLine(props.index), { cacheTime: 0 });
     const [menuProps, toggleMenu] = useMenuState();
     const [anchorPoint, setAnchorPoint] = React.useState({ x: 0, y: 0 });
