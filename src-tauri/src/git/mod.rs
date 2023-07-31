@@ -4,7 +4,6 @@ pub mod credentials;
 pub mod diff;
 pub mod files;
 pub mod git_merge_file;
-pub mod graph;
 pub mod graph_generator;
 pub mod history;
 pub mod index;
@@ -45,8 +44,8 @@ pub struct AppState {
 pub type StateType<'a> = tauri::State<'a, Arc<Mutex<AppState>>>;
 
 pub struct GitBackend {
-    repo: Repository,
-    branches: Vec<BranchInfo>,
+    pub repo: Repository,
+    pub branches: Vec<BranchInfo>,
     pub graph: GraphLayoutData,
 }
 

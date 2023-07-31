@@ -8,6 +8,7 @@
 extern crate lazy_static;
 extern crate enum_display_derive;
 
+mod api;
 mod error;
 mod git;
 mod log;
@@ -22,6 +23,13 @@ use simple_logger::SimpleLogger;
 use tauri::async_runtime::Mutex;
 
 use crate::{
+    api::{
+        graph::{find_commits, get_graph_entries, get_index},
+        index::{
+            apply_diff, checkout, commit, discard_changes, get_conflicts, get_status,
+            resolve_conflict_manually, stage, unstage,
+        },
+    },
     git::{
         add_to_gitignore,
         branches::{
@@ -31,14 +39,9 @@ use crate::{
         config::get_config,
         diff::get_diff,
         files::{get_blame, get_file_contents, get_files},
-        graph::{find_commits, get_graph_entries, get_index},
         history::{
             get_affected_branches, get_commit, get_commit_stats, get_commits, get_graph,
             get_history_size,
-        },
-        index::{
-            apply_diff, checkout, commit, discard_changes, get_conflicts, get_status,
-            resolve_conflict_manually, stage, unstage,
         },
         load_repo,
         merge::{abort_merge, get_merge_message, is_merge, merge},
