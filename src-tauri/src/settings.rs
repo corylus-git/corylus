@@ -8,6 +8,7 @@ use config::Config;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use tauri::Window;
+use tracing::instrument;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -90,7 +91,7 @@ pub fn load_settings() -> Settings {
         let settings = Config::builder().add_source(config_file).build();
         let settings_result = settings.map(|config| config.try_deserialize::<Settings>());
         if let Err(e) = &settings_result {
-            log::error!("Could not load settings. {}", e.to_string());
+            tracing::error!("Could not load settings. {}", e.to_string());
         }
 
         let mut settings = settings_result
@@ -115,15 +116,17 @@ fn store_settings(settings: &Settings) -> DefaultResult {
         .map_err(|e| BackendError::new(format!("Could not open settings file. {}", e)))?;
     serde_json::to_writer(file, &settings)
         .map_err(|e| BackendError::new(format!("Could not serialize settings. {}", e)))?;
-    log::info!("Stored updated settings {:?}", &settings);
+    tracing::info!("Stored updated settings {:?}", &settings);
     Ok(())
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_settings(state: StateType<'_>) -> Result<Settings> {
     with_state(state, |s| Ok(s.settings.clone())).await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn update_settings(
     state: StateType<'_>,
@@ -146,6 +149,7 @@ fn current_time_millis() -> Result<u64> {
                 .as_millis().try_into().map_err(|_| BackendError::new("If you see this error, you live > 584 Mio years in the future and really shouldn'nt be using this program anymore"))
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn update_history(state: StateType<'_>, path: &str) -> Result<Settings> {
     with_state_mut(&state, |s| {

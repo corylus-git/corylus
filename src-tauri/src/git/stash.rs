@@ -1,5 +1,6 @@
 use git2::{DiffOptions, Oid, StashApplyOptions, StashFlags};
 use tauri::Window;
+use tracing::instrument;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -12,6 +13,7 @@ use super::{
     with_backend_mut, GitBackend, StateType,
 };
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn stash(
     state: StateType<'_>,
@@ -36,6 +38,7 @@ pub async fn stash(
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_stashes(state: StateType<'_>) -> Result<Vec<Commit>> {
     with_backend_mut(state, |backend| {
@@ -67,6 +70,7 @@ fn get_stashes_data(backend: &mut GitBackend) -> Result<Vec<(usize, String, git2
     Ok(stashes_data)
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn get_stash_stats(state: StateType<'_>, window: Window, oid: &str) -> DefaultResult {
     with_backend_mut(state, |backend| {
@@ -129,6 +133,7 @@ fn find_stash_idx(oid: &str, backend: &mut GitBackend) -> Result<usize> {
         .ok_or_else(|| BackendError::new("Could not find selected stash"))
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn apply_stash(
     state: StateType<'_>,
@@ -152,6 +157,7 @@ pub async fn apply_stash(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn drop_stash(state: StateType<'_>, window: Window, oid: &str) -> DefaultResult {
     with_backend_mut(state, |backend| {

@@ -1,8 +1,9 @@
 use std::path::Path;
 
 use git2::{build::CheckoutBuilder, Status};
-use log::error;
 use tauri::Window;
+use tracing::error;
+use tracing::instrument;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -15,6 +16,7 @@ use crate::{
     window_events::{TypedEmit, WindowEvents},
 };
 
+#[instrument(skip(state), err, ret, err, ret)]
 #[tauri::command]
 pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
     with_backend(state, |backend| {
@@ -32,6 +34,7 @@ pub async fn get_status(state: StateType<'_>) -> Result<Vec<IndexStatus>> {
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
@@ -42,11 +45,12 @@ pub async fn stage(window: Window, state: StateType<'_>, path: &str) -> DefaultR
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
         let head = backend.repo.head()?.peel_to_commit()?;
-        log::debug!("Unstaging {}", path);
+        tracing::debug!("Unstaging {}", path);
         backend
             .repo
             .reset_default(Some(&head.into_object()), [path])?;
@@ -56,6 +60,7 @@ pub async fn unstage(window: Window, state: StateType<'_>, path: &str) -> Defaul
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn commit(
     window: Window,
@@ -74,6 +79,7 @@ pub async fn commit(
     })
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn checkout(
     state: StateType<'_>,
@@ -102,6 +108,7 @@ pub async fn checkout(
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_conflicts(state: StateType<'_>, path: &str) -> Result<Option<String>> {
     with_backend(state, |backend| {
@@ -127,6 +134,7 @@ pub async fn get_conflicts(state: StateType<'_>, path: &str) -> Result<Option<St
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn resolve_conflict_manually(
     state: StateType<'_>,
@@ -148,6 +156,7 @@ pub async fn resolve_conflict_manually(
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn apply_diff(
     window: Window,
@@ -156,7 +165,7 @@ pub async fn apply_diff(
     to_working_copy: bool,
 ) -> DefaultResult {
     with_backend(state, |backend| {
-        log::debug!(
+        tracing::debug!(
             "Applying diff to {} (to working copy: {})",
             diff,
             to_working_copy
@@ -177,6 +186,7 @@ pub async fn apply_diff(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn discard_changes(window: Window, state: StateType<'_>, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
@@ -189,7 +199,7 @@ pub async fn discard_changes(window: Window, state: StateType<'_>, path: &str) -
             // underneath the path
             Status::WT_MODIFIED
         };
-        log::debug!(
+        tracing::debug!(
             "Discarding changes for {}. Current state: {:?}",
             path,
             state

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, time::Instant};
 
 use git2::{Delta, DiffOptions, Oid, Patch, Pathspec, PathspecFlags, Repository, Sort};
+use tracing::{instrument, trace};
 
 use crate::error::{BackendError, Result};
 
@@ -157,7 +158,7 @@ pub fn load_history_iter<'a>(
     let ps = Pathspec::new(pathspec)?;
     let mut diffopts = DiffOptions::new();
     if let Some(p) = pathspec {
-        log::debug!("Loading history for path spec {}", p);
+        tracing::debug!("Loading history for path spec {}", p);
         diffopts.pathspec(p);
     }
 
@@ -194,7 +195,7 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
     let ps = Pathspec::new(pathspec)?;
     let mut diffopts = DiffOptions::new();
     if let Some(p) = pathspec {
-        log::debug!("Loading history for path spec {}", p);
+        tracing::debug!("Loading history for path spec {}", p);
         diffopts.pathspec(p);
     }
 
@@ -217,7 +218,7 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
         // do not reduce for full graphs as this algorithm is currently really inefficient
         transitive_reduction(internal_history)
     } else {
-        log::debug!(
+        tracing::debug!(
             "Loaded {} history elements in {} ms",
             internal_history.len(),
             start.elapsed().as_millis()
@@ -226,6 +227,7 @@ pub fn load_history(repo: &git2::Repository, pathspec: Option<&str>) -> Result<V
     })
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_history_size(state: StateType<'_>) -> Result<usize> {
     with_backend(state, |backend| {
@@ -240,11 +242,13 @@ pub async fn get_history_size(state: StateType<'_>) -> Result<usize> {
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_commits(state: StateType<'_>, pathspec: Option<&str>) -> Result<Vec<Commit>> {
     with_backend(state, |backend| load_history(&backend.repo, pathspec)).await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_graph(state: StateType<'_>, pathspec: Option<&str>) -> Result<GraphLayoutData> {
     with_backend(state, |backend| {
@@ -344,9 +348,10 @@ pub fn do_get_graph<'repo_lifetime>(
     }
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_commit(state: StateType<'_>, ref_name_or_oid: &str) -> Result<Commit> {
-    log::trace!("Requesting commit information for {}", ref_name_or_oid);
+    trace!("Requesting commit information for {}", ref_name_or_oid);
     with_backend(state, |backend| {
         let obj = backend.repo.revparse_single(ref_name_or_oid)?;
         let commit = obj.peel_to_commit()?;
@@ -355,6 +360,7 @@ pub async fn get_commit(state: StateType<'_>, ref_name_or_oid: &str) -> Result<C
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_commit_stats(state: StateType<'_>, oid: &str) -> Result<CommitStats> {
     with_backend_mut(state, |backend| {
@@ -390,6 +396,7 @@ pub async fn get_commit_stats(state: StateType<'_>, oid: &str) -> Result<CommitS
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_affected_branches(state: StateType<'_>, oid: String) -> Result<Vec<String>> {
     with_backend(state, |backend| {

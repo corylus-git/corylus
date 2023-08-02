@@ -155,32 +155,35 @@ fn get_new_graph_lines(
 ) -> Result<Vec<LayoutListEntry>> {
     let new_commits = load_history_iter(&backend.repo, None, Some(&missing_oids))?
         .filter_map(|c| {
-            log::debug!("Result: {:?}", c);
+            tracing::debug!("Result: {:?}", c);
             c.ok()
         })
         .filter_map(|c| map_commit(&c, false).ok());
     Ok(GraphGenerator::new(
         new_commits,
-        Some(backend.graph.lines.last().unwrap().rails.clone()),
+        Some(
+            backend
+                .graph
+                .lines
+                .last()
+                .map_or(vec![], |l| l.rails.clone()),
+        ),
     )
     .take(batch_size)
     .collect())
 }
 
 fn get_missing_oids(backend: &GitBackend) -> Vec<git2::Oid> {
-    backend
-        .graph
-        .lines
-        .last()
-        .unwrap() // TODO I don't like this unwrap here
-        .rails
-        .iter()
-        .filter_map(|entry| {
-            entry
-                .as_ref()
-                .and_then(|e| git2::Oid::from_str(e.expected_parent.as_str()).ok())
-        })
-        .collect()
+    backend.graph.lines.last().map_or(vec![], |l| {
+        l.rails
+            .iter()
+            .filter_map(|entry| {
+                entry
+                    .as_ref()
+                    .and_then(|e| git2::Oid::from_str(e.expected_parent.as_str()).ok())
+            })
+            .collect()
+    })
 }
 
 pub fn load_more_graph_entries(
@@ -189,17 +192,21 @@ pub fn load_more_graph_entries(
     window: Window,
 ) -> DefaultResult {
     let old_length = backend.graph.lines.len();
-    log::debug!(
+    tracing::debug!(
         "Need to calculate {} more graph lines. Currently have {}",
         additional_size,
         backend.graph.lines.len()
     );
     let missing_oids = get_missing_oids(&backend);
-    log::debug!("Missing OIDs: {:?}", missing_oids);
+    tracing::debug!("Missing OIDs: {:?}", missing_oids);
     let new_lines = get_new_graph_lines(&backend, &missing_oids, additional_size + 50)?;
     backend.graph.lines.extend(new_lines);
-    backend.graph.rails = backend.graph.lines.last().unwrap().rails.clone(); // TODO I don't like this unwrap()
-    log::debug!("Graph now has {} lines", backend.graph.lines.len());
+    backend.graph.rails = backend
+        .graph
+        .lines
+        .last()
+        .map_or(vec![], |l| l.rails.clone());
+    tracing::debug!("Graph now has {} lines", backend.graph.lines.len());
     emit_change_event(backend, window, old_length)?;
     Ok(())
 }

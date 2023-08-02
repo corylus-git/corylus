@@ -6,7 +6,7 @@ use super::git::TimeWithOffset;
 /**
  * Information about a single block of lines penned by a specific author.
  */
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct BlameInfo {
     /**
      * The OID of the commit the last change occured

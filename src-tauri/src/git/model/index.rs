@@ -83,7 +83,7 @@ fn get_index_status(entry: &git2::StatusEntry<'_>) -> DiffStatus {
 /**
  * Information about a possible rebase, that is currently in progress
  */
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct RebaseStatusInfo {
     /**
      * Commits that were already done

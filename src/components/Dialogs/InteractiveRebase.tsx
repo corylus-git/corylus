@@ -12,7 +12,7 @@ import { DropDownList, Hoverable } from '../StyleBase';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { useAsync } from 'react-use';
-import { GraphLine } from '../History/GraphRenderer';
+import { GraphLine } from '../History/graph/GraphLine';
 import { SelectableList, SelectableListEntryProps } from '../util/SelectableList';
 
 type RebaseAction = 'pick' | 'squash' | 'drop';

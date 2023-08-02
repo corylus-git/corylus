@@ -57,7 +57,7 @@ pub trait LoggingDefaultUnwrapper<T> {
 impl<T> LoggingDefaultUnwrapper<T> for Result<T> {
     fn ok_or_log(self, message: &str) -> Option<T> {
         self.map_err(|err| {
-            log::error!("{}: {}", message, err.message);
+            tracing::error!("{}: {}", message, err.message);
         })
         .ok()
     }

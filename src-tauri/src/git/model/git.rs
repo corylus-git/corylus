@@ -541,7 +541,7 @@ pub struct Tag {
 /**
  * The source type for a branch/merge
  */
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum SourceType {
     Branch,
     Commit,

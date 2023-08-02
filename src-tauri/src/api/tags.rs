@@ -1,4 +1,5 @@
 use tauri::Window;
+use tracing::instrument;
 
 use crate::error::{DefaultResult, Result};
 use crate::window_events::{TypedEmit, WindowEvents};
@@ -6,6 +7,7 @@ use crate::window_events::{TypedEmit, WindowEvents};
 use crate::git::model::git::Tag;
 use crate::git::{with_backend, StateType};
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>> {
     with_backend(state, |backend| {
@@ -16,12 +18,6 @@ pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>> {
                 .find_tag(tag_id)
                 .map(|tag| tag.target_id().to_string())
                 .ok();
-            log::debug!(
-                "Tag: {} ({}) -> {:?}",
-                String::from_utf8_lossy(tag_name),
-                tag_id,
-                target
-            );
 
             tags.push(Tag {
                 name: String::from_utf8_lossy(tag_name.split_at(10).1).to_string(), // just remove the refs/tags/ part
@@ -30,11 +26,13 @@ pub async fn get_tags(state: StateType<'_>) -> Result<Vec<Tag>> {
             });
             true
         })?;
+        tracing::debug!("Returning tags {:?}", tags);
         Ok(tags)
     })
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn create_tag(
     state: StateType<'_>,

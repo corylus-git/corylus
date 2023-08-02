@@ -1,5 +1,6 @@
 use git2::RepositoryState;
 use tauri::Window;
+use tracing::instrument;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -15,10 +16,11 @@ use crate::git::{
     with_backend, with_backend_mut, StateType,
 };
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn rebase_status(state: StateType<'_>) -> Result<Option<RebaseStatusInfo>> {
     with_backend(state, |backend| {
-        log::debug!("Repo state {:?}", backend.repo.state());
+        tracing::debug!("Repo state {:?}", backend.repo.state());
         if backend.repo.state() == RepositoryState::RebaseMerge {
             Ok(Some(RebaseStatusInfo {
                 patch: "<todo>".to_owned(),
@@ -31,6 +33,7 @@ pub async fn rebase_status(state: StateType<'_>) -> Result<Option<RebaseStatusIn
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn rebase(state: StateType<'_>, window: Window, target: &str) -> DefaultResult {
     with_backend_mut(state, |backend| {
@@ -83,7 +86,7 @@ pub async fn rebase(state: StateType<'_>, window: Window, target: &str) -> Defau
     })
     .await
     .map_err(|e| {
-        log::error!("rebase failed: {:?}", e);
+        tracing::error!("rebase failed: {:?}", e);
         e
     })
 }

@@ -21,6 +21,8 @@ use git::{git_open, is_git_dir, AppState};
 use settings::load_settings;
 use simple_logger::SimpleLogger;
 use tauri::async_runtime::Mutex;
+use tracing::Level;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use crate::{
     api::{
@@ -57,6 +59,14 @@ use crate::{
 
 // #[cfg(not(test))]
 fn main() {
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_max_level(Level::TRACE)
+        .finish();
+    // TODO ignoring this error is OK
+    tracing::subscriber::set_global_default(subscriber)
+        .map_err(|e| println!("Could not initialize logging and tracing: {:?}", e));
+
     SimpleLogger::new()
         .init()
         .unwrap_or_else(|err| println!("Could not initialize logger. {}", err));

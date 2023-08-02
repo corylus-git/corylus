@@ -5,7 +5,8 @@ use std::{
 };
 
 use git2::{BlameOptions, StatusOptions};
-use log::debug;
+use tracing::debug;
+use tracing::instrument;
 
 use crate::error::{BackendError, Result};
 
@@ -14,6 +15,7 @@ use super::{
     with_backend, StateType,
 };
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_files(state: StateType<'_>) -> Result<Vec<FileStats>> {
     with_backend(state, |backend| {
@@ -35,6 +37,7 @@ pub async fn get_files(state: StateType<'_>) -> Result<Vec<FileStats>> {
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_file_contents(state: StateType<'_>, path: &str, rev: &str) -> Result<Vec<u8>> {
     with_backend(state, |backend| {
@@ -46,9 +49,9 @@ pub async fn get_file_contents(state: StateType<'_>, path: &str, rev: &str) -> R
                 )
             })?;
             let full_path = repo_path.join(path);
-            log::trace!("Reading contents of {:?} from disk", full_path.as_os_str());
+            tracing::trace!("Reading contents of {:?} from disk", full_path.as_os_str());
             Ok(std::fs::read(full_path).map_err(|e| {
-                log::error!("Could not read file from workdir. {}", e.to_string());
+                tracing::error!("Could not read file from workdir. {}", e.to_string());
                 BackendError::new(format!(
                     "Could not read file from workdir. {}",
                     e.to_string()
@@ -74,9 +77,10 @@ pub async fn get_file_contents(state: StateType<'_>, path: &str, rev: &str) -> R
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_blame(state: StateType<'_>, path: &str) -> Result<Vec<BlameInfo>> {
-    log::trace!("Getting blame for {}", path);
+    tracing::trace!("Getting blame for {}", path);
     with_backend(state, |backend| {
         let mut blame_options = BlameOptions::new();
         let p = Path::new(path);

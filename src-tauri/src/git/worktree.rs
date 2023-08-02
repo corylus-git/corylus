@@ -2,12 +2,14 @@ use std::fs;
 use std::path::Path;
 
 use git2::{Repository, WorktreeAddOptions};
+use tracing::instrument;
 
 use crate::error::{BackendError, DefaultResult, LoggingDefaultUnwrapper, Result};
 
 use super::model::git::Worktree;
 use super::{with_backend, GitBackend, StateType};
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_worktrees(state: StateType<'_>) -> Result<Vec<Worktree>> {
     with_backend(state, load_worktrees).await
@@ -45,6 +47,7 @@ pub fn load_worktrees(backend: &GitBackend) -> Result<Vec<Worktree>> {
         .collect())
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn checkout_worktree(state: StateType<'_>, ref_name: &str, path: &str) -> DefaultResult {
     with_backend(state, |backend| {
@@ -58,7 +61,7 @@ pub async fn checkout_worktree(state: StateType<'_>, ref_name: &str, path: &str)
             .ok_or(BackendError::new(
                 "Could not derive worktree name from path",
             ))?;
-        log::debug!(
+        tracing::debug!(
             "Creating worktree with name {} from {} at {}",
             ref_name,
             ref_name,
@@ -88,7 +91,7 @@ pub async fn checkout_worktree(state: StateType<'_>, ref_name: &str, path: &str)
     })
     .await
     .map_err(|e| {
-        log::error!("Could not check out worktree {}", e.to_string());
+        tracing::error!("Could not check out worktree {}", e.to_string());
         e
     })
 }

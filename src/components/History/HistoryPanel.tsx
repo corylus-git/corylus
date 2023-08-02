@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Splitter, SplitterPanel } from '../util/Splitter';
 import { BranchesPanel } from '../Branches/Branches';
-import { GraphPanel } from './Graph';
+import { GraphPanel } from './graph/Graph';
 import { CommitDetailsView } from '../Diff/Commit';
 import { useState, useRef } from 'react';
 import { Logger } from '../../util/logger';

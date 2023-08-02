@@ -11,12 +11,13 @@ pub mod remote;
 pub mod stash;
 pub mod worktree;
 
-use std::{fs::OpenOptions, io::Write, sync::Arc};
+use std::{fmt::Debug, fs::OpenOptions, io::Write, sync::Arc};
 
 use git2::{DiffOptions, Oid, Repository};
-use log::info;
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::Mutex, Window};
+use tracing::info;
+use tracing::{instrument, trace_span};
 
 use crate::{
     error::{BackendError, DefaultResult},
@@ -35,6 +36,15 @@ use self::{
 pub struct AppState {
     pub git: Option<GitBackend>,
     pub settings: Settings,
+}
+
+impl Debug for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "GitBackend: {:?}",
+            self.git.as_ref().map(|b| b.repo.path())
+        ))
+    }
 }
 
 pub type StateType<'a> = tauri::State<'a, Arc<Mutex<AppState>>>;
@@ -147,6 +157,7 @@ fn split_branch_name(
     }
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn git_open<'a>(state: StateType<'a>, path: &str) -> DefaultResult {
     // WARNING Check whether this "open" really has to happen like this or whether this creates the lock file and blocks the git repo...
@@ -157,6 +168,7 @@ pub async fn git_open<'a>(state: StateType<'a>, path: &str) -> DefaultResult {
     Ok(())
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn load_repo(state: StateType<'_>, window: Window) -> DefaultResult {
     with_backend_mut(state, |backend| {
@@ -169,9 +181,9 @@ pub async fn load_repo(state: StateType<'_>, window: Window) -> DefaultResult {
             rails: vec![],
         };
         // print time taken by loading the graph
-        log::debug!("Graph loaded in {:?} ms", start.elapsed().as_millis());
+        tracing::debug!("Graph loaded in {:?} ms", start.elapsed().as_millis());
 
-        log::debug!(
+        tracing::debug!(
             "Graph changed. Emitting event. {}",
             backend.graph.lines.len()
         );
@@ -195,11 +207,13 @@ pub async fn load_repo(state: StateType<'_>, window: Window) -> DefaultResult {
     .await
 }
 
+#[instrument]
 #[tauri::command]
 pub fn is_git_dir(name: &str) -> bool {
     Repository::open(name).is_ok()
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn add_to_gitignore(
     state: StateType<'_>,
@@ -265,7 +279,11 @@ pub async fn with_backend<F: FnOnce(&GitBackend) -> std::result::Result<R, Backe
 ) -> Result<R, BackendError> {
     let state_guard = state.lock().await;
     if let Some(git) = state_guard.git.as_ref() {
-        op(git)
+        let op_span = trace_span!(
+            "with_backend",
+            path = git.repo.workdir().map(|wd| wd.to_str())
+        );
+        op_span.in_scope(|| op(git))
     } else {
         Err(BackendError::new("Cannot load diff without open git repo"))
     }
@@ -280,8 +298,13 @@ pub async fn with_backend_mut<
 ) -> Result<R, BackendError> {
     let mut state_guard = state.lock().await;
     if let Some(git) = state_guard.git.as_mut() {
-        op(git)
+        let op_span = trace_span!(
+            "with_backend_mut",
+            path = git.repo.workdir().map(|wd| wd.to_str())
+        );
+        op_span.in_scope(|| op(git))
     } else {
+        tracing::error!("Cannot load diff without open git repo");
         Err(BackendError::new("Cannot load diff without open git repo"))
     }
 }

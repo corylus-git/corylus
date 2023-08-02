@@ -1,3 +1,5 @@
+use tracing::instrument;
+
 use crate::error::Result;
 
 use crate::git::{
@@ -5,6 +7,7 @@ use crate::git::{
     with_backend, StateType,
 };
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_config(state: StateType<'_>) -> Result<Vec<GitConfigEntry>> {
     with_backend(state, |backend| {

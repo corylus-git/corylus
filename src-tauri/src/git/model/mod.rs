@@ -124,7 +124,7 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
     }
 
     let upstream = branch.upstream();
-    log::trace!("Getting upstream name for {}", branch_ref_name);
+    tracing::trace!("Getting upstream name for {}", branch_ref_name);
     let upstream_name = if let Ok(unb) = upstream_name_buf {
         unb.as_str().map_or_else(
             || {
@@ -139,7 +139,7 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
         return Err(BackendError::new("Upstream name cannot be Error here"));
     };
 
-    log::debug!(
+    tracing::debug!(
         "Branch: {:?}, upstream branch: {:?}",
         branch_ref_name,
         upstream_name
@@ -156,7 +156,7 @@ pub fn get_upstream(branch: &Branch, repo: &Repository) -> Result<Option<Upstrea
                     remote_name,
                 }))
             } else {
-                log::error!("Cannot get upstream: {}", error);
+                tracing::error!("Cannot get upstream: {}", error);
                 Err(error.into())
             }
         }

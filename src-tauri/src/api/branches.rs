@@ -1,5 +1,6 @@
 use git2::{build::CheckoutBuilder, BranchType, Oid, Repository, ResetType};
 use tauri::Window;
+use tracing::instrument;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -19,6 +20,7 @@ use crate::git::{
     StateType,
 };
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>> {
     with_backend(state, |backend| {
@@ -57,12 +59,13 @@ pub async fn get_branches(state: StateType<'_>) -> Result<Vec<BranchInfo>> {
             })
         });
         let results: Result<Vec<BranchInfo>> = result.collect();
-        log::debug!("Branches: {:?}", results);
+        tracing::debug!("Branches: {:?}", results);
         results
     })
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_unmerged_branches(state: StateType<'_>) -> Result<Vec<String>> {
     with_backend(state, |backend| {
@@ -83,6 +86,7 @@ pub async fn get_unmerged_branches(state: StateType<'_>) -> Result<Vec<String>> 
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn delete_branch(
     state: StateType<'_>,
@@ -103,6 +107,7 @@ pub async fn delete_branch(
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn create_branch(
     state: StateType<'_>,
@@ -140,6 +145,7 @@ pub async fn create_branch(
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn change_branch(state: StateType<'_>, window: Window, ref_name: &str) -> DefaultResult {
     with_backend(state, |backend| {
@@ -162,6 +168,7 @@ pub async fn change_branch(state: StateType<'_>, window: Window, ref_name: &str)
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn checkout_remote_branch(
     state: StateType<'_>,
@@ -206,6 +213,7 @@ pub async fn checkout_remote_branch(
     .await
 }
 
+#[instrument(skip(state, window), err)]
 #[tauri::command]
 pub async fn reset(
     state: StateType<'_>,

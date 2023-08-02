@@ -1,5 +1,5 @@
 import { Commit } from '../model/stateObjects';
-import { Rail } from '../components/History/RailLine';
+import { Rail } from '../components/History/graph/RailLine';
 
 export interface LayoutListEntry {
     rail: number;

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use serde::Deserialize;
+use tracing::{debug, error, info, instrument, trace, warn};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -24,18 +25,19 @@ impl Display for Level {
     }
 }
 
-impl From<Level> for log::Level {
+impl From<Level> for tracing::Level {
     fn from(level: Level) -> Self {
         match level {
-            Level::Trace => log::Level::Trace,
-            Level::Debug => log::Level::Debug,
-            Level::Info => log::Level::Info,
-            Level::Warn => log::Level::Warn,
-            Level::Error => log::Level::Error,
+            Level::Trace => tracing::Level::TRACE,
+            Level::Debug => tracing::Level::DEBUG,
+            Level::Info => tracing::Level::INFO,
+            Level::Warn => tracing::Level::WARN,
+            Level::Error => tracing::Level::ERROR,
         }
     }
 }
 
+#[instrument(name = "ui", parent=None, skip_all)]
 #[tauri::command]
 pub fn send_log(
     level: Level,
@@ -43,7 +45,51 @@ pub fn send_log(
     message: &str,
     meta: Option<serde_json::Value>,
 ) -> Result<(), String> {
-    let full_context = format!("ui::{}", context);
-    log::log!(target: full_context.as_str(), level.into(), "{} {}", message, meta.unwrap_or_default());
+    // let fields = FieldSet::new(&[], Identifier());
+    // let metadata = Metadata::new(
+    //     context,
+    //     "ui",
+    //     level.into(),
+    //     None,
+    //     None,
+    //     None,
+    //     fields,
+    //     Kind::EVENT,
+    // );
+    // let fields = meta.map(|m| if m.is_object() {
+    //     ValueSet::
+    // } else {
+
+    // })
+    // Event::dispatch(&metadata, fields)
+    match level {
+        Level::Trace => {
+            trace!(
+                message = message,
+                context = context,
+                meta = serde_json::to_string(&meta).unwrap_or_else(|_| format!("{:?}", &meta))
+            )
+        }
+        Level::Debug => debug!(
+            message = message,
+            context = context,
+            meta = serde_json::to_string(&meta).unwrap_or_else(|_| format!("{:?}", &meta))
+        ),
+        Level::Info => info!(
+            message = message,
+            context = context,
+            meta = serde_json::to_string(&meta).unwrap_or_else(|_| format!("{:?}", &meta))
+        ),
+        Level::Warn => warn!(
+            message = message,
+            context = context,
+            meta = serde_json::to_string(&meta).unwrap_or_else(|_| format!("{:?}", &meta))
+        ),
+        Level::Error => error!(
+            message = message,
+            context = context,
+            meta = serde_json::to_string(&meta).unwrap_or_else(|_| format!("{:?}", &meta))
+        ),
+    };
     Ok(())
 }

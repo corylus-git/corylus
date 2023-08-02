@@ -3,8 +3,9 @@ use std::{borrow::Cow, path::Path};
 use git2::{
     build::RepoBuilder, AutotagOption, FetchOptions, FetchPrune, PushOptions, RemoteCallbacks,
 };
-use log::debug;
 use tauri::Window;
+use tracing::debug;
+use tracing::instrument;
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -17,6 +18,7 @@ use super::{
     with_backend, with_backend_mut, StateType,
 };
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>> {
     with_backend(state, |backend| {
@@ -40,6 +42,7 @@ pub async fn get_remotes(state: StateType<'_>) -> Result<Vec<RemoteMeta>> {
     })
     .await
 }
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn push(
     state: StateType<'_>,
@@ -84,6 +87,7 @@ pub async fn push(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn fetch(
     state: StateType<'_>,
@@ -93,7 +97,7 @@ pub async fn fetch(
     prune: bool,
     fetch_tags: bool,
 ) -> DefaultResult {
-    log::trace!(
+    tracing::trace!(
         "Invoking fetch(remote={:?}, ref_spec={:?}, prune={}, fetch_tags={})",
         remote,
         ref_spec,
@@ -127,6 +131,7 @@ pub async fn fetch(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn add_remote(
     state: StateType<'_>,
@@ -135,7 +140,7 @@ pub async fn add_remote(
     url: &str,
 ) -> DefaultResult {
     with_backend_mut(state, |backend| {
-        log::trace!("Adding new remote {} -> {}", name, url);
+        tracing::trace!("Adding new remote {} -> {}", name, url);
         backend.repo.remote(name, url)?;
         window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
@@ -143,6 +148,7 @@ pub async fn add_remote(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn update_remote(
     state: StateType<'_>,
@@ -151,7 +157,7 @@ pub async fn update_remote(
     url: &str,
 ) -> DefaultResult {
     with_backend_mut(state, |backend| {
-        log::trace!("Updating remote {} -> {}", name, url);
+        tracing::trace!("Updating remote {} -> {}", name, url);
         backend.repo.remote_set_url(name, url)?;
         window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
@@ -159,10 +165,11 @@ pub async fn update_remote(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn delete_remote(state: StateType<'_>, window: Window, name: &str) -> DefaultResult {
     with_backend_mut(state, |backend| {
-        log::trace!("Removing remote {}", name);
+        tracing::trace!("Removing remote {}", name);
         backend.repo.remote_delete(name)?;
         window.typed_emit(WindowEvents::BranchesChanged, ())?;
         Ok(())
@@ -201,6 +208,7 @@ fn do_fetch(
     Ok(())
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn pull(
     state: StateType<'_>,
@@ -217,7 +225,7 @@ pub async fn pull(
             .1
             .ok_or_else(|| BackendError::new("Could not parse remote branch reference"))?;
         if from_ref.peel_to_commit()?.id() != backend.repo.head()?.peel_to_commit()?.id() {
-            log::debug!("Remote has a updates. Merging.");
+            tracing::debug!("Remote has a updates. Merging.");
             let ref_name = from_ref
                 .name()
                 .ok_or_else(|| BackendError::new("Target reference has no valid name"))?
@@ -232,6 +240,7 @@ pub async fn pull(
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn clone(
     state: StateType<'_>,

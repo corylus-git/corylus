@@ -205,7 +205,7 @@ dialog {
   grid-gap: 0.5rem;
 }
 
-dialog::backdrop {
+diatracing::backdrop {
   background-color: rgba(0, 0, 0, 0.5);
 }
 

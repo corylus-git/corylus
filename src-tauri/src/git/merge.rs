@@ -3,8 +3,9 @@ use std::{fs::File, io::Write};
 use git2::{
     build::CheckoutBuilder, AnnotatedCommit, MergeOptions, Object, Repository, RepositoryState,
 };
-use log::{debug, trace};
 use tauri::Window;
+use tracing::instrument;
+use tracing::{debug, trace};
 
 use crate::{
     error::{BackendError, DefaultResult, Result},
@@ -16,6 +17,7 @@ use super::{
     StateType,
 };
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn merge(
     state: StateType<'_>,
@@ -156,16 +158,18 @@ fn fast_forward(
     Ok(())
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn is_merge(state: StateType<'_>) -> Result<bool> {
     with_backend(state, |backend| {
         let state = backend.repo.state();
-        log::trace!("Repository state: {:?}", state);
+        tracing::trace!("Repository state: {:?}", state);
         Ok(state == RepositoryState::Merge)
     })
     .await
 }
 
+#[instrument(skip(state, window), err, ret)]
 #[tauri::command]
 pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult {
     with_backend_mut(state, |backend| {
@@ -188,6 +192,7 @@ pub async fn abort_merge(state: StateType<'_>, window: Window) -> DefaultResult 
     .await
 }
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_merge_message(state: StateType<'_>) -> Result<Option<String>> {
     with_backend(state, |backend| {

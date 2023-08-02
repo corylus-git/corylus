@@ -1,7 +1,7 @@
 use git2::RepositoryState;
-use log::debug;
 use serde::Deserialize;
 use tauri::Window;
+use tracing::debug;
 
 use crate::{
     error::DefaultResult,
@@ -99,7 +99,7 @@ pub fn do_commit(
     Ok(())
 }
 
-#[derive(Deserialize, PartialEq, Eq)]
+#[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum ConflictResolution {
     Ours,

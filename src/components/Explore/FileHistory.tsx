@@ -6,7 +6,7 @@ import { Splitter, SplitterPanel } from '../util/Splitter';
 import { NoScrollPanel } from '../util/NoScrollPanel';
 import { CommitDetailsContent } from '../Diff/Commit';
 import { useFileHistory } from '../../model/state/explorer';
-import { GraphRenderer } from '../History/GraphRenderer';
+import { GraphRenderer } from '../History/graph/GraphRenderer';
 import { useBranches, useTags } from '../../model/state/repo';
 import { useAsync } from 'react-use';
 import { Commit } from '../../model/stateObjects';

@@ -1,20 +1,20 @@
 import { ControlledMenu, ControlledMenuProps, MenuItem } from '@szhsin/react-menu';
 import { invoke } from '@tauri-apps/api';
 import * as React from 'react';
-import { selectCommit } from '../../model/actions/repo';
-import { DialogActions, useDialog } from '../../model/state/dialogs';
+import { selectCommit } from '../../../model/actions/repo';
+import { DialogActions, useDialog } from '../../../model/state/dialogs';
 import {
     useBranches, useHistorySize, useSelectedCommit, useTags
-} from '../../model/state/repo';
-import { BranchInfo, Commit } from '../../model/stateObjects';
-import { LayoutListEntry } from '../../util/graphLayout';
-import { Maybe, toOptional } from '../../util/maybe';
-import { SearchBox } from '../shared/SearchBox';
-import { ListSelector } from '../util/SelectableList';
+} from '../../../model/state/repo';
+import { BranchInfo, Commit } from '../../../model/stateObjects';
+import { LayoutListEntry } from '../../../util/graphLayout';
+import { Maybe, toOptional } from '../../../util/maybe';
+import { SearchBox } from '../../shared/SearchBox';
+import { ListSelector } from '../../util/SelectableList';
 import { GraphRenderer } from './GraphRenderer';
-import { CommitStatsData } from '../../model/stateObjects';
-import { Logger } from '../../util/logger';
-import { getGraphEntries } from '../../model/state/graph';
+import { CommitStatsData } from '../../../model/stateObjects';
+import { Logger } from '../../../util/logger';
+import { getGraphEntries } from '../../../model/state/graph';
 
 function matchCommit(c: Commit, searchTerm: string): boolean {
     return (
@@ -91,7 +91,7 @@ const Graph: React.FC<{
                 width={props.width}
                 height={props.height}
                 getLine={async idx => {
-                    Logger().debug('getLine', '------------ getting line', { idx });
+                    console.log('getLine', '------------ getting line', { idx });
                     return (await getGraphEntries(idx, idx + 1))[0]
                 }
                 } // TODO directly request from the backend

@@ -27,9 +27,8 @@ class LogWrapper {
     }
 }
 
-function sendLog(level: Level, context: string, message: string, meta: any)
-{
-    console.log("Sending log message to backend", level, context, message, meta);
+function sendLog(level: Level, context: string, message: string, meta: any) {
+    // console.log("Sending log message to backend", level, context, message, meta);
     invoke('send_log', { level, context, message, meta });
 }
 

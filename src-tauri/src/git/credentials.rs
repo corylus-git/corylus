@@ -19,11 +19,11 @@ fn get_credentials(
     username: Option<&str>,
     cred_type: CredentialType,
 ) -> std::result::Result<Cred, git2::Error> {
-    log::debug!("Received request for credential type {:?}", cred_type);
+    tracing::debug!("Received request for credential type {:?}", cred_type);
     if cred_type.is_username() {
         // git needs to know the username first and couldn't extract it from the URL -> request
         // this from the user
-        log::error!("SSH without username in the URL is currently not supported");
+        tracing::error!("SSH without username in the URL is currently not supported");
         return Err(git2::Error::new(
             git2::ErrorCode::GenericError,
             git2::ErrorClass::None,
@@ -61,9 +61,9 @@ fn get_ssh_key(
     if let Some(kp) = key_path {
         let cred = Cred::ssh_key(username.unwrap(), None, Path::new(&kp), None);
         if let Err(e) = &cred {
-            log::error!("SSH error: {}", e);
+            tracing::error!("SSH error: {}", e);
         } else {
-            log::debug!("Successfully loaded key from file.");
+            tracing::debug!("Successfully loaded key from file.");
         }
         return cred;
     }

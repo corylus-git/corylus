@@ -1,6 +1,7 @@
 use std::{convert::TryFrom, fs::read, path::Path};
 
 use git2::{Oid, Patch};
+use tracing::instrument;
 
 use crate::error::{BackendError, Result};
 
@@ -9,6 +10,7 @@ use super::{
     with_backend, DiffSourceType, StateType,
 };
 
+#[instrument(skip(state), err, ret)]
 #[tauri::command]
 pub async fn get_diff(
     state: StateType<'_>,
@@ -18,7 +20,13 @@ pub async fn get_diff(
     path: Option<&str>,
     untracked: Option<bool>,
 ) -> Result<Vec<FileDiff>> {
-    log::debug!("Retrieving diff for source {:?}({:?} -> {:?}), path: {:?}", source, commit_id, to_parent, path);
+    tracing::debug!(
+        "Retrieving diff for source {:?}({:?} -> {:?}), path: {:?}",
+        source,
+        commit_id,
+        to_parent,
+        path
+    );
     with_backend(state, |backend| match &source {
         DiffSourceType::Commit => {
             let parent = if let Some(p_id) = to_parent {
@@ -30,7 +38,12 @@ pub async fn get_diff(
             } else {
                 None
             };
-            log::trace!("Getting diff for commit: {:?} -> {:?}, path {:?}", commit_id, parent, path);
+            tracing::trace!(
+                "Getting diff for commit: {:?} -> {:?}, path {:?}",
+                commit_id,
+                parent,
+                path
+            );
             let diff =
                 backend.load_diff(commit_id, parent.map(|p| p.to_string()).as_deref(), &[path])?;
             Ok(Diff::try_from(diff)?.0)

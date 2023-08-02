@@ -38,6 +38,7 @@ import { queryClient } from '../util/queryClient';
 import { ConfirmationDialog } from './Dialogs/ConfirmationDialog';
 import { stagingArea } from '../model/state/stagingArea';
 import { listen } from '../util/typesafeListen';
+import { QueryClient, QueryClientProvider } from 'react-query';
 
 export const MainView = styled.div`
     display: grid;
@@ -102,9 +103,8 @@ const MainStatusBar: React.FC = () => {
 
 listen('GraphChanged', (ev) => {
     Logger().debug('GraphChanged', '---------------------------------- invalidating graphLine queries');
-    for (let i = 0; i < 1000; i++) {
-        queryClient.invalidateQueries(['graphLine', i]);
-    }
+    queryClient.invalidateQueries('graphLine');
+    console.log('Cache now', queryClient.getQueryCache().findAll().map(e => ({ key: e.queryKey, isStale: e.isStale() })));
 })
 
 export const Repository: React.FC<{ path: string }> = ({ path }) => {
