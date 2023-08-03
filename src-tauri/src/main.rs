@@ -37,6 +37,7 @@ use crate::{
             resolve_conflict_manually, stage, unstage,
         },
         rebase::{rebase, rebase_status},
+        remote::{add_remote, clone, delete_remote, fetch, get_remotes, pull, push, update_remote},
         tags::{create_tag, get_tags},
     },
     git::{
@@ -49,7 +50,6 @@ use crate::{
         },
         load_repo,
         merge::{abort_merge, get_merge_message, is_merge, merge},
-        remote::{add_remote, clone, delete_remote, fetch, get_remotes, pull, push, update_remote},
         stash::{apply_stash, drop_stash, get_stash_stats, get_stashes, stash},
         worktree::{checkout_worktree, get_worktrees},
     },
