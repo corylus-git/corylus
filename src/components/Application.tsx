@@ -37,7 +37,7 @@ const ApplicationViewContainer: React.FC = () => {
         (async () => {
             const tabInfos = await Promise.all(settings.openTabs.map(async (t) => ({
                 id: nanoid(),
-                path: just(t),
+                path: t,
                 title: await basename(t),
             })));
             tabs.loadTabs(tabInfos);

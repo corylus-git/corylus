@@ -158,14 +158,7 @@ export const Tabs: React.FC = () => {
         activeRef.current?.scrollIntoView();
     }, [tabs.active]);
 
-    const getActiveTabPath = React.useCallback(() => {
-        if (tabs.active.found) {
-            const activeTab = tabs.tabs.find(t => tabs.active.found && t.id === tabs.active.value);
-            return activeTab?.path?.found ? activeTab.path.value : undefined;
-        }
-    }, [tabs.active, tabs.tabs]);
-
-    const activePath = getActiveTabPath();
+    const activePath = tabs.tabs.find(t => t.id === tabs.active)?.path;
 
     return (
         <TabContainer onMouseUp={() => intervalRef.current && clearInterval(intervalRef.current)}>
@@ -188,13 +181,13 @@ export const Tabs: React.FC = () => {
                     <div className="tabs-header-container" ref={scrollRef}>
                         {tabs.tabs.map((tab) => (
                             <Tab
-                                ref={tabs.active.found && tabs.active.value === tab.id ? activeRef : undefined}
+                                ref={tabs.active === tab.id ? activeRef : undefined}
                                 label={tab.title}
-                                active={tabs.active.found && tabs.active.value === tab.id}
+                                active={tabs.active === tab.id}
                                 key={tab.id}
-                                title={(tab.path.found && tab.path.value) || undefined}
+                                title={tab.path || undefined}
                                 onClose={() => tabs.closeTab(tab.id)}
-                                onClick={tabs.active.found && tabs.active.value === tab.id ? undefined : () => tabs.switchTab(tab)}
+                                onClick={tabs.active === tab.id ? undefined : () => tabs.switchTab(tab)}
                             />
 
                         ))}
@@ -223,7 +216,7 @@ export const Tabs: React.FC = () => {
             </TabHeader>
             <TabContent>
                 {
-                    tabs.active.found
+                    tabs.active
                         ? (activePath ? <Repository path={activePath} /> : <NewTab />)
                         : <></>
                 }

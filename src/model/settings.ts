@@ -90,6 +90,7 @@ export const updateSettings = trackError('updateSettings', 'update settings',
 
 export const updateHistory = trackError('updateHistory', 'update history',
     async (path: string) => {
+        Logger().debug('updateHistory', 'Updating history', { path });
         await invoke('update_history', { path });
     }
 );
@@ -101,7 +102,7 @@ export const updateTabs = trackError('updateTabs', 'updating stored tabs',
             Logger().error('updateTabs', 'Tried to save updated tabs in non-existent settings');
         }
         else {
-            await updateSettings({ ...currentSettings, openTabs: tabs.flatMap(t => t.path.found ? [t.path.value] : []) });
+            await updateSettings({ ...currentSettings, openTabs: tabs.flatMap(t => t.path ? [t.path] : []) });
         }
     }
 );

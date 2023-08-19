@@ -5,8 +5,7 @@ import createHook from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import create from 'zustand/vanilla';
 import { Logger } from '../../util/logger';
-import { just, Maybe, nothing } from '../../util/maybe';
-import { updateHistory, updateSettings, updateTabs, useSettings } from '../settings';
+import { updateHistory, updateTabs } from '../settings';
 import { repoStore } from './repo';
 import { stagingArea } from './stagingArea';
 
@@ -22,7 +21,7 @@ export interface TabState {
     /**
      * The path displayed in this tab
      */
-    path: Maybe<string>;
+    path: string | null;
 }
 
 export type TabsState = {
@@ -33,7 +32,7 @@ export type TabsState = {
     /**
      * The id of active tab
      */
-    active: Maybe<string>;
+    active: string | null;
 };
 
 export type TabsActions = {
@@ -47,21 +46,21 @@ export type TabsActions = {
 
 export const tabsStore = create<TabsState & TabsActions>()(
     immer((set, get) => ({
-        tabs: [],
-        active: nothing,
+        tabs: [] as readonly TabState[],
+        active: null,
         addTab: (): void => {
             set((state) => {
                 Logger().debug('addTab', 'Opening new tab');
                 const tab: TabState = {
                     id: `tab-${nanoid()}`,
-                    path: nothing,
+                    path: null,
                     title: '(New Tab)',
                 };
                 const tabs = [...state.tabs, tab];
                 updateTabs(tabs);
                 return {
                     tabs,
-                    active: just(tab.id)
+                    active: tab.id
                 };
             });
         },
@@ -71,13 +70,13 @@ export const tabsStore = create<TabsState & TabsActions>()(
                     tabs: state.tabs.filter(t => t.id !== id),
                     active: state.active
                 };
-                if (state.active.found && state.active.value === id) {
+                if (state.active === id) {
                     const formerIdx = state.tabs.findIndex(t => t.id === id);
-                    newState.active = newState.tabs.length > 0 ? just(newState.tabs[Math.min(formerIdx, newState.tabs.length - 1)].id) : nothing;
-                    if (newState.active.found) {
-                        const tab = newState.tabs.find(t => newState.active.found && t.id === newState.active.value);
-                        if (tab && tab.path.found) {
-                            repoStore.getState().openRepo(tab.path.value);
+                    newState.active = newState.tabs.length > 0 ? newState.tabs[Math.min(formerIdx, newState.tabs.length - 1)].id : null;
+                    if (newState.active) {
+                        const tab = newState.tabs.find(t => t.id === newState.active);
+                        if (tab && tab.path) {
+                            repoStore.getState().openRepo(tab.path);
                             stagingArea.getState().reset();
                         }
                     }
@@ -89,35 +88,46 @@ export const tabsStore = create<TabsState & TabsActions>()(
         switchTab: (tab: TabState): void => {
             set((state) => {
                 Logger().silly('switchTab', 'Switching active tab', { tab: tab });
-                state.active = just(tab.id);
-                if (tab.path.found) {
+                state.active = tab.id;
+                if (tab.path) {
                     Logger().debug('switchTabs', 'Re-loading repository', {
-                        path: tab.path.value,
+                        path: tab.path,
                     });
-                    repoStore.getState().openRepo(tab.path.value);
+                    repoStore.getState().openRepo(tab.path);
                     stagingArea.getState().reset();
                 }
-                state.tabs.forEach((t) => t.path.found && updateHistory(t.path.value));
+                state.tabs.forEach((t) => t.path && updateHistory(t.path));
                 return state;
             });
         },
         openRepoInActive: async (path: string): Promise<void> => {
             const title = await basename(path);
+            const state = get();
+            Logger().debug('openRepoInActive', 'Opening repository in current tab', { path, active: state.active });
+            if (!state.active) {
+                Logger().error('openRepoInActive', 'No active tab');
+                return;
+            }
+            const newState = await openInActiveTab(state.tabs, state.active, path, title);
+            Logger().debug("openRepoInActive", "Opening tab", newState);
             set((state) => {
-                openInActiveTab(state.tabs, state.active, path, title);
+                state.tabs = castDraft(newState.tabs);
+                state.active = newState.active;
             });
         },
         openRepoInNew: async (path: string): Promise<void> => {
             const title = await basename(path);
+            const id = `tab-${nanoid()}`;
+            const state = get();
+            const tabs = [...state.tabs, {
+                id,
+                path: null,
+                title: '(New Tab)',
+            }];
+            const newState = await openInActiveTab(tabs, id, path, title);
             set((state) => {
-                const id = `tab-${nanoid()}`;
-                state.tabs = [...state.tabs, {
-                    id,
-                    path: nothing,
-                    title: '(New Tab)',
-                }];
-                state.active = just(id);
-                openInActiveTab(state.tabs, state.active, path, title);
+                state.tabs = castDraft(newState.tabs);
+                state.active = newState.active;
             });
         },
         loadTabs: (tabs: readonly TabState[]): void => {
@@ -126,38 +136,57 @@ export const tabsStore = create<TabsState & TabsActions>()(
                 state.tabs = castDraft(tabs);
             });
             const active = get().active;
-            if (active.found) {
-                const activeTab = get().tabs.find(t => t.id === active.value);
-                if (activeTab && activeTab.path.found) {
-                    repoStore.getState().openRepo(activeTab.path.value);
+            if (active) {
+                const activeTab = get().tabs.find(t => t.id === active);
+                if (activeTab && activeTab.path) {
+                    repoStore.getState().openRepo(activeTab.path);
                 }
             }
         },
     }))
 );
 
-function openInActiveTab(tabs: TabState[], active: Maybe<string>, path: string, title: string) {
-    const activeTab = tabs.find(t => active.found && t.id === active.value);
-    if (!activeTab) {
+async function openInActiveTab(tabs: readonly TabState[], active: string, path: string, title: string): Promise<TabsState> {
+    const clonedTabs = [...tabs];
+    const activeIdx = clonedTabs.findIndex(t => t.id === active);
+    Logger().silly('openInActiveTab', 'Opening repository in active tab', {
+        path,
+        active: activeIdx,
+    })
+    if (activeIdx === -1) {
         Logger().error('openInActiveTab', 'Could not find active tab to open path in');
+        throw new Error("Could not open tab");
     } else {
-        activeTab.path = just(path);
-        activeTab.title = title;
-        Logger().debug('openInActiveTab', 'Re-loading repository', {
-            path,
-        });
-        repoStore.getState().openRepo(path);
-        updateTabs(tabs);
-        updateHistory(path);
+        try {
+            const clonedTab = { ...tabs[activeIdx] };
+            clonedTab.path = path;
+            clonedTab.title = title;
+            Logger().debug('openInActiveTab', 'Re-loading repository', {
+                path,
+            });
+            repoStore.getState().openRepo(path);
+            await updateTabs(tabs);
+            await updateHistory(path);
+            clonedTabs.splice(activeIdx, 1, clonedTab);
+            return {
+                tabs: clonedTabs,
+                active,
+            }
+        }
+        catch (e) {
+            console.log(e);
+            Logger().error('openInActiveTab', 'Could not open tab', { error: e });
+            throw e;
+        }
     }
 }
 
 /**
  * Get the tab containing the given path, if any
  */
-export function getTab(path: string): TabState | undefined {
+export function getTab(path: string): TabState | null {
     const tabs = tabsStore.getState();
-    return tabs.tabs.find(t => t.path.found && t.path.value === path)
+    return tabs.tabs.find(t => t.path === path) ?? null;
 }
 //
 // export function useTabs() {
