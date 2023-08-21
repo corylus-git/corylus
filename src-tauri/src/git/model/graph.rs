@@ -197,7 +197,19 @@ pub fn load_more_graph_entries(
         additional_size,
         backend.graph.lines.len()
     );
-    let missing_oids = get_missing_oids(&backend);
+    let mut missing_oids = get_missing_oids(&backend);
+    if missing_oids.is_empty() && backend.graph.lines.is_empty() {
+        // assuming the graph is empty and we don't yet have any missing OIDs, this is the first load
+        backend.repo.branches(None)?.for_each(|b| {
+            if let Ok(c) = b.and_then(|b| b.0.get().peel_to_commit()) {
+                missing_oids.push(c.id());
+            }
+        });
+        backend.repo.tag_foreach(|oid, _| {
+            missing_oids.push(oid);
+            true
+        })?;
+    }
     tracing::debug!("Missing OIDs: {:?}", missing_oids);
     let new_lines = get_new_graph_lines(&backend, &missing_oids, additional_size + 50)?;
     backend.graph.lines.extend(new_lines);

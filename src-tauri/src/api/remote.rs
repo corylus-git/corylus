@@ -1,7 +1,7 @@
-use std::{borrow::Cow, path::Path};
+use std::path::Path;
 
 use git2::PushOptions;
-use git2::{build::RepoBuilder, FetchOptions, FetchPrune, RemoteCallbacks};
+use git2::{build::RepoBuilder, FetchOptions, RemoteCallbacks};
 use tauri::Window;
 use tracing::instrument;
 use tracing::{debug, error};
